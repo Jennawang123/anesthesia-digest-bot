@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude plugins:*)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "mcp__openevidence__oe_ask",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
+    ]
+  }
+}

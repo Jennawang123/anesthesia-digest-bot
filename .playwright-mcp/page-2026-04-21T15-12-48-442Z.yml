@@ -1,0 +1,26 @@
+- generic [ref=e2]:
+  - heading "🎭 雪梨之旅" [level=1] [ref=e3]
+  - paragraph [ref=e4]: 輸入 Firebase Realtime Database 網址開始
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: Firebase 資料庫網址
+      - textbox "https://xxx-default-rtdb.firebaseio.com" [ref=e8]
+    - generic [ref=e9]:
+      - generic [ref=e10]: 旅遊標題
+      - textbox [ref=e11]: 🎭 雪梨之旅
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: 旅伴 1
+        - textbox "Jenna" [ref=e15]
+      - generic [ref=e16]:
+        - generic [ref=e17]: 旅伴 2
+        - textbox "男友" [ref=e18]
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]: 出發日期
+        - textbox [ref=e22]: 2026-04-22
+      - generic [ref=e23]:
+        - generic [ref=e24]: 天數
+        - spinbutton [ref=e25]: "7"
+    - button "開始使用 →" [ref=e26] [cursor=pointer]
+    - paragraph [ref=e27]: Firebase Console → Realtime Database → 建立資料庫（測試模式）→ 複製網址

@@ -1,0 +1,23 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - img "Sydney Opera House" [ref=e4]
+    - generic [ref=e6]:
+      - generic [ref=e7]: 雪梨之旅
+      - generic [ref=e10]: 已同步
+  - generic [ref=e14]:
+    - generic [ref=e15]: 📅
+    - generic [ref=e16]: 載入中…
+  - button "＋" [ref=e17] [cursor=pointer]
+  - generic [ref=e18]:
+    - generic [ref=e19] [cursor=pointer]:
+      - generic [ref=e20]: 📅
+      - generic [ref=e21]: 行程
+    - generic [ref=e22] [cursor=pointer]:
+      - generic [ref=e23]: 💰
+      - generic [ref=e24]: 記帳
+    - generic [ref=e25] [cursor=pointer]:
+      - generic [ref=e26]: 📝
+      - generic [ref=e27]: 記事本
+    - generic [ref=e28] [cursor=pointer]:
+      - generic [ref=e29]: ⚙️
+      - generic [ref=e30]: 設定

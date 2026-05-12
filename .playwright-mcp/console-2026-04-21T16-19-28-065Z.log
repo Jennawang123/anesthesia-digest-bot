@@ -1,0 +1,2 @@
+[     343ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:7823/sydney-trip.html:0
+[    4941ms] [WARNING] [2026-04-21T16:19:33.003Z]  @firebase/database: FIREBASE WARNING: Firebase error. Please ensure that you have the URL of your Firebase Realtime Database instance configured correctly. (https://fake.firebaseio.com/)  @ https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js:0
