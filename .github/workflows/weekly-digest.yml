@@ -1,0 +1,39 @@
+name: 麻醉科週報
+
+on:
+  schedule:
+    # 週一 07:00 台灣時間 = 週日 23:00 UTC
+    - cron: "0 23 * * 0"
+  workflow_dispatch: # 允許手動觸發
+
+jobs:
+  generate-digest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 需要把 reported_articles.json 寫回 repo
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run weekly digest
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+        run: python weekly_digest.py
+
+      - name: Commit updated reported_articles.json
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add reported_articles.json
+          git diff --staged --quiet || git commit -m "chore: update reported articles $(date +'%Y-%m-%d')"
+          git push
