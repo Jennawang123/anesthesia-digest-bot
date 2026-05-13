@@ -220,22 +220,29 @@ def analyze_with_claude(new_articles, prev_summary):
 ## 過去已報導過的文章（供跨期比較參考）
 {prev_summary}
 
-## 格式規則（非常重要，請嚴格遵守）
+## ⚠️ 格式規則（違反即重做）
 
-每篇文章用以下固定格式，**絕對不要使用 Markdown 表格（| 符號）**：
+禁止事項：
+- 禁止使用 Markdown 表格（含 `|` 符號的任何格式）
+- 禁止使用 `**欄位名稱**：` 的 bold label 格式
+- 禁止截斷文章
 
-### [英文完整標題]
-📍 期刊名 | YYYY年MM月 | 研究類型 | ⭐⭐⭐（或⭐⭐或⭐）
-🔑 一句話重點：（繁體中文，醫學名詞保留英文，限 30 字內）
+每篇文章必須嚴格使用以下格式（以下是一個完整範例，請照抄結構）：
+
+---範例開始---
+### Remimazolam versus Propofol for Sedation of Mechanically Ventilated Patients
+📍 Anesthesiology | 2026年04月 | Phase 3 RCT | ⭐⭐⭐
+🔑 Remimazolam tosylate 在 ICU 機械通氣鎮靜的療效與安全性不劣於 propofol
 📊 主要發現：
-- 發現 1（含具體數據）
-- 發現 2
-- 發現 3（選填）
-💡 臨床意義：（繁體中文，1–2 句）
-🔗 連結：URL
-（若與過去報導有關）🔁 跨期比較：一兩句說明異同，標明哪一週
+- Sedation success rate：remimazolam 87.3% vs propofol 84.1%（非劣效達標）
+- 低血壓發生率顯著較低（23% vs 41%，p<0.001）
+- 嗜伊紅球增多症（eosinophilia）為 remimazolam 特有副作用，發生率 8%
+💡 臨床意義：對低血壓高風險病患（septic shock、心衰）提供 propofol 以外的選擇；eosinophilia 需納入監測。
+🔗 https://doi.org/10.1097/ALN.0000000000006000
+---範例結束---
 
----
+每個欄位（📍🔑📊💡🔗）都是獨立一行，不用 bullet point 前置，不用 **bold**。
+📊 下面的發現用 bullet（`- `）列出。
 
 ## 評分標準
 - ⭐⭐⭐ 改變臨床實務 → 加入「本週必讀」區
@@ -252,37 +259,37 @@ def analyze_with_claude(new_articles, prev_summary):
 ---
 
 ## 📋 本週快覽
-（列出所有推薦文章，格式：- ⭐⭐⭐ **標題縮寫** — 期刊 — 一句話重點）
-（每篇一行，不用表格）
+（每篇推薦文章一行，格式：`- ⭐⭐⭐ 標題縮寫 — 期刊 — 一句話重點`）
+（禁止表格）
 
 ---
 
 ## 🎯 本週主題：[主題名稱]
-[2–3 段主題介紹：為何重要、各期刊角度、臨床意義]
+[2–3 段主題介紹]
 
 ---
 
 ## 📌 本週必讀（⭐⭐⭐）
-[所有 ⭐⭐⭐ 文章，每篇用上述固定格式]
+[所有 ⭐⭐⭐ 文章，每篇照範例格式]
 
 ---
 
 ## 其他重要文章
 
 ### Anesthesiology
-[Anesthesiology 的 ⭐⭐ 文章]
+[⭐⭐ 文章，照範例格式]
 
 ### Anesthesia & Analgesia
-[A&A 的 ⭐⭐ 文章]
+[⭐⭐ 文章，照範例格式]
 
 ### BJA
-[BJA 的 ⭐⭐ 文章]
+[⭐⭐ 文章，照範例格式]
 
 ### NEJM
-[NEJM 的 ⭐⭐ 文章]
+[⭐⭐ 文章，照範例格式]
 
 ### JAMA
-[JAMA 的 ⭐⭐ 文章]
+[⭐⭐ 文章，照範例格式]
 
 ---
 
@@ -294,7 +301,7 @@ def analyze_with_claude(new_articles, prev_summary):
 
 ---
 
-只輸出週報內容，不要加其他說明。每篇文章都要完整輸出，不可截斷。"""
+只輸出週報，不加說明。每篇文章完整輸出。"""
 
     print("呼叫 Claude API 分析文章...")
     response = client.messages.create(
