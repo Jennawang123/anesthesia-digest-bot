@@ -212,7 +212,7 @@ def analyze_with_claude(new_articles, prev_summary):
 ## 語言規則
 - 說明文字用繁體中文
 - 醫學術語、藥名、術式、期刊名稱一律保留英文，不翻譯
-- 例如：regional anesthesia, nerve block, propofol, TIVA, ICU, PONV, sugammadex, rocuronium, opioid, epidural, RSI, TAP block, ESPB, fascial plane block, laryngoscopy, spinal anesthesia, dexmedetomidine 等
+- 例如：regional anesthesia, nerve block, propofol, TIVA, ICU, PONV, sugammadex, rocuronium, opioid, epidural, RSI, TAP block, ESPB, spinal anesthesia, dexmedetomidine 等
 
 ## 本週新文章（共 {len(new_articles)} 篇）
 {articles_block}
@@ -220,24 +220,30 @@ def analyze_with_claude(new_articles, prev_summary):
 ## 過去已報導過的文章（供跨期比較參考）
 {prev_summary}
 
-## 任務
+## 格式規則（非常重要，請嚴格遵守）
 
-1. **找出本週主題**：從這批文章找 1–2 個核心熱點（多本期刊同時關注、重要 RCT/meta-analysis、新 guideline、或某本期刊的主打文章）
+每篇文章用以下固定格式，**絕對不要使用 Markdown 表格（| 符號）**：
 
-2. **選出 6–12 篇最重要的文章寫摘要**，格式：
-   **[英文標題]**
-   - **期刊**：Journal | 發表時間：YYYY年MM月 | 研究類型 | ⭐⭐⭐
-   - **一句話重點**：（繁體中文，醫學名詞保留英文）
-   - **主要發現**：2–3 點（繁體中文）
-   - **臨床意義**：1–2 句（繁體中文）
-   - **連結**：URL
-   （若與過去報導有關，加上）🔁 **與過去報導比較**：一兩句說明異同，標明哪一週
-
-3. **評分**：⭐⭐⭐ 改變臨床實務 / ⭐⭐ 值得了解 / ⭐ 有趣但影響較小。⭐⭐⭐ 標記「必讀」
-
-4. 輸出完整週報，結構如下：
+### [英文完整標題]
+📍 期刊名 | YYYY年MM月 | 研究類型 | ⭐⭐⭐（或⭐⭐或⭐）
+🔑 一句話重點：（繁體中文，醫學名詞保留英文，限 30 字內）
+📊 主要發現：
+- 發現 1（含具體數據）
+- 發現 2
+- 發現 3（選填）
+💡 臨床意義：（繁體中文，1–2 句）
+🔗 連結：URL
+（若與過去報導有關）🔁 跨期比較：一兩句說明異同，標明哪一週
 
 ---
+
+## 評分標準
+- ⭐⭐⭐ 改變臨床實務 → 加入「本週必讀」區
+- ⭐⭐ 值得了解
+- ⭐ 有趣但影響較小
+
+## 輸出結構（請完整輸出，不要截斷任何文章）
+
 # 🩺 麻醉科週報 — {today_str}
 
 > 本週涵蓋：Anesthesiology、Anesthesia & Analgesia、BJA、NEJM、JAMA
@@ -245,21 +251,38 @@ def analyze_with_claude(new_articles, prev_summary):
 
 ---
 
-## 📌 本週必讀（⭐⭐⭐）
-[必讀文章：標題、期刊、發表時間、一句話重點]
+## 📋 本週快覽
+（列出所有推薦文章，格式：- ⭐⭐⭐ **標題縮寫** — 期刊 — 一句話重點）
+（每篇一行，不用表格）
 
 ---
 
 ## 🎯 本週主題：[主題名稱]
-[2–3 段主題介紹：為何這個主題現在重要、各期刊的角度、對臨床的意義]
+[2–3 段主題介紹：為何重要、各期刊角度、臨床意義]
 
-### 主題相關文章
-[相關文章摘要]
+---
+
+## 📌 本週必讀（⭐⭐⭐）
+[所有 ⭐⭐⭐ 文章，每篇用上述固定格式]
 
 ---
 
 ## 其他重要文章
-[其餘文章，依期刊分組]
+
+### Anesthesiology
+[Anesthesiology 的 ⭐⭐ 文章]
+
+### Anesthesia & Analgesia
+[A&A 的 ⭐⭐ 文章]
+
+### BJA
+[BJA 的 ⭐⭐ 文章]
+
+### NEJM
+[NEJM 的 ⭐⭐ 文章]
+
+### JAMA
+[JAMA 的 ⭐⭐ 文章]
 
 ---
 
@@ -267,15 +290,16 @@ def analyze_with_claude(new_articles, prev_summary):
 - 搜尋日期：{datetime.now().strftime('%Y-%m-%d')}
 - 涵蓋期刊：5 本
 - 新增文章：{len(new_articles)} 篇
-- 推薦閱讀：X 篇（其中必讀 X 篇）
+- 推薦閱讀：X 篇（必讀 X 篇）
+
 ---
 
-只輸出週報內容，不要加其他說明。"""
+只輸出週報內容，不要加其他說明。每篇文章都要完整輸出，不可截斷。"""
 
     print("呼叫 Claude API 分析文章...")
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=4096,
+        max_tokens=8000,
         messages=[{"role": "user", "content": prompt}],
     )
     return response.content[0].text
@@ -283,37 +307,99 @@ def analyze_with_claude(new_articles, prev_summary):
 
 # ── Notion 建立頁面 ────────────────────────────────────────────────────────────
 
+def parse_inline(text):
+    """把 **bold** 轉成 Notion rich_text 陣列，保留其他文字原樣"""
+    import re
+    parts = []
+    for seg in re.split(r"(\*\*(?:[^*]|\*(?!\*))+\*\*)", text):
+        if not seg:
+            continue
+        if seg.startswith("**") and seg.endswith("**") and len(seg) > 4:
+            parts.append({
+                "type": "text",
+                "text": {"content": seg[2:-2][:1990]},
+                "annotations": {"bold": True},
+            })
+        else:
+            # 每個純文字段不超過 1990 字
+            for i in range(0, len(seg), 1990):
+                parts.append({"type": "text", "text": {"content": seg[i:i+1990]}})
+    return parts or [{"type": "text", "text": {"content": text[:1990]}}]
+
+
+def split_text_blocks(text, block_type, block_key):
+    """長文字切分成多個相同類型的 block（Notion 單一 rich_text 上限 2000 字）"""
+    blocks = []
+    # 切成最多 1990 字的段落，優先在句號或逗號處斷行
+    while text:
+        if len(text) <= 1990:
+            chunk, text = text, ""
+        else:
+            cut = 1990
+            for punct in ["。", "；", "，", ". ", " "]:
+                idx = text.rfind(punct, 0, 1990)
+                if idx > 800:
+                    cut = idx + len(punct)
+                    break
+            chunk, text = text[:cut], text[cut:].lstrip()
+        blocks.append({
+            "object": "block",
+            "type": block_type,
+            block_key: {"rich_text": parse_inline(chunk)},
+        })
+    return blocks
+
+
 def md_to_blocks(text):
     """把 Markdown 文字轉換成 Notion block 格式"""
     blocks = []
     for line in text.split("\n"):
-        stripped = line.rstrip()
-        if stripped.startswith("# "):
+        s = line.rstrip()
+
+        if s.startswith("# "):
             blocks.append({"object": "block", "type": "heading_1",
-                           "heading_1": {"rich_text": [{"type": "text", "text": {"content": stripped[2:]}}]}})
-        elif stripped.startswith("## "):
+                "heading_1": {"rich_text": parse_inline(s[2:])}})
+
+        elif s.startswith("## "):
             blocks.append({"object": "block", "type": "heading_2",
-                           "heading_2": {"rich_text": [{"type": "text", "text": {"content": stripped[3:]}}]}})
-        elif stripped.startswith("### "):
-            blocks.append({"object": "block", "type": "heading_3",
-                           "heading_3": {"rich_text": [{"type": "text", "text": {"content": stripped[4:]}}]}})
-        elif stripped.startswith("- ") or stripped.startswith("* "):
-            blocks.append({"object": "block", "type": "bulleted_list_item",
-                           "bulleted_list_item": {"rich_text": [{"type": "text", "text": {"content": stripped[2:]}}]}})
-        elif stripped == "---":
+                "heading_2": {"rich_text": parse_inline(s[3:])}})
+
+        elif s.startswith("### "):
+            title = s[4:]
+            # ⭐⭐⭐ 文章或必讀 → callout（橘色背景，在 iPhone 上明顯）
+            if "⭐⭐⭐" in title or title.startswith("📌"):
+                blocks.append({"object": "block", "type": "callout",
+                    "callout": {
+                        "rich_text": parse_inline(title),
+                        "icon": {"type": "emoji", "emoji": "📌"},
+                        "color": "orange_background",
+                    }})
+            else:
+                blocks.append({"object": "block", "type": "heading_3",
+                    "heading_3": {"rich_text": parse_inline(title)}})
+
+        elif s.startswith("- ") or s.startswith("* "):
+            content = s[2:]
+            # 以 emoji 開頭的 label 行（🔑/📊/💡/🔗/🔁/📍）→ 特別標示
+            if content and content[0] in "📍🔑📊💡🔗🔁⭐":
+                blocks.extend(split_text_blocks(content, "bulleted_list_item", "bulleted_list_item"))
+            else:
+                blocks.extend(split_text_blocks(content, "bulleted_list_item", "bulleted_list_item"))
+
+        elif s == "---":
             blocks.append({"object": "block", "type": "divider", "divider": {}})
-        elif stripped.startswith("> "):
-            blocks.append({"object": "block", "type": "quote",
-                           "quote": {"rich_text": [{"type": "text", "text": {"content": stripped[2:]}}]}})
-        elif stripped.startswith("**") and stripped.endswith("**") and len(stripped) > 4:
-            blocks.append({"object": "block", "type": "paragraph",
-                           "paragraph": {"rich_text": [{"type": "text", "text": {"content": stripped},
-                                                        "annotations": {"bold": True}}]}})
-        elif stripped:
-            # 截斷過長的段落（Notion 單一 rich_text 上限 2000 字）
-            content = stripped[:1990]
-            blocks.append({"object": "block", "type": "paragraph",
-                           "paragraph": {"rich_text": [{"type": "text", "text": {"content": content}}]}})
+
+        elif s.startswith("> "):
+            content = s[2:]
+            blocks.extend(split_text_blocks(content, "quote", "quote"))
+
+        elif s:
+            # 以 emoji label 開頭的獨立行（📍/🔑/📊/💡/🔗）→ 用 quote block 突顯
+            if s and s[0] in "📍🔑📊💡🔗🔁":
+                blocks.extend(split_text_blocks(s, "quote", "quote"))
+            else:
+                blocks.extend(split_text_blocks(s, "paragraph", "paragraph"))
+
     return blocks
 
 
