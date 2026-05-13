@@ -249,7 +249,13 @@ def analyze_with_claude(new_articles, prev_summary):
 - ⭐⭐ 值得了解
 - ⭐ 有趣但影響較小
 
-## 輸出結構（請完整輸出，不要截斷任何文章）
+## 詳細摘要數量限制（重要）
+- ⭐⭐⭐ 文章：**全部**寫詳細摘要（預計 3–5 篇）
+- ⭐⭐ 文章：精選最重要的 **4–6 篇**寫詳細摘要，其餘只列在快覽
+- ⭐ 文章：**只出現在快覽**，不寫詳細摘要
+- 詳細摘要總數：**最多 10 篇**
+
+## 輸出結構（請完整輸出每篇選定的詳細摘要）
 
 # 🩺 麻醉科週報 — {today_str}
 
@@ -259,8 +265,8 @@ def analyze_with_claude(new_articles, prev_summary):
 ---
 
 ## 📋 本週快覽
-（每篇推薦文章一行，格式：`- ⭐⭐⭐ 標題縮寫 — 期刊 — 一句話重點`）
-（禁止表格）
+（所有推薦文章，每篇一行：`- ⭐⭐⭐ 標題縮寫 — 期刊 — 一句話重點`）
+（⭐ 文章也列在此，但不寫詳細摘要）
 
 ---
 
@@ -270,26 +276,26 @@ def analyze_with_claude(new_articles, prev_summary):
 ---
 
 ## 📌 本週必讀（⭐⭐⭐）
-[所有 ⭐⭐⭐ 文章，每篇照範例格式]
+[所有 ⭐⭐⭐ 文章，每篇照範例格式，完整輸出]
 
 ---
 
 ## 其他重要文章
 
 ### Anesthesiology
-[⭐⭐ 文章，照範例格式]
+[精選 ⭐⭐ 文章，照範例格式，完整輸出]
 
 ### Anesthesia & Analgesia
-[⭐⭐ 文章，照範例格式]
+[精選 ⭐⭐ 文章，照範例格式，完整輸出]
 
 ### BJA
-[⭐⭐ 文章，照範例格式]
+[精選 ⭐⭐ 文章，照範例格式，完整輸出]
 
 ### NEJM
-[⭐⭐ 文章，照範例格式]
+[精選 ⭐⭐ 文章，照範例格式，完整輸出]
 
 ### JAMA
-[⭐⭐ 文章，照範例格式]
+[精選 ⭐⭐ 文章，照範例格式，完整輸出]
 
 ---
 
@@ -297,16 +303,16 @@ def analyze_with_claude(new_articles, prev_summary):
 - 搜尋日期：{datetime.now().strftime('%Y-%m-%d')}
 - 涵蓋期刊：5 本
 - 新增文章：{len(new_articles)} 篇
-- 推薦閱讀：X 篇（必讀 X 篇）
+- 詳細摘要：X 篇（必讀 X 篇）
 
 ---
 
-只輸出週報，不加說明。每篇文章完整輸出。"""
+只輸出週報，不加說明。選定的每篇文章必須完整輸出，不可截斷。"""
 
     print("呼叫 Claude API 分析文章...")
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=8000,
+        max_tokens=16000,
         messages=[{"role": "user", "content": prompt}],
     )
     return response.content[0].text
