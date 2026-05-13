@@ -13,6 +13,7 @@ import requests
 import json
 import feedparser
 import xml.etree.ElementTree as ET
+import time
 from datetime import datetime, timedelta
 import os
 import sys
@@ -78,13 +79,22 @@ def fetch_pubmed_journal(journal_name, search_term, max_results=25):
             print(f"  ✓ {journal_name}: 0 篇（近 35 天無新文章）")
             return articles
 
-        # Step 2: efetch 取得完整 XML（含摘要）
-        r2 = requests.get(
-            f"{NCBI_EUTILS}/efetch.fcgi",
-            params={"db": "pubmed", "id": ",".join(ids), "retmode": "xml"},
-            timeout=30,
-            headers=NCBI_HEADERS,
-        )
+        # NCBI rate limit: 3 requests/sec without API key → 加間隔避免 throttle
+        time.sleep(1)
+
+        # Step 2: efetch 取得完整 XML（含摘要），最多重試一次
+        for attempt in range(2):
+            r2 = requests.get(
+                f"{NCBI_EUTILS}/efetch.fcgi",
+                params={"db": "pubmed", "id": ",".join(ids), "retmode": "xml"},
+                timeout=30,
+                headers=NCBI_HEADERS,
+            )
+            if r2.text.strip().startswith("<?xml") or r2.text.strip().startswith("<PubmedArticleSet"):
+                break
+            # 非 XML 回應（通常是 throttle error page），等待後重試
+            print(f"  ⚠ {journal_name} efetch 非 XML 回應，重試中...", file=sys.stderr)
+            time.sleep(3)
         root = ET.fromstring(r2.text)
 
         for art in root.findall(".//PubmedArticle"):
@@ -151,6 +161,7 @@ def fetch_articles():
 
     for journal_name, search_term in PUBMED_JOURNALS.items():
         all_articles.extend(fetch_pubmed_journal(journal_name, search_term))
+        time.sleep(1)  # 各期刊之間額外間隔
 
     for journal_name, url in RSS_FEEDS.items():
         all_articles.extend(fetch_rss_journal(journal_name, url))
