@@ -1,12 +1,18 @@
 """
 麻醉科週報自動化腳本
-每週從五大期刊 RSS feed 抓取最新文章，透過 Claude API 整理成週報，存入 Notion
+每週從五大期刊抓取最新文章，透過 Claude API 整理成週報，存入 Notion
+
+抓取策略：
+- Anesthesiology / A&A：NCBI E-utilities（不受 Cloudflare 封鎖）
+- BJA：ScienceDirect RSS
+- NEJM / JAMA：各自官方 RSS
 """
 
 import anthropic
 import requests
 import json
 import feedparser
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 import os
 import sys
@@ -17,13 +23,21 @@ NOTION_API_KEY = os.environ["NOTION_API_KEY"]
 NOTION_PARENT_ID = "32fe77f4-b1f0-8049-9ecc-eb6a1a5d6a0f"  # 「麻醉週報」頁面 ID
 REPORTED_FILE = "reported_articles.json"
 
-JOURNAL_FEEDS = {
-    "Anesthesiology": "https://pubs.asahq.org/rss/site_1/1.xml",
-    "Anesthesia & Analgesia": "https://journals.lww.com/anesthesia-analgesia/rss/current",
-    "British Journal of Anaesthesia": "https://www.bjanaesthesia.org/feed/rss",
+# 使用 RSS 的期刊
+RSS_FEEDS = {
+    "British Journal of Anaesthesia": "https://rss.sciencedirect.com/publication/science/00070912",
     "NEJM": "https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss",
     "JAMA": "https://jamanetwork.com/rss/site_3/67.xml",
 }
+
+# 使用 NCBI E-utilities 的期刊（官網有 Cloudflare 封鎖）
+PUBMED_JOURNALS = {
+    "Anesthesiology": '"Anesthesiology"[Journal]',
+    "Anesthesia & Analgesia": '"Anesthesia and Analgesia"[Journal]',
+}
+
+NCBI_EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+NCBI_HEADERS = {"User-Agent": "AnesthesiaDigestBot/1.0 (educational; contact: anesthesia-digest)"}
 
 
 # ── 工具函數 ───────────────────────────────────────────────────────────────────
@@ -40,24 +54,107 @@ def save_reported(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def fetch_articles():
-    """從各期刊 RSS feed 抓取文章"""
-    all_articles = []
-    for journal, url in JOURNAL_FEEDS.items():
-        try:
-            feed = feedparser.parse(url)
-            for entry in feed.entries[:25]:
-                all_articles.append({
-                    "journal": journal,
-                    "title": entry.get("title", "").strip(),
-                    "abstract": entry.get("summary", entry.get("description", ""))[:600],
-                    "url": entry.get("link", ""),
-                    "published": entry.get("published", ""),
-                    "uid": entry.get("id", entry.get("link", "")),
+def fetch_pubmed_journal(journal_name, search_term, max_results=25):
+    """用 NCBI E-utilities 抓期刊最新文章（含摘要）"""
+    articles = []
+    try:
+        # Step 1: esearch 取得最新 PMIDs
+        r = requests.get(
+            f"{NCBI_EUTILS}/esearch.fcgi",
+            params={
+                "db": "pubmed",
+                "term": f"{search_term} AND hasabstract",
+                "retmax": max_results,
+                "retmode": "json",
+                "sort": "pub date",
+                "datetype": "pdat",
+                "reldate": 35,  # 過去 35 天，確保涵蓋一週新文章
+            },
+            timeout=20,
+            headers=NCBI_HEADERS,
+        )
+        ids = r.json()["esearchresult"]["idlist"]
+        if not ids:
+            print(f"  ✓ {journal_name}: 0 篇（近 35 天無新文章）")
+            return articles
+
+        # Step 2: efetch 取得完整 XML（含摘要）
+        r2 = requests.get(
+            f"{NCBI_EUTILS}/efetch.fcgi",
+            params={"db": "pubmed", "id": ",".join(ids), "retmode": "xml"},
+            timeout=30,
+            headers=NCBI_HEADERS,
+        )
+        root = ET.fromstring(r2.text)
+
+        for art in root.findall(".//PubmedArticle"):
+            pmid = art.findtext(".//PMID", "")
+            title_el = art.find(".//ArticleTitle")
+            title = "".join(title_el.itertext()) if title_el is not None else ""
+            title = title.strip()
+
+            # 跳過 erratum / correction（無摘要、無實質內容）
+            pub_types = [el.text for el in art.findall(".//PublicationType")]
+            if any(t in ["Published Erratum", "Retraction of Publication"] for t in pub_types if t):
+                continue
+
+            abstract_parts = ["".join(el.itertext()) for el in art.findall(".//AbstractText")]
+            abstract = " ".join(abstract_parts)[:600]
+
+            pub_date = art.findtext(".//PubDate/Year", "") + "年" + art.findtext(".//PubDate/Month", "")
+            doi = art.findtext('.//ELocationID[@EIdType="doi"]', "")
+            url = f"https://doi.org/{doi}" if doi else f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+
+            if title:
+                articles.append({
+                    "journal": journal_name,
+                    "title": title,
+                    "abstract": abstract,
+                    "url": url,
+                    "published": pub_date,
+                    "uid": pmid,
                 })
-            print(f"  ✓ {journal}: {len(feed.entries)} 篇")
-        except Exception as e:
-            print(f"  ✗ {journal} 抓取失敗: {e}", file=sys.stderr)
+
+        print(f"  ✓ {journal_name}: {len(articles)} 篇")
+    except Exception as e:
+        print(f"  ✗ {journal_name} 抓取失敗: {e}", file=sys.stderr)
+    return articles
+
+
+def fetch_rss_journal(journal_name, url, max_results=25):
+    """用 RSS feed 抓期刊最新文章"""
+    articles = []
+    try:
+        r = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        feed = feedparser.parse(r.content)
+        for entry in feed.entries[:max_results]:
+            title = entry.get("title", "").strip()
+            if not title:
+                continue
+            articles.append({
+                "journal": journal_name,
+                "title": title,
+                "abstract": entry.get("summary", entry.get("description", ""))[:600],
+                "url": entry.get("link", ""),
+                "published": entry.get("published", ""),
+                "uid": entry.get("id", entry.get("link", "")),
+            })
+        print(f"  ✓ {journal_name}: {len(feed.entries)} 篇")
+    except Exception as e:
+        print(f"  ✗ {journal_name} 抓取失敗: {e}", file=sys.stderr)
+    return articles
+
+
+def fetch_articles():
+    """從各期刊抓取文章"""
+    all_articles = []
+
+    for journal_name, search_term in PUBMED_JOURNALS.items():
+        all_articles.extend(fetch_pubmed_journal(journal_name, search_term))
+
+    for journal_name, url in RSS_FEEDS.items():
+        all_articles.extend(fetch_rss_journal(journal_name, url))
+
     return all_articles
 
 
