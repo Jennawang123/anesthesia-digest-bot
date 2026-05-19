@@ -1,1 +1,754 @@
-{"articles": []}
+{
+  "articles": [
+    {
+      "title": "Advancing Perioperative Medicine: A Multistakeholder Perspective.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006072",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Anesthesia workstation performance in pediatric ventilation - Part 1: Precision of ventilation.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006149",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Anesthesia workstation performance in pediatric ventilation - Part 2: Characteristics during pressure support ventilation and oxygen rise times.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006150",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Effect of Paroxetine or Escitalopram Coadministered with Oxycodone versus Oxycodone Alone on Ventilation during Hypercapnia: A Randomized Clinical Trial.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006043",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Developing a Framework for Career Fulfillment in Academic Anesthesiology: Findings from a Single-institution Focus Group Study.",
+      "url": "https://doi.org/10.1097/ALN.0000000000005920",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Choice of anesthesia in microelectrode recording-guided deep brain stimulation surgery for Parkinson's disease (CHAMPION): A noninferiority randomized controlled trial.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006133",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Intervals For Oscillometric Arterial Pressure Monitoring During Noncardiac Surgery: the '2.5-Minute Versus 5-Minute' Randomized Clinical Trial.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006140",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Clinical Performance in Critical Care Simulation Under Sleep Deprivation: Effects of Power Napping in the R-NAP Randomized Controlled Trial.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006135",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Mechanical power and energy in invasively ventilated newborn infants.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006128",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Short- and Long-Term Efficacy and Safety of Levosimendan in VA-ECMO Weaning: The WEANILEVO Randomized Double-Blind Multicenter Trial.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006143",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Cryotherapy and Duration of Inflammatory Pain in Mice.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006066",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Efficacy and Safety of Remimazolam Tosylate versus Propofol for Sedation of Postoperative Mechanically Ventilated Patients in Intensive Care Units: A Multicenter, Randomized, Single-blind, Noninferiority, Phase 3 Trial.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006047",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Association of Posttraumatic Growth and Analgesic Use in Postoperative Patients.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006060",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Cryoneurolysis Thermal Graphs: In Vivo Descriptive Data from Ultrasound-guided Percutaneous Thermocouples.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006059",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "\"Effect of weight-based versus absolute norepinephrine dosing on mortality risk in obese patients with septic shock: an observational, multicohort, retrospective study\".",
+      "url": "https://doi.org/10.1097/ALN.0000000000006134",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Early Respiratory Mechanics and Gas Exchange after Lung Transplantation: Associations with Severe Primary Graft Dysfunction.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006138",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Circulating Endothelial Signature: A Biomarker of Delirium Risk and Severity in Postoperative Patients.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006137",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Continuous Erector Spinae Plane Blocks to Treat Pain Following Percutaneous Nephrolithotomy: A Randomized, Triple-Masked, Placebo-Controlled Clinical Trial.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006129",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Evaluating three routes of tranexamic acid administration in total hip and knee arthroplasty: A nationwide database analysis in Taiwan.",
+      "url": "https://doi.org/10.1097/ALN.0000000000006114",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Social Drivers of Health in Pediatric Perioperative Care.",
+      "url": "https://doi.org/10.1097/ALN.0000000000005983",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Anesthesiology 5.0: Thriving amid Volatility, Uncertainty, Complexity, and Ambiguity.",
+      "url": "https://doi.org/10.1097/ALN.0000000000005928",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "2025 John W. Severinghaus Lecture: It's Not Your Fault-Or Is It? The Cognitive Basis for Errors.",
+      "url": "https://doi.org/10.1097/ALN.0000000000005839",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Rural America Nears a Cliff: Federal Funding Cuts Threaten Health Systems and Anesthesia Care.",
+      "url": "https://doi.org/10.1097/ALN.0000000000005934",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Rewarding Productivity, Hoping for Creativity.",
+      "url": "https://doi.org/10.1097/ALN.0000000000005954",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Optimizing Perioperative Management of Sarcoidosis in Noncardiac Surgery: A Focused Review and Practical Framework.",
+      "url": "https://doi.org/10.1097/ALN.0000000000005890",
+      "journal": "Anesthesiology",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Minimum Effective Dose of Prophylactic Oxytocin Infusion During Cesarean Delivery in Preterm and Term Pregnancy: A Sequential Allocation Dose Finding Study.",
+      "url": "https://doi.org/10.1213/ANE.0000000000008099",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "How to Innovate as an Anesthesiologist: Guidance From the American Society of Anesthesiologists Committee on Innovation.",
+      "url": "https://doi.org/10.1213/ANE.0000000000008075",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "The Effect of Immersive Virtual Reality on Anterograde Amnesia and Subjective Pain During Procedures: A Within-Subject Randomized Controlled Study.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007858",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Intraoperative Adverse Events, Waste, and Costs Before and After Implementation of Intravenous Fluid Conservation During a National Shortage.",
+      "url": "https://doi.org/10.1213/ANE.0000000000008085",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Respiratory Depression after Perioperative Methadone Administration: A Systematic Review and Meta-analysis.",
+      "url": "https://doi.org/10.1213/ANE.0000000000008077",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Neuronal Cell Death Modalities and Protective Mechanisms Induced By Sevoflurane: A Narrative Review.",
+      "url": "https://doi.org/10.1213/ANE.0000000000008035",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Nephrocheck for Prediction of In-Hospital Acute Kidney Injury and Major Adverse Kidney Events After Cardiac Surgery.",
+      "url": "https://doi.org/10.1213/ANE.0000000000008079",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "The Use of Methadone in Adult Cardiac Surgery: A Systematic Review With Narrative Synthesis.",
+      "url": "https://doi.org/10.1213/ANE.0000000000008074",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "The Association of Preoperative Cognitive Dysfunction to Common Intraoperative Electroencephalographic Parameters and Cerebral Hypoxia During Cardiac Surgery.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007724",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "A Retrospective Cohort Assessment of Labor Epidural Catheter Replacement With Programmed Intermittent Epidural Bolus and Continuous Epidural Infusion.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007788",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Ultrasound-Guided In-Plane Subclavian Vein Puncture versus Prior Ultrasound and Landmark Technique: A Randomized Controlled Trial.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007841",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "A Comparison of Ten Large Language Models and a Conventional Search Engine for Clinical Decision Support in Anesthesiology: Expert Agreement and Physician Perceptions.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007864",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Contribution of Acute Kidney Injury After Liver Transplant in Development of Chronic Kidney Disease: A Single-Center Retrospective Cohort Study.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007911",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Communication Training for the Preoperative Anesthesia Consultation Reduces Anxiety: A Prospective, Patient-Blinded Pre-Post Intervention Study.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007791",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Impact of Emergence Delirium on Self-reported Postoperative Recovery After Noncardiac Surgery: A Prospective Cohort Study.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007805",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Esmolol as an Adjunct in Multimodal Anesthesia: A Systematic Review and Meta-Analysis of Its Opioid-Sparing and Analgesic Effects.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007787",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Neuraxial Compared With General Anesthesia on Postoperative Outcomes After Hip Arthroplasty for Geriatric Hip Fracture: Results From a National Database.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007758",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Less Is More for Bleeding Management Algorithms in Cardiac Surgery: A Network Meta-Analysis and Meta-Regression of Randomized Studies.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007714",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Isoflurane Exposure Influence on Sleep Architecture in a Rat Model of Alzheimer's Disease.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007717",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Use of Machine Learning to Derive Discrete Clinical Phenotypes and Assess Treatment-Effect Heterogeneity in the Steroids in Cardiac Surgery Trial Dataset.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007715",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Anesthesiology Milestones 1.0: Residents' Learning Trajectories and Training Outcomes.",
+      "url": "https://doi.org/10.1213/ANE.0000000000007693",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Pro-Con Debate: Opioids and Perioperative Organ Injury-Friend or Foe?",
+      "url": "https://doi.org/10.1213/ANE.0000000000007707",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Examining the Association Between Model for End-Stage Liver Disease 3.0 Scores and Intraoperative Blood Component Transfusion During Liver Transplant Surgery.",
+      "url": "https://doi.org/10.1213/ANE.0000000000008081",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Outcome Differences Between General and Neuraxial Anesthesia for Hip Fracture by Frailty and Age in the Elderly: A Retrospective Cohort Study.",
+      "url": "https://doi.org/10.1213/ANE.0000000000008062",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Perioperative Dexamethasone in Periprosthetic Joint Infection Surgery: Diabetes-Stratified Results From a Propensity Score-Matched Retrospective Cohort Study.",
+      "url": "https://doi.org/10.1213/ANE.0000000000008049",
+      "journal": "Anesthesia & Analgesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "The carbon footprint of general anaesthesia in adult patients: re-evaluating the environmental sustainability of propofol. Comment on <em>Br J Anaesth</em> 2025; 134: 1620–7",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002953?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Conditional <em>versus</em> expected power in trial design: the concept of assurance illustrated in mortality trials",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002989?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Stellate ganglion block for preventing perioperative arrhythmias: revised analysis. Comment on <em>Br J Anaesth</em> 2026; 136: 495–506",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003272?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Substantial nitrous oxide loss from a centrally piped hospital supply system: single-centre quantitative analysis",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003235?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Clinical meaning of the modified Cormack–Lehane grade during direct laryngoscopy and Macintosh videolaryngoscopy",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002540?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Analgesic nonresponsiveness to nitrous oxide during labour as a risk factor for postpartum depression: a prospective observational cohort study",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003223?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "High-flow nasal oxygenation, not ventilation: defining a PaCO<sub>2</sub> threshold during apnoeic high-flow nasal oxygenation. Comment on <em>Br J Anaesth</em> 2026; 136: 481–85",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002977?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Decision-making processes in older patients that require, but do not undergo, emergency laparotomy in the UK: a multicentre observational study",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002813?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Refusal of blood transfusion based on donor COVID-19 vaccination status: an emerging postpandemic challenge for perioperative care",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002795?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Environmental impact of peripheral venous cannulation: comparison between methods",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002588?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Genotype–phenotype relationships in butyrylcholinesterase deficiency: a systematic review",
+      "url": "https://www.sciencedirect.com/science/article/pii/S000709122600276X?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Association of postoperative elevation of biomarkers of neural injury in blood with postoperative neurocognitive disorders in adults receiving general anaesthesia: a systematic review",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002771?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Patient Blood Management: a systematic review of current international guidelines",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002734?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Variation in anaesthesia-related costs and charges for total hip and knee arthroplasty cases: an observational study using United States claims data",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002862?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Remote perioperative symptom monitoring through a smartphone is feasible: evidence from the Personalised Prediction of Persistent Postsurgical Pain (P5) study",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002886?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Associations of baseline characteristics, patient-reported outcomes, and satisfaction with pain therapy with the patient's global impression of change: recovery endpoint or early symptom appraisal? Comment on <em>Br J Anaesth</em> 2026; 136: 1341-8",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002679?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Local anaesthetic pharmacokinetics of single-injection erector spinae plane block: systematic review of pharmacokinetic studies",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002849?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Acute normovolaemic haemodilution after cardiac surgery. Comment on <em>Br J Anaesth</em> 2026; 136: 836–46",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002801?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Shrinking pharmacological options in modern anaesthesia",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002746?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Kappa opioid receptor internalisation-induced p38 nuclear translocation suppresses glioma progression: methodological considerations and future directions. Comment on <em>Br J Anaesth</em> 2025; 134: 759–71",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002552?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Individualised anaesthesia and analgesia in surgery: conceptual framework for improving postoperative pain",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002758?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Sevoflurane alters α5β3GABA(A) receptor trafficking through calcium/calmodulin-dependent protein kinase II-dependent β3 subunit phosphorylation to produce cognitive impairment in aged mice. Comment on <em>Br J Anaesth</em> 2026; 136: 1518-33",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002151?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Safety of clonidine and dexmedetomidine in peripheral nerve blocks: interpreting preclinical safety data. Comment on <em>Br J Anaesth</em> 2026; 136: 255–65",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002898?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Responsibility cannot be abdicated: a mandate for patient-centred precision care in perioperative brain health. Comment on <em>Br J Anaesth</em> 2026<em>;</em> doi: 10.1016/j.bja.2026.02.009",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002783?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Stellate ganglion block for preventing perioperative arrhythmias. Comment on <em>Br J Anaesth</em> 2026; 136: 495–506",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002837?dgcid=rss_sd_all",
+      "journal": "British Journal of Anaesthesia",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Ensitrelvir for Covid-19 Postexposure Prophylaxis in Household Contacts",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2509306?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Endovascular Treatment of Medium-Vessel-Occlusion Strokes",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2514120?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Telitacicept for IgA Nephropathy — Interim Analysis of a Phase 3 Trial",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2514415?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "A Phase 3 Trial of Brepocitinib in Dermatomyositis",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2503531?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Inflammatory Myopathies",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMra2415426?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "The Inherited Basis of Coronary Artery Disease",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMc2602956?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Targeting CD20 versus APRIL or BAFF and APRIL for IgA Nephropathy",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMc2603286?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Therapy for Atrial Fibrillation in Patients with Drug-Eluting Stents",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMc2603462?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Cabotegravir plus Rilpivirine for Persons with HIV and Adherence Challenges",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMc2604136?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Dulaglutide-Associated Choroidal Lymphoid Hyperplasia",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMc2600397?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Current Causes of Death among Children and Adolescents in the United States",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMc2600445?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Editing tRNA Genes to Broaden Nonsense Therapeutics",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMx260014?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Endovascular Therapy for Medium-Vessel Occlusion Stroke — Narrowing the Target Population",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMe2601852?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "A Phase 3 Trial of Brepocitinib in Dermatomyositis",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMe2604009?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Inhalation Injury from House Fire Smoke",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMicm2517900?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Cerebral Syphilitic Gumma",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMicm2518333?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Central Retinal-Vein Occlusion",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMicm2518603?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Case 14-2026: A 50-Year-Old Woman with Vaginal Bleeding and Anemia",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMcpc2517864?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "How Did Race Get Into Lung Testing?",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMp2601975?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Unpacking the Ordinary",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMp2513327?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Can AI Say “I Don’t Know”?",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMp2517624?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "A Sleeping Giant of Health Care Affordability — Self-Insured Employers",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMp2517872?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Overcoming the Digital Divide in Health Care AI",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMp2600816?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Inhaled Treprostinil for Idiopathic Pulmonary Fibrosis",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2512911?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Prehospital Whole Blood in Traumatic Hemorrhage — a Randomized Controlled Trial",
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2516043?af=R&rss=currentIssue",
+      "journal": "NEJM",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "JAMA",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2848704",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Audio Highlights April 17, 2026",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2848102",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "FDA Approves Weekly Basal Insulin for Adults With Type 2 Diabetes",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2848078",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Metabolically Healthy Obesity in Children Still Raises Cardiometabolic Risk",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2848077",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "FDA Approves GLP-1 Obesity Pill Without Food or Water Restrictions",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2848076",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Hypertension Burden Increasing Worldwide, With Stark Disparities",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2848075",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Influencer Prescription Drug Promotion May Spread Misinformation",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2848074",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "WHO Releases New Tuberculosis Testing Guidelines",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2848073",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "New Autism Group to Counter Overhauled Federal Committee",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2848072",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "What to Know About the Cicada SARS-CoV-2 Variant",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2848071",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Error in Denominators",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847987",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Long-Term Neurocognitive Outcomes After Severe Malaria Infection",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847974",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Long-Term Cognitive Ability and Academic Achievement After Childhood Severe Malaria",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847971",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "A Love Letter to Clinical Trials",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847669",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Inconsistencies Between Text and Table",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847653",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "More US Immigration Detention, Less Oversight, and More Deaths",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847652",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Mortality in US Immigration and Customs Enforcement Detention",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847650",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Mandatory Training Modules in Health Care",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847646",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Incorrect Data and Reference",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847584",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Virtual and Remotely Conducted Trials",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847583",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Tobramycin Plus Vancomycin to Prevent Surgical Site Infection",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847582",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Intrawound Tobramycin Plus Vancomycin to Prevent Surgical Site Infection in Tibial Fractures Research Summary",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847579",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "International Reference Pricing Across Medicare and Medicaid",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847578",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Changes in Mifepristone Use at Pharmacies After Removal of the FDA In-Person Dispensing Requirement",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847577",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    },
+    {
+      "title": "Real-World Outcomes of Transcatheter Tricuspid Valve Replacement",
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2847572",
+      "journal": "JAMA",
+      "reported_date": "2026-05-19"
+    }
+  ]
+}
