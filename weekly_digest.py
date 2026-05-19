@@ -249,6 +249,12 @@ def analyze_with_claude(new_articles, prev_summary):
 - ⭐⭐ 值得了解
 - ⭐ 有趣但影響較小
 
+## 跨期刊熱點偵測（重要）
+閱讀完所有文章後，判斷本週是否有 **同一主題在 2 本以上期刊各有文章**。
+常見熱點主題例如：opioid-sparing anesthesia、PONV、regional anesthesia、airway management、perioperative cardiac risk、neuraxial anesthesia、dexmedetomidine、sugammadex、multimodal analgesia 等。
+- 若有：在輸出中加入「🔥 跨期刊熱點」section（格式見下方輸出結構）
+- 若無：完全省略該 section，不留空白標題
+
 ## 詳細摘要數量限制（重要）
 - ⭐⭐⭐ 文章：**全部**寫詳細摘要（預計 3–5 篇）
 - ⭐⭐ 文章：精選最重要的 **4–6 篇**寫詳細摘要，其餘只列在快覽
@@ -296,6 +302,16 @@ def analyze_with_claude(new_articles, prev_summary):
 
 ### JAMA
 [精選 ⭐⭐ 文章，照範例格式，完整輸出]
+
+---
+
+## 🔥 跨期刊熱點（若本週有符合條件則輸出，否則省略整個 section）
+主題：[e.g. Opioid-sparing anesthesia]
+[一段話說明為何這個主題本週跨期刊出現、臨床背景]
+各期刊觀點：
+- [期刊名]：[研究設計] — [一句話結論]
+- [期刊名]：[研究設計] — [一句話結論]
+💬 比較：[各期刊研究設計差異、結論是否一致、對臨床實務的綜合啟示]
 
 ---
 
