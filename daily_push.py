@@ -38,8 +38,23 @@ def load_articles(weekday: int) -> list[dict]:
     with open("daily_data/week.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     arts = data["articles"].get(str(weekday), [])
-    # 3–5 篇：5 篇以上取 5，3 篇以下全取（不足也推）
-    return arts[:5] if len(arts) >= 5 else arts
+
+    # 每本期刊最多 2 篇，確保來源多元，總篇數 3–5
+    seen: dict[str, int] = {}
+    selected = []
+    for a in arts:
+        journal = a.get("journal", "")
+        if seen.get(journal, 0) < 2:
+            selected.append(a)
+            seen[journal] = seen.get(journal, 0) + 1
+        if len(selected) == 5:
+            break
+
+    # 若多元篩選後不足 3 篇，直接取前 5（寧可重複期刊也要夠篇數）
+    if len(selected) < 3:
+        selected = arts[:5]
+
+    return selected
 
 
 # ── 2. Format ─────────────────────────────────────────────────────────────────
