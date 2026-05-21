@@ -55,28 +55,35 @@ def save_reported(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def fetch_pubmed_journal(journal_name, search_term, max_results=25):
+def fetch_pubmed_journal(journal_name, search_term, max_results=60):
     """用 NCBI E-utilities 抓期刊最新文章（含摘要）"""
     articles = []
     try:
+        # 用月份範圍而非 reldate：捕捉 epub-ahead 文章（可能 epub 早幾個月但本月才出刊）
+        # 查當月 + 前兩個月；deduplication 會過濾已報導過的文章
+        today = datetime.now()
+        two_months_ago = today.replace(day=1)
+        for _ in range(2):
+            two_months_ago = (two_months_ago - timedelta(days=1)).replace(day=1)
+        mindate = two_months_ago.strftime("%Y/%m")
+        maxdate = today.strftime("%Y/%m")
+
         # Step 1: esearch 取得最新 PMIDs
         r = requests.get(
             f"{NCBI_EUTILS}/esearch.fcgi",
             params={
                 "db": "pubmed",
-                "term": f"{search_term} AND hasabstract",
+                "term": f"{search_term} AND hasabstract AND (\"{mindate}\"[pdat]:\"{maxdate}\"[pdat])",
                 "retmax": max_results,
                 "retmode": "json",
                 "sort": "pub date",
-                "datetype": "pdat",
-                "reldate": 35,  # 過去 35 天，確保涵蓋一週新文章
             },
             timeout=20,
             headers=NCBI_HEADERS,
         )
         ids = r.json()["esearchresult"]["idlist"]
         if not ids:
-            print(f"  ✓ {journal_name}: 0 篇（近 35 天無新文章）")
+            print(f"  ✓ {journal_name}: 0 篇（{mindate}–{maxdate} 無新文章）")
             return articles
 
         # NCBI rate limit: 3 requests/sec without API key → 加間隔避免 throttle
