@@ -1,0 +1,38 @@
+name: 麻醉科日報 - 週一抓取分類
+
+on:
+  schedule:
+    # 週一 00:45 UTC = 08:45 台灣時間
+    - cron: '45 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-and-classify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic requests feedparser
+
+      - name: Fetch and classify articles
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        run: python daily_fetch_classify.py
+
+      - name: Commit week.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add daily_data/week.json
+          git diff --staged --quiet || git commit -m "chore: weekly classified articles [skip ci]"
+          git push

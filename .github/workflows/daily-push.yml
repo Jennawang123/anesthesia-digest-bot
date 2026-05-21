@@ -1,0 +1,35 @@
+name: 麻醉科日報 - 每日推送
+
+on:
+  schedule:
+    # 週一至週五 01:00 UTC = 09:00 台灣時間
+    - cron: '0 1 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  daily-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 確保拿到週一 fetch-classify 提交的最新 week.json
+          ref: main
+
+      - name: Pull latest (週一 fetch 可能剛完成)
+        run: git pull --rebase origin main
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic requests
+
+      - name: Push daily digest to LINE
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_GROUP_ID: ${{ secrets.LINE_GROUP_ID }}
+        run: python daily_push.py
