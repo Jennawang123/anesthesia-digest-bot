@@ -30,7 +30,11 @@ ERRATA_KEYWORDS = ("erratum", "correction", "retraction", "corrigendum")
 
 # ── 1. Fetch ──────────────────────────────────────────────────────────────────
 
-def fetch_ncbi(journal: str, days_back: int = 14) -> list[dict]:
+def fetch_ncbi_by_issn(issn: str, journal_label: str, days_back: int = 30) -> list[dict]:
+    return fetch_ncbi(f"{issn}[ISSN]", journal_label, days_back)
+
+
+def fetch_ncbi(query_term: str, journal_label: str, days_back: int = 30) -> list[dict]:
     today = datetime.now(timezone.utc)
     start = (today - timedelta(days=days_back)).strftime("%Y/%m/%d")
     end   = today.strftime("%Y/%m/%d")
@@ -39,7 +43,7 @@ def fetch_ncbi(journal: str, days_back: int = 14) -> list[dict]:
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
         params={
             "db": "pubmed",
-            "term": f'"{journal}"[Journal] AND ("{start}"[PDAT]:"{end}"[PDAT])',
+            "term": f'{query_term} AND ("{start}"[PDAT]:"{end}"[PDAT])',
             "retmax": 30,
             "retmode": "json",
             "sort": "pub date",
@@ -79,7 +83,7 @@ def fetch_ncbi(journal: str, days_back: int = 14) -> list[dict]:
         articles.append({
             "title":    title,
             "abstract": abstract[:500],
-            "journal":  journal,
+            "journal":  journal_label,
             "url":      f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "",
         })
 
@@ -165,14 +169,20 @@ def main():
     print("Fetching articles...")
     all_articles: list[dict] = []
 
-    for journal in ("Anesthesiology", "Anesthesia & Analgesia", "Anaesthesia"):
-        arts = fetch_ncbi(journal)
+    # PubMed journal names（用 ISSN 避免縮寫差異）
+    ncbi_journals = [
+        ("Anesthesiology",  "0003-3022"),
+        ("Anesth Analg",    "0003-2999"),  # Anesthesia & Analgesia
+        ("Anaesthesia",     "0003-2409"),
+    ]
+    for journal, issn in ncbi_journals:
+        arts = fetch_ncbi_by_issn(issn, journal)
         print(f"  {journal}: {len(arts)}")
         all_articles.extend(arts)
         time.sleep(0.5)
 
     rss_sources = [
-        ("https://www.bjanaesthesia.org/rss/S0007-0912",                           "BJA"),
+        ("https://rss.sciencedirect.com/publication/science/00070912",             "BJA"),
         ("https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss",        "NEJM"),
         ("https://jamanetwork.com/rss/site_3/67.xml",                              "JAMA"),
     ]
