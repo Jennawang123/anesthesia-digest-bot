@@ -1,6 +1,6 @@
 {
   "week": "2026-W21",
-  "fetched_at": "2026-05-21T15:24:24.058644+00:00",
+  "fetched_at": "2026-05-21T16:11:14.115665+00:00",
   "articles": {
     "1": [
       {
@@ -22,19 +22,25 @@
         "url": "https://pubmed.ncbi.nlm.nih.gov/42101008/"
       },
       {
-        "title": "Short- and Long-Term Efficacy and Safety of Levosimendan in VA-ECMO Weaning: The WEANILEVO Randomized Double-Blind Multicenter Trial.",
-        "abstract": "Liberation from veno-arterial extracorporeal membrane oxygenation (VA-ECMO) remains challenging. To date, we have limited evidence from observational studies supporting pharmacological interventions to facilitate successful VA-ECMO weaning. The present study aimed to evaluate the efficacy and safety of a single dose of levosimendan in patients supported by VA-ECMO who met predefined criteria for weaning.",
-        "journal": "Anesthesiology",
-        "url": "https://pubmed.ncbi.nlm.nih.gov/42101006/"
-      },
-      {
         "title": "Energy, flow and pressure in the cardiovascular system: a narrative review of how the circulation works.",
         "abstract": "Understanding what determines blood flow in the circulation is central to haemodynamic management in anaesthesia and critical care. Traditional teaching emphasises pressure-based concepts, such as preload; afterload; central venous pressure; and venous return curves. However, these frameworks generate confusion about causality and control. Interpreting pressure variables as drivers of flow has contributed to inconsistent physiological reasoning and potentially harmful treatment. This narrative r",
         "journal": "Anaesthesia",
         "url": "https://pubmed.ncbi.nlm.nih.gov/42157570/"
+      },
+      {
+        "title": "Venous thromboembolism risk following surgery during the COVID-19 pandemic.",
+        "abstract": "SARS-CoV-2 infection is associated with an increased risk of venous thromboembolism. Data are lacking on how this risk altered during the COVID-19 pandemic and following vaccination. We aimed to evaluate the 90-day risk of postoperative venous thromboembolism during the pandemic.",
+        "journal": "Anaesthesia",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/41334827/"
       }
     ],
     "2": [
+      {
+        "title": "Hydroxyethyl Starch and Perioperative Complications: a Systematic Review and Meta-analysis.",
+        "abstract": "Based on renal injury reported in critically ill and septic patients, the Food and Drug Administration issued a black box warning regarding hydroxyethyl starch (HES 130/0.4) use in 2013, and expanded the warning to surgical and trauma patients in 2021. Similarly, the European Medicines Agency initiated withdrawal of hydroxyethyl starch in 2022. We therefore conducted a new meta-analysis focused on renal injury designed to complement a 2021 meta-analysis of perioperative hydroxyethyl starch use, ",
+        "journal": "Anesthesiology",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42160629/"
+      },
       {
         "title": "Effect of Paroxetine or Escitalopram Coadministered with Oxycodone versus Oxycodone Alone on Ventilation during Hypercapnia: A Randomized Clinical Trial.",
         "abstract": "Opioid-induced respiratory depression remains a critical public safety concern. Previous clinical findings demonstrated decreased hypercapnic ventilation after 5 days when paroxetine, a selective serotonin reuptake inhibitor (SSRI), was administered alone or with oxycodone. However, uncertainty remained whether chronic use of SSRIs could cause similar respiratory effects. This study investigated whether chronic use of paroxetine and another SSRI, escitalopram, led to a similar decrease in ventil",
@@ -42,16 +48,58 @@
         "url": "https://pubmed.ncbi.nlm.nih.gov/41849255/"
       },
       {
-        "title": "Cryotherapy and Duration of Inflammatory Pain in Mice.",
-        "abstract": "Cryotherapy, or icing, is ubiquitously employed and recommended for managing acute inflammation and the pain that accompanies it. Recently published data have suggested that pharmacologic reduction of inflammation, despite the short-term benefit of pain relief, has a longer-term risk of delaying the resolution of pain and increasing the risk of pain chronification.",
-        "journal": "Anesthesiology",
-        "url": "https://pubmed.ncbi.nlm.nih.gov/41894397/"
+        "title": "Post-dural Puncture Headache in Dural Puncture Epidural and Combined Spinal-Epidural Using 24- and 25-Gauge Needles Versus Conventional Epidural Labor Analgesia: A Systematic Review and Meta-analysis.",
+        "abstract": "Compared to standard labor epidurals, placement of a dural puncture epidural (DPE) has been shown to improve labor analgesia efficacy, speed onset of analgesia, and decrease failure rates. However, there is a concern of increased post-dural puncture headache (PDPH) risk. A 25-gauge or larger spinal needle is typically needed for a DPE to have improved efficacy over a standard epidural. A prior meta-analysis comparing combined spinal-epidurals (CSEs) with epidurals did not identify a difference i",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42155003/"
       },
       {
-        "title": "Platelet function in patients undergoing major non-cardiac vascular surgery (PLUGS): a prospective cohort study.",
-        "abstract": "Patients who require major vascular surgery often receive antiplatelet therapy for primary or secondary prevention of cardiovascular disease. Clopidogrel resistance and variability in platelet recovery after drug discontinuation pose clinical challenges, particularly for regional anaesthesia and blood management. The aim of this study was to characterise platelet function and determine the prevalence of antiplatelet resistance using near-patient viscoelastic testing in patients undergoing major,",
+        "title": "Association Between CTSG Variants and Persistent Postoperative Pain After Cardiac Surgery.",
+        "abstract": "Cathepsin G (CTSG) is a neutrophil-derived serine protease implicated in inflammatory pain modulation. Genetic variation in CTSG may influence postoperative pain susceptibility. This study evaluated the association between CTSG polymorphisms, CTSG plasma concentration and enzymatic activity, and long-term pain after cardiac surgery.",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42153808/"
+      },
+      {
+        "title": "The Effect of Immersive Virtual Reality on Anterograde Amnesia and Subjective Pain During Procedures: A Within-Subject Randomized Controlled Study.",
+        "abstract": "Immersive virtual reality (VR) distraction reduces procedural pain. The current study explores whether immersive VR also reduces how much people can remember about a painful experience: anterograde amnesia for pain.",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42138978/"
+      },
+      {
+        "title": "Respiratory Depression after Perioperative Methadone Administration: A Systematic Review and Meta-analysis.",
+        "abstract": "Despite evidence supporting methadone analgesic efficacy, perioperative methadone use remains limited due to concerns regarding respiratory depression. The aim of this systematic review and meta-analysis is to objectively evaluate the current evidence on the association between perioperative intravenous methadone administration and postoperative respiratory depression, compared with other opioids.1.",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42102090/"
+      },
+      {
+        "title": "The Use of Methadone in Adult Cardiac Surgery: A Systematic Review With Narrative Synthesis.",
+        "abstract": "Methadone is a long-acting opioid with multifaceted analgesic properties that is under increasing investigation as an intraoperative analgesic in cardiac surgery. A systematic search of United States National Library of Medicine Database (MEDLINE) and Excerpta Medica Database (EMBASE) databases identified publications investigating the use of intraoperative methadone in adult cardiac surgical patients. The risk of bias and quality of evidence of these studies were assessed, and data from these r",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42085333/"
+      },
+      {
+        "title": "Opioid-free vs. opioid-inclusive anaesthesia with or without regional anaesthesia for postoperative pain: a systematic review with network meta-analysis of randomised controlled trials.",
+        "abstract": "Concerns about opioid-related adverse effects have increased interest in opioid-free anaesthesia, but the benefits compared with opioid-inclusive techniques, especially in the presence of regional anaesthesia, remain uncertain.",
         "journal": "Anaesthesia",
-        "url": "https://pubmed.ncbi.nlm.nih.gov/42125980/"
+        "url": "https://pubmed.ncbi.nlm.nih.gov/41487040/"
+      },
+      {
+        "title": "Peri-operative pain management in major lower extremity amputation in vascular Surgery: a UK anaesthetic and vascular surgery Delphi consensus study.",
+        "abstract": "Major lower extremity amputations occurring secondary to vascular disease remain prevalent worldwide. Pain surrounding these procedures is complex, multifactorial and associated with poor functional and psychosocial outcomes. The evidence base informing pain management approaches in major lower extremity amputations remain largely heterogeneous and limited. This study aimed to establish procedure-specific, multispeciality consensus on the ideal principles and practices required to optimise pain ",
+        "journal": "Anaesthesia",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/41408655/"
+      },
+      {
+        "title": "Incidence of peri-operative peripheral nerve injuries associated with general and regional anaesthesia: an observational study.",
+        "abstract": "Peri-operative peripheral nerve injuries are rare, and estimating their incidence and identifying risk factors is difficult. Previous data attempting to determine the incidence come from single-centre studies or small database reviews, making it difficult to draw definitive conclusions.",
+        "journal": "Anaesthesia",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/41321232/"
+      },
+      {
+        "title": "Stellate ganglion block for preventing perioperative arrhythmias: revised analysis. Comment on <em>Br J Anaesth</em> 2026; 136: 495–506",
+        "abstract": "Publication date: Available online 15 May 2026   Source:  British Journal of Anaesthesia  Author(s): Eduardo Nunez-Rodriguez, Ricardo S. Mishima, Juan P. Cata",
+        "journal": "BJA",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003272?dgcid=rss_sd_all"
       }
     ],
     "3": [
@@ -80,16 +128,64 @@
         "url": "https://pubmed.ncbi.nlm.nih.gov/42102350/"
       },
       {
-        "title": "Intervals For Oscillometric Arterial Pressure Monitoring During Noncardiac Surgery: the '2.5-Minute Versus 5-Minute' Randomized Clinical Trial.",
-        "abstract": "Guidelines recommend measuring arterial pressure at least every 5 minutes during surgery. However, it remains unknown whether shortening the measurement interval of intermittent oscillometric arterial pressure monitoring can help reduce intraoperative hypotension. This trial tested the primary hypothesis that oscillometric arterial pressure monitoring at 2.5-minute versus 5-minute intervals reduces intraoperative hypotension in noncardiac surgery patients under general anesthesia.",
-        "journal": "Anesthesiology",
-        "url": "https://pubmed.ncbi.nlm.nih.gov/42102346/"
+        "title": "Neuronal Cell Death Modalities and Protective Mechanisms Induced By Sevoflurane: A Narrative Review.",
+        "abstract": "Sevoflurane is a widely used inhaled anesthetic for adult and pediatric surgeries. In both populations, sevoflurane has been reported to have neurotoxic long-term effects such as cognitive impairment. One of the most important mechanisms for neurotoxicity mediated by sevoflurane is neuronal cell death. In this review, we analyze published data from animal and clinical studies that investigate the potential neurotoxic effects of sevoflurane in both the developing and aged brains. We briefly intro",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42090240/"
       },
       {
         "title": "Diagnostic value of the percentage of glottic opening score for classifying videolaryngoscopy in children: a prospective validation study.",
         "abstract": "The percentage of glottic opening (POGO) score quantifies the laryngeal view obtained during laryngoscopy. This secondary analysis of the prospective observational PeDiAC study aimed to compare the POGO score with subjective glottic view ratings on a visual analogue scale (VAS) for classifying difficult videolaryngoscopic tracheal intubation.",
         "journal": "Anaesthesia",
         "url": "https://pubmed.ncbi.nlm.nih.gov/42145174/"
+      },
+      {
+        "title": "Cost-effectiveness of a transition from volatile anaesthesia to total intravenous anaesthesia to reduce carbon footprint: an economic modelling study.",
+        "abstract": "The UK NHS is committed to reaching net zero carbon emissions by 2040. Volatile anaesthetic agents are potent greenhouse gases and alternative intravenous methods exist. We aimed to predict the cost-effectiveness of a transition from volatile anaesthesia to total intravenous anaesthesia to reduce carbon emissions.",
+        "journal": "Anaesthesia",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/41532227/"
+      },
+      {
+        "title": "Neurometabolic depletion with ketamine during sevoflurane anaesthesia",
+        "abstract": "Publication date: Available online 20 May 2026   Source:  British Journal of Anaesthesia  Author(s): Gabriela Elias, Ada Erus, Jad Mchaimech, Elie Adam",
+        "journal": "BJA",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002965?dgcid=rss_sd_all"
+      },
+      {
+        "title": "Propofol-based <em>versus</em> volatile anaesthesia for cancer surgery: a meta-analysis of randomised trials",
+        "abstract": "Publication date: Available online 20 May 2026   Source:  British Journal of Anaesthesia  Author(s): Michele Carron, Enrico Tamburini, Lorenza Dalla Massara, Sabrina Congedi, Federico Linassi",
+        "journal": "BJA",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003375?dgcid=rss_sd_all"
+      },
+      {
+        "title": "The Video Classification of Intubation (VCI) score for videolaryngoscopy: accuracy and clinical utility remain uncertain. Comment on <em>Br J Anaesth</em> 2026; 136: 1616–24",
+        "abstract": "Publication date: Available online 19 May 2026   Source:  British Journal of Anaesthesia  Author(s): Martin Petzoldt, Viktor A. Wünsch, Catharina Grün, Phillip B. Sasu, Vera Köhl",
+        "journal": "BJA",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003314?dgcid=rss_sd_all"
+      },
+      {
+        "title": "Identification of difficult airways in critical care units (ID-ACCT): airway ultrasound as a useful adjunct in intensive care unit airway assessment. Comment on <em>Br J Anaesth</em> 2026; 136: 705-15",
+        "abstract": "Publication date: Available online 18 May 2026   Source:  British Journal of Anaesthesia  Author(s): Filomena Di Vezza, Marco Sanvitti, Federico Bilotta",
+        "journal": "BJA",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003260?dgcid=rss_sd_all"
+      },
+      {
+        "title": "BOPPPS-simulation model for crisis training in anaesthesia residents",
+        "abstract": "Publication date: Available online 18 May 2026   Source:  British Journal of Anaesthesia  Author(s): Xiao-rui Jiang, Yan-hua Wang, Juan Wu, Zhong-cheng Zhang, Yan Jing, Mei-ping Li, Qiang Ren, Yu Hu, Lin-zhong Zhang, Rui-lin Zhang",
+        "journal": "BJA",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003247?dgcid=rss_sd_all"
+      },
+      {
+        "title": "The carbon footprint of general anaesthesia in adult patients: re-evaluating the environmental sustainability of propofol. Comment on <em>Br J Anaesth</em> 2025; 134: 1620–7",
+        "abstract": "Publication date: Available online 15 May 2026   Source:  British Journal of Anaesthesia  Author(s): Yujie Wang, Tianlong Wang, Min Li, Xiangyang Guo, Zhengqian Li",
+        "journal": "BJA",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002953?dgcid=rss_sd_all"
+      },
+      {
+        "title": "Clinical meaning of the modified Cormack–Lehane grade during direct laryngoscopy and Macintosh videolaryngoscopy",
+        "abstract": "Publication date: Available online 14 May 2026   Source:  British Journal of Anaesthesia  Author(s): Manuel Taboada, Jorge Fernández, Esteban Ferreiroa, Sergio Varela, Juan José Amate, María Bermúdez, Marta Estévez, Raquel Ruido, Alejandro Bedoya, Fernando Otero, Teresa Seoane-Pillado",
+        "journal": "BJA",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002540?dgcid=rss_sd_all"
       }
     ],
     "4": [
@@ -106,18 +202,84 @@
         "url": "https://pubmed.ncbi.nlm.nih.gov/42127247/"
       },
       {
-        "title": "Mechanical power and energy in invasively ventilated newborn infants.",
-        "abstract": "Mechanical power estimates the amount of energy delivered to ventilated lungs but there are no available data in neonates. We aim to provide a real-world description of power and investigate its relationship with clinical variables in neonates.",
-        "journal": "Anesthesiology",
-        "url": "https://pubmed.ncbi.nlm.nih.gov/42101008/"
+        "title": "Post-dural Puncture Headache in Dural Puncture Epidural and Combined Spinal-Epidural Using 24- and 25-Gauge Needles Versus Conventional Epidural Labor Analgesia: A Systematic Review and Meta-analysis.",
+        "abstract": "Compared to standard labor epidurals, placement of a dural puncture epidural (DPE) has been shown to improve labor analgesia efficacy, speed onset of analgesia, and decrease failure rates. However, there is a concern of increased post-dural puncture headache (PDPH) risk. A 25-gauge or larger spinal needle is typically needed for a DPE to have improved efficacy over a standard epidural. A prior meta-analysis comparing combined spinal-epidurals (CSEs) with epidurals did not identify a difference i",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42155003/"
+      },
+      {
+        "title": "Minimum Effective Dose of Prophylactic Oxytocin Infusion During Cesarean Delivery in Preterm and Term Pregnancy: A Sequential Allocation Dose Finding Study.",
+        "abstract": "There is a paucity of uterine oxytocin receptors during preterm gestation. Whether this affects the requirement of oxytocin dose for uterine contraction in patients with preterm gestation is not researched. We compared effective dose in 90% of target population (ED90) of oxytocin infusion for satisfactory uterine tone during cesarean delivery in patients with preterm and term pregnancy.",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42148902/"
+      },
+      {
+        "title": "Guidelines for anaesthesia and sedation for patients who are breastfeeding: Guidelines from the Association of Anaesthetists.",
+        "abstract": "Breastfeeding is acknowledged widely as one of the most effective ways to ensure the health and well-being of both child and birth parent. Historically, advice given to patients who required an anaesthetic while breastfeeding was variable and inconsistent, sometimes resulting in the interruption of feeding for ≥ 24 h, or expressing and discarding breastmilk because of concerns regarding the possible adverse effects secondary to medicines passing into the breastmilk. This can be a contributory fa",
+        "journal": "Anaesthesia",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/41532178/"
       }
     ],
     "5": [
       {
-        "title": "Short- and Long-Term Efficacy and Safety of Levosimendan in VA-ECMO Weaning: The WEANILEVO Randomized Double-Blind Multicenter Trial.",
-        "abstract": "Liberation from veno-arterial extracorporeal membrane oxygenation (VA-ECMO) remains challenging. To date, we have limited evidence from observational studies supporting pharmacological interventions to facilitate successful VA-ECMO weaning. The present study aimed to evaluate the efficacy and safety of a single dose of levosimendan in patients supported by VA-ECMO who met predefined criteria for weaning.",
-        "journal": "Anesthesiology",
-        "url": "https://pubmed.ncbi.nlm.nih.gov/42101006/"
+        "title": "Influence of Pre-emptive Haptoglobin on Postoperative Acute Kidney Injury in Cardiac Surgical Patients: A Randomized Controlled Trial.",
+        "abstract": "Haptoglobin may reduce hemolysis-induced kidney injury in patients undergoing cardiovascular surgery with cardiopulmonary bypass (CPB). Haptoglobin may be given empirically when hemolytic urine is observed, or pre-emptively when detected by elevated free hemoglobin concentrations. In the present study, we investigated whether pre-emptive haptoglobin therapy guided by serum-free hemoglobin concentrations could prevent postoperative renal dysfunction in patients who underwent major cardiovascular ",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/41650332/"
+      },
+      {
+        "title": "Association Between CTSG Variants and Persistent Postoperative Pain After Cardiac Surgery.",
+        "abstract": "Cathepsin G (CTSG) is a neutrophil-derived serine protease implicated in inflammatory pain modulation. Genetic variation in CTSG may influence postoperative pain susceptibility. This study evaluated the association between CTSG polymorphisms, CTSG plasma concentration and enzymatic activity, and long-term pain after cardiac surgery.",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42153808/"
+      },
+      {
+        "title": "Nephrocheck for Prediction of In-Hospital Acute Kidney Injury and Major Adverse Kidney Events After Cardiac Surgery.",
+        "abstract": "Acute kidney injury (AKI) is a common complication after cardiac surgery and is a risk factor for long-term major adverse kidney events (MAKE). This study aimed to evaluate the association between postoperative Nephrocheck AKI risk score with postoperative in-hospital AKI and MAKE up to 5 years after cardiac surgery.",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42085354/"
+      },
+      {
+        "title": "The Use of Methadone in Adult Cardiac Surgery: A Systematic Review With Narrative Synthesis.",
+        "abstract": "Methadone is a long-acting opioid with multifaceted analgesic properties that is under increasing investigation as an intraoperative analgesic in cardiac surgery. A systematic search of United States National Library of Medicine Database (MEDLINE) and Excerpta Medica Database (EMBASE) databases identified publications investigating the use of intraoperative methadone in adult cardiac surgical patients. The risk of bias and quality of evidence of these studies were assessed, and data from these r",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42085333/"
+      },
+      {
+        "title": "The Association of Preoperative Cognitive Dysfunction to Common Intraoperative Electroencephalographic Parameters and Cerebral Hypoxia During Cardiac Surgery.",
+        "abstract": "Older cardiac surgery patients have a higher prevalence of cognitive dysfunction and elevated risk of perioperative neurocognitive disorders (PND), both independently related to adverse postoperative outcomes. Neuromonitoring using electroencephalogram (EEG) and cerebral oximetry (CO) may predict PND. However, preoperative factors influencing intraoperative neurophysiological characteristics are not well understood. We conducted a study in a cardiac surgery cohort to better understand the relati",
+        "journal": "Anesth Analg",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/41980267/"
+      },
+      {
+        "title": "Artificial intelligence-assisted peri-operative echocardiography: a multicentre observational study.",
+        "abstract": "Point-of-care transthoracic echocardiography performed by anaesthetists can influence peri-operative management but is constrained by time, the need for measurements and advanced skill requirements. Artificial intelligence-driven analysis may streamline this assessment and yield benefits to clinicians and patients.",
+        "journal": "Anaesthesia",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/42086509/"
+      },
+      {
+        "title": "Pre-operative anaemia, red blood cell transfusion and mortality after cardiac surgery: a Netherlands Heart Registration mediation analysis.",
+        "abstract": "Pre-operative anaemia is an established risk factor for mortality after cardiac surgery. The extent to which this risk is mediated by complications related to red blood cell transfusion remains uncertain, particularly across different age groups.",
+        "journal": "Anaesthesia",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/41388606/"
+      },
+      {
+        "title": "Chest compressions in impending cardiac arrest attributable to embolism",
+        "abstract": "Publication date: Available online 19 May 2026   Source:  British Journal of Anaesthesia  Author(s): Xiao-Xia Wang, Xiao-Xiao Jin, Jing-Jing Xie, Guang-Qiu Zhu",
+        "journal": "BJA",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003259?dgcid=rss_sd_all"
+      },
+      {
+        "title": "Prophylactic norepinephrine infusion to reduce severe hypotension during induction of anaesthesia in patients undergoing cardiac surgery: considerations on endpoint selection, haemodynamic burden, and generalisability. Comment <em>on Br J Anaesth</em> 2026; 136: 856–64",
+        "abstract": "Publication date: Available online 19 May 2026   Source:  British Journal of Anaesthesia  Author(s): Jianqiao Cao, Peipei Zhang",
+        "journal": "BJA",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003338?dgcid=rss_sd_all"
+      },
+      {
+        "title": "Incidence of spinal-epidural haematoma after neuraxial anaesthesia for total hip and knee arthroplasty: a single-centre analysis of 96 103 consecutive cases from 2013 to 2023",
+        "abstract": "Publication date: Available online 18 May 2026   Source:  British Journal of Anaesthesia  Author(s): Krizia Amoroso, Alexander P. Hughes, Gaston Camino-Willhuber, Jennifer Shue, Ellen M. Soffin",
+        "journal": "BJA",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0007091226002680?dgcid=rss_sd_all"
       }
     ]
   }
