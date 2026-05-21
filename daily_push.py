@@ -52,29 +52,36 @@ def build_prompt(articles: list[dict], topic: dict, date_str: str) -> str:
 
     return f"""你是麻醉科日報編輯，請將以下文章整理成 LINE 推播日報。
 
-輸出格式（嚴格照此結構，不要改動表情符號和標題格式）：
-
+開頭固定格式：
 🩺 麻醉科日報 {date_str}（{topic['day']}）
 主題：{topic['name']}
+━━━━━━━━━━━━━━━━━━━━
 
-📌 必讀（⭐⭐⭐）
-• 英文標題 — 一句話重點
-  🔗 URL
+每篇文章格式（嚴格照此結構）：
 
-📌 推薦閱讀（⭐⭐）
-• 英文標題 — 一句話重點
-  🔗 URL
+### [完整英文標題]
 
-📌 延伸閱讀（⭐）
-• 英文標題 — 一句話重點
-  🔗 URL
+> 📍 [期刊名] | [發表年月，格式：YYYY年Mon] | [研究設計，如 Phase 3 RCT / Meta-analysis / Cohort study 等] | [⭐ 星級]
+>
+> 🔑 [一句話核心發現，繁體中文，醫療術語保留英文]
+>
+> 📊 主要發現：
+- [關鍵數據或發現 1]
+- [關鍵數據或發現 2]
+- [關鍵數據或發現 3，若有]
+>
+> 💡 臨床意義：[對臨床實務的影響，繁體中文，醫療術語保留英文]
+>
+> 🔗 [URL]
 
+結尾：
+━━━━━━━━━━━━━━━━━━━━
 共 N 篇｜{date_str}
 
 規則：
-- 星級判斷：⭐⭐⭐ 給 RCT 或重大臨床研究，⭐⭐ 給有臨床意義的觀察研究，⭐ 給其他
-- 一句話重點用繁體中文，醫療術語（藥名、術式、縮寫、期刊名）保留英文，不翻譯
-- 若文章不足以填滿三個星級，合併成較少節次，不要出現空節
+- ⭐⭐⭐ 給 RCT、重要 meta-analysis；⭐⭐ 給有臨床意義的觀察研究；⭐ 給其他
+- 醫療術語、藥名、術式、縮寫、期刊名全部保留英文，不翻譯
+- 📊 bullet points 列具體數值（p value、OR、HR、NNT 等），無具體數值則列關鍵比較結果
 - 直接輸出訊息本體，不加任何說明文字
 
 文章資料：
@@ -100,25 +107,24 @@ def format_message(articles: list[dict], topic: dict, date_str: str) -> str:
 # ── 3. Split ──────────────────────────────────────────────────────────────────
 
 def split_message(text: str) -> list[str]:
-    """在文章節次邊界（📌）切割，確保每則 ≤ MAX_CHARS。"""
+    """在文章邊界（### 開頭）切割，確保每則 ≤ MAX_CHARS。"""
     if len(text) <= MAX_CHARS:
         return [text]
 
-    # 以 📌 為分割點，找出每個節次的起始位置
     import re
-    boundary_positions = [m.start() for m in re.finditer(r"📌", text)]
+    # 找每篇文章的起始位置（### 開頭的行）
+    boundary_positions = [m.start() for m in re.finditer(r"^###", text, re.MULTILINE)]
 
     if not boundary_positions:
-        # 找不到邊界，硬切
         return [text[i:i + MAX_CHARS] for i in range(0, len(text), MAX_CHARS)]
 
+    # 第一段包含 header（從頭到第一個 ###）
     parts = []
     current_start = 0
-    last_boundary = 0
+    last_boundary = boundary_positions[0]
 
-    for pos in boundary_positions[1:]:  # 從第二個 📌 開始檢查
+    for pos in boundary_positions[1:]:
         if pos - current_start > MAX_CHARS:
-            # 上一個邊界前截斷
             chunk = text[current_start:last_boundary].rstrip()
             parts.append(chunk)
             current_start = last_boundary
