@@ -30,10 +30,6 @@ ERRATA_KEYWORDS = ("erratum", "correction", "retraction", "corrigendum")
 
 # ── 1. Fetch ──────────────────────────────────────────────────────────────────
 
-def fetch_ncbi_by_issn(issn: str, journal_label: str, days_back: int = 30) -> list[dict]:
-    return fetch_ncbi(f"{issn}[ISSN]", journal_label, days_back)
-
-
 def fetch_ncbi(query_term: str, journal_label: str, days_back: int = 30) -> list[dict]:
     today = datetime.now(timezone.utc)
     start = (today - timedelta(days=days_back)).strftime("%Y/%m/%d")
@@ -51,6 +47,7 @@ def fetch_ncbi(query_term: str, journal_label: str, days_back: int = 30) -> list
         timeout=30,
     )
     pmids = search.json().get("esearchresult", {}).get("idlist", [])
+    print(f"    [{journal_label}] PMIDs found: {len(pmids)}")
     if not pmids:
         return []
 
@@ -172,11 +169,13 @@ def main():
     # PubMed journal names（用 ISSN 避免縮寫差異）
     ncbi_journals = [
         ("Anesthesiology",  "0003-3022"),
-        ("Anesth Analg",    "0003-2999"),  # Anesthesia & Analgesia
-        ("Anaesthesia",     "0003-2409"),
+        ("Anesth Analg",    "0003-2999 OR 1526-7598"),  # Anesthesia & Analgesia (print + eISSN)
+        ("Anaesthesia",     "0003-2409 OR 1365-2044"),  # Anaesthesia (print + eISSN)
     ]
-    for journal, issn in ncbi_journals:
-        arts = fetch_ncbi_by_issn(issn, journal)
+    for journal, issns in ncbi_journals:
+        # 多個 ISSN 用 OR 串接
+        issn_query = " OR ".join(f"{i.strip()}[ISSN]" for i in issns.split(" OR "))
+        arts = fetch_ncbi(f"({issn_query})", journal)
         print(f"  {journal}: {len(arts)}")
         all_articles.extend(arts)
         time.sleep(0.5)
