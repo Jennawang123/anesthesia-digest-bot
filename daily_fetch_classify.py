@@ -219,7 +219,47 @@ def main():
     with open("daily_data/week.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-    print("Saved → daily_data/week.json")
+    # GitHub Actions 環境：用 Contents API 直接寫入，不靠 git push
+    gh_token = os.environ.get("GITHUB_TOKEN")
+    gh_repo  = os.environ.get("GITHUB_REPOSITORY")
+    if gh_token and gh_repo:
+        _upload_to_github(data, gh_token, gh_repo)
+    else:
+        print("Saved → daily_data/week.json (local only)")
+
+
+def _upload_to_github(data: dict, token: str, repo: str) -> None:
+    import base64
+    content_b64 = base64.b64encode(
+        json.dumps(data, ensure_ascii=False, indent=2).encode()
+    ).decode()
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    url = f"https://api.github.com/repos/{repo}/contents/daily_data/week.json"
+
+    # 取現有檔案的 SHA（更新時必須帶入）
+    get = requests.get(url, headers=headers)
+    sha = get.json().get("sha") if get.status_code == 200 else None
+
+    payload: dict = {
+        "message": "chore: weekly classified articles [skip ci]",
+        "content": content_b64,
+        "committer": {
+            "name":  "github-actions[bot]",
+            "email": "github-actions[bot]@users.noreply.github.com",
+        },
+    }
+    if sha:
+        payload["sha"] = sha
+
+    put = requests.put(url, headers=headers, json=payload)
+    put.raise_for_status()
+    new_sha = put.json().get("content", {}).get("sha", "")[:7]
+    print(f"Saved → daily_data/week.json (GitHub API, sha={new_sha})")
 
 
 if __name__ == "__main__":
