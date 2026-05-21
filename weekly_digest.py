@@ -35,6 +35,7 @@ RSS_FEEDS = {
 PUBMED_JOURNALS = {
     "Anesthesiology": '"Anesthesiology"[Journal]',
     "Anesthesia & Analgesia": '"Anesthesia and Analgesia"[Journal]',
+    "Anaesthesia": '"Anaesthesia"[Journal]',
 }
 
 NCBI_EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
@@ -272,7 +273,7 @@ def analyze_with_claude(new_articles, prev_summary):
 
 # 🩺 麻醉科週報 — {today_str}
 
-> 本週涵蓋：Anesthesiology、Anesthesia & Analgesia、BJA、NEJM、JAMA
+> 本週涵蓋：Anesthesiology、Anesthesia & Analgesia、Anaesthesia、BJA、NEJM、JAMA
 > 🔍 本週主題：[主題名稱]
 
 ---
@@ -299,6 +300,9 @@ def analyze_with_claude(new_articles, prev_summary):
 [精選 ⭐⭐ 文章，照範例格式，完整輸出]
 
 ### Anesthesia & Analgesia
+[精選 ⭐⭐ 文章，照範例格式，完整輸出]
+
+### Anaesthesia
 [精選 ⭐⭐ 文章，照範例格式，完整輸出]
 
 ### BJA
