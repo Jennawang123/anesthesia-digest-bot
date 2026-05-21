@@ -50,6 +50,9 @@ def build_prompt(articles: list[dict], topic: dict, date_str: str) -> str:
         for i, a in enumerate(articles)
     )
 
+    number_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
+    n = len(articles)
+
     return f"""你是麻醉科日報編輯，請將以下文章整理成 LINE 推播日報。
 
 開頭固定格式：
@@ -57,31 +60,33 @@ def build_prompt(articles: list[dict], topic: dict, date_str: str) -> str:
 主題：{topic['name']}
 ━━━━━━━━━━━━━━━━━━━━
 
-每篇文章格式（嚴格照此結構）：
+每篇文章格式（依序用 {" ".join(number_emojis[:n])} 編號，嚴格照此結構，不可有 ### 或 > 符號）：
 
-### [完整英文標題]
+[數字emoji] [完整英文標題]
 
-> 📍 [期刊名] | [發表年月，格式：YYYY年Mon] | [研究設計，如 Phase 3 RCT / Meta-analysis / Cohort study 等] | [⭐ 星級]
->
-> 🔑 [一句話核心發現，繁體中文，醫療術語保留英文]
->
-> 📊 主要發現：
-- [關鍵數據或發現 1]
-- [關鍵數據或發現 2]
-- [關鍵數據或發現 3，若有]
->
-> 💡 臨床意義：[對臨床實務的影響，繁體中文，醫療術語保留英文]
->
-> 🔗 [URL]
+📍 [期刊名] | [發表年月，格式：YYYY年Mon] | [研究設計] | [⭐星級]
+
+🔑 [一句話核心發現，繁體中文，醫療術語保留英文]
+
+📊 主要發現：
+• [關鍵數據或發現 1]
+• [關鍵數據或發現 2]
+• [關鍵數據或發現 3，若有]
+
+💡 [臨床意義，繁體中文，醫療術語保留英文]
+
+🔗 [URL]
+
+（每篇之間空一行分隔）
 
 結尾：
 ━━━━━━━━━━━━━━━━━━━━
-共 N 篇｜{date_str}
+共 {n} 篇｜{date_str}
 
 規則：
 - ⭐⭐⭐ 給 RCT、重要 meta-analysis；⭐⭐ 給有臨床意義的觀察研究；⭐ 給其他
 - 醫療術語、藥名、術式、縮寫、期刊名全部保留英文，不翻譯
-- 📊 bullet points 列具體數值（p value、OR、HR、NNT 等），無具體數值則列關鍵比較結果
+- 📊 bullet points 用 • 開頭，列具體數值（p value、OR、HR、NNT 等）
 - 直接輸出訊息本體，不加任何說明文字
 
 文章資料：
@@ -112,8 +117,8 @@ def split_message(text: str) -> list[str]:
         return [text]
 
     import re
-    # 找每篇文章的起始位置（### 開頭的行）
-    boundary_positions = [m.start() for m in re.finditer(r"^###", text, re.MULTILINE)]
+    # 找每篇文章的起始位置（數字 emoji 開頭的行）
+    boundary_positions = [m.start() for m in re.finditer(r"^[1-5]️⃣", text, re.MULTILINE)]
 
     if not boundary_positions:
         return [text[i:i + MAX_CHARS] for i in range(0, len(text), MAX_CHARS)]
