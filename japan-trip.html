@@ -12,20 +12,16 @@
 (function(){
   const S=512,c=document.createElement('canvas');c.width=c.height=S;
   const x=c.getContext('2d');
-  const bg=x.createLinearGradient(0,0,S,S);
-  bg.addColorStop(0,'#667EEA');bg.addColorStop(1,'#764BA2');
+  const bg=x.createLinearGradient(0,0,0,S);
+  bg.addColorStop(0,'#C0392B');bg.addColorStop(1,'#E74C3C');
   x.fillStyle=bg;x.beginPath();x.roundRect(0,0,S,S,96);x.fill();
-  // Plane body
   x.fillStyle='rgba(255,255,255,0.95)';
-  x.beginPath();x.moveTo(100,290);x.bezierCurveTo(80,280,80,240,120,236);x.lineTo(340,200);x.bezierCurveTo(400,196,430,220,420,248);x.bezierCurveTo(410,272,370,278,320,272);x.lineTo(140,306);x.closePath();x.fill();
-  // Wings
-  x.beginPath();x.moveTo(180,272);x.lineTo(140,360);x.lineTo(220,344);x.lineTo(260,272);x.closePath();x.fill();
-  x.beginPath();x.moveTo(320,250);x.lineTo(310,310);x.lineTo(356,302);x.lineTo(368,250);x.closePath();x.fill();
-  // Tail
-  x.beginPath();x.moveTo(110,292);x.lineTo(80,358);x.lineTo(140,336);x.lineTo(140,292);x.closePath();x.fill();
-  // Window strip
-  x.fillStyle='rgba(102,126,234,0.5)';
-  x.beginPath();x.roundRect(170,220,160,22,11);x.fill();
+  x.beginPath();x.roundRect(80,140,352,30,6);x.fill();
+  x.beginPath();x.roundRect(110,195,292,22,5);x.fill();
+  x.beginPath();x.roundRect(148,217,34,200,6);x.fill();
+  x.beginPath();x.roundRect(330,217,34,200,6);x.fill();
+  x.beginPath();x.moveTo(80,140);x.lineTo(148,100);x.lineTo(182,140);x.closePath();x.fill();
+  x.beginPath();x.moveTo(432,140);x.lineTo(364,100);x.lineTo(330,140);x.closePath();x.fill();
   ['icon','apple-touch-icon'].forEach(r=>{const l=document.createElement('link');l.rel=r;l.href=c.toDataURL('image/png');document.head.appendChild(l);});
 })();
 </script>
