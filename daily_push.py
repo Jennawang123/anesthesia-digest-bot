@@ -241,7 +241,7 @@ def push_line(text: str) -> None:
 
 def main():
     now_twn  = taiwan_now()
-    weekday  = now_twn.isoweekday()  # 1=週一 … 5=週五
+    weekday  = int(os.environ.get("FORCE_WEEKDAY", now_twn.isoweekday()))
     date_str = now_twn.strftime("%Y/%m/%d")
 
     if weekday not in TOPICS:
