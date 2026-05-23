@@ -172,8 +172,8 @@ def format_message(articles: list[dict], topic: dict, date_str: str, hot_theme: 
         )
 
     response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1800,
+        model="claude-sonnet-4-6",
+        max_tokens=2000,
         messages=[{"role": "user", "content": build_prompt(articles, topic, date_str, hot_theme)}],
     )
     return response.content[0].text.strip()
