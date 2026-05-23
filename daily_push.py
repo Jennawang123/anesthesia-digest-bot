@@ -154,7 +154,9 @@ def build_prompt(articles: list[dict], topic: dict, date_str: str, hot_theme: st
 規則：
 - ⭐⭐⭐ 給 RCT、重要 meta-analysis；⭐⭐ 給有臨床意義的觀察研究；⭐ 給其他
 - 醫療術語、藥名、術式、縮寫、期刊名全部保留英文，不翻譯
-- 📊 bullet points 用 • 開頭，列具體數值（p value、OR、HR、NNT 等）
+- 專有名詞若非全科通識（如 NephroCheck、MAKE、TEG 等），首次出現時括號補充一句中文解釋，例如：NephroCheck（尿液 TIMP-2×IGFBP7 biomarker 用於 AKI 預測）
+- 📊 bullet points 用 • 開頭，必須列出具體數值（p value、OR、HR、NNT、%、n 數等）或具體介入內容（例：限制術中 IV fluid ≤3 mL/kg/hr、使用 goal-directed therapy protocol）；禁止使用空洞描述如「有效改善」、「結果顯著」、「策略有效」
+- 🔑 一句話核心發現必須說清楚：誰、做了什麼、結果如何（含數字或方向）
 - 直接輸出訊息本體，不加任何說明文字
 
 文章資料：
