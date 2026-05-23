@@ -109,6 +109,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .day-card.open .day-body{display:block;}
 
 .act-row{display:flex;align-items:flex-start;padding:11px 16px;border-bottom:1px solid var(--border);gap:10px;cursor:grab;transition:opacity .2s;}
+.act-handle{width:18px;font-size:14px;color:var(--border);cursor:grab;flex-shrink:0;display:flex;align-items:center;user-select:none;}
+.act-handle:active{cursor:grabbing;}
+.act-row.drag-over-act{border-top:2px solid var(--blue);}
 .act-row:last-of-type{border-bottom:none;}
 .act-row.dragging{opacity:.3;cursor:grabbing;}
 .act-ico{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin-top:1px;}
@@ -467,6 +470,7 @@ let curCat='food',curPayer=0,curSplit='both',curCur='JPY';
 let curAC='sight',curACur='JPY',curAPayer=0,curASplit='both';
 let curNT='text',curImg=null,curPieCur='JPY',lastExps={},exchRate=null;
 const DG={on:false,did:null,aid:null,act:null,srcEl:null,ghost:null,timer:null,sx:0,sy:0};
+let curActOrder=0;
 
 // ─── Utils ───────────────────────────────────────────
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -601,7 +605,7 @@ function bootApp(){
   document.getElementById('c_gemini').value=CFG.geminiKey||'';
   const ph=document.getElementById('hdrPhoto');
   if(CFG.photo){ph.src=CFG.photo;ph.style.display='';}else{ph.style.display='none';}
-  renderCatGrid();renderACGrid();initDnD();
+  renderCatGrid();renderACGrid();initDnD();initActDnD();
   fetchWeather().finally(()=>connectFB());
   fetchRate();
 }
@@ -738,6 +742,51 @@ function initDnD(){
   });
 }
 
+const ADG={on:false,did:null,aid:null,srcEl:null};
+function initActDnD(){
+  const box=document.getElementById('schedBox');
+  box.addEventListener('dragstart',e=>{
+    const handle=e.target.closest('.act-handle');
+    const row=e.target.closest('.act-row');
+    if(!handle||!row)return;
+    ADG.on=true;ADG.did=row.dataset.did;ADG.aid=row.dataset.aid;ADG.srcEl=row;
+    e.dataTransfer.setData('actdnd',JSON.stringify({did:row.dataset.did,aid:row.dataset.aid}));
+    e.dataTransfer.effectAllowed='move';
+    setTimeout(()=>row.classList.add('dragging'),0);
+  });
+  box.addEventListener('dragend',e=>{
+    ADG.on=false;
+    e.target.closest&&e.target.closest('.act-row')?.classList.remove('dragging');
+    document.querySelectorAll('.act-row.drag-over-act').forEach(r=>r.classList.remove('drag-over-act'));
+  });
+  box.addEventListener('dragover',e=>{
+    if(!ADG.on)return;
+    const row=e.target.closest('.act-row');
+    if(!row||row===ADG.srcEl||row.dataset.did!==ADG.did)return;
+    e.preventDefault();e.dataTransfer.dropEffect='move';
+    document.querySelectorAll('.act-row.drag-over-act').forEach(r=>r.classList.remove('drag-over-act'));
+    row.classList.add('drag-over-act');
+  });
+  box.addEventListener('drop',e=>{
+    if(!ADG.on)return;
+    const tgtRow=e.target.closest('.act-row');
+    if(!tgtRow||tgtRow===ADG.srcEl||tgtRow.dataset.did!==ADG.did){ADG.on=false;return;}
+    e.preventDefault();e.stopPropagation();
+    const did=ADG.did;
+    const dayCard=document.getElementById('dc-'+did);
+    const rows=[...dayCard.querySelectorAll('.act-row')];
+    const srcIdx=rows.findIndex(r=>r.dataset.aid===ADG.aid);
+    const tgtIdx=rows.findIndex(r=>r.dataset.aid===tgtRow.dataset.aid);
+    if(srcIdx<0||tgtIdx<0||srcIdx===tgtIdx){ADG.on=false;return;}
+    const aids=rows.map(r=>r.dataset.aid);
+    aids.splice(srcIdx,1);aids.splice(tgtIdx,0,ADG.aid);
+    const updates={};
+    aids.forEach((a,i)=>updates['/schedule/'+did+'/acts/'+a+'/order']=i);
+    DB.ref('/').update(updates);
+    ADG.on=false;
+  });
+}
+
 function moveAct(fromDid,aid,act,toDid){
   DB.ref('/schedule/'+toDid+'/date').once('value',snap=>{
     const newDate=snap.val()||'';
@@ -766,7 +815,12 @@ function renderSched(sched){
   const days=Object.entries(sched).sort((a,b)=>(parseInt(a[0].replace(/\D/g,''))||0)-(parseInt(b[0].replace(/\D/g,''))||0));
   if(!days.length){box.innerHTML='<div class="empty"><div class="empty-i">📅</div><div class="empty-h">尚無行程</div></div>';return;}
   box.innerHTML=days.map(([did,day])=>{
-    const acts=Object.entries(day.acts||{}).sort((a,b)=>(a[1].time||'').localeCompare(b[1].time||''));
+    const acts=Object.entries(day.acts||{}).sort((a,b)=>{
+      const oa=a[1].order!=null?a[1].order:999999;
+      const ob=b[1].order!=null?b[1].order:999999;
+      if(oa!==ob)return oa-ob;
+      return(a[1].time||'').localeCompare(b[1].time||'');
+    });
     const dayN=did.replace(/\D/g,'');
     const wInfo=weatherByDate.get(day.date);
     const wChip=wInfo?`<span class="wchip">${wInfo.icon} ${wInfo.temp}°C ${wInfo.desc}</span>`:'';
@@ -794,6 +848,7 @@ function renderSched(sched){
             const sym=(act.cost?.cur||'JPY')==='JPY'?'¥':'NT$';
             const dp=0;
             return `<div class="act-row" draggable="true" data-did="${did}" data-aid="${aid}">
+              <div class="act-handle" data-did="${did}" data-aid="${aid}">⠿</div>
               <div class="act-ico" style="background:${ac.bg}">${ac.ico}</div>
               <div class="act-body">
                 ${act.time?`<div class="act-time">⏰ ${act.time}</div>`:''}
@@ -838,6 +893,7 @@ function openActEdit(did,aid){
     document.getElementById('a_cost').value=a.cost?.amt||'';
     curAC=a.cat||'sight';renderACGrid();
     selACur(a.cost?.cur||'JPY');selAPayer(a.cost?.paidBy===CFG.p2?1:0);selASplit(a.cost?.split||'both');
+    curActOrder=a.order||0;
     openM('m-act');
   });
 }
@@ -846,12 +902,16 @@ function saveAct(){
   const name=document.getElementById('a_name').value.trim();if(!name){toast('請輸入活動名稱');return;}
   const costAmt=parseFloat(document.getElementById('a_cost').value);
   const hasCost=!isNaN(costAmt)&&costAmt>0;
-  const obj={cat:curAC,name,time:document.getElementById('a_time').value,
-    loc:document.getElementById('a_loc').value.trim(),note:document.getElementById('a_note').value.trim(),
-    cost:hasCost?{amt:costAmt,cur:curACur,paidBy:curAPayer===0?CFG.p1:CFG.p2,split:curASplit}:null};
-  const id=aid||('a'+uid());
   DB.ref('/schedule/'+did).once('value',daySnap=>{
     const dayData=daySnap.val()||{};
+    const existingActs=Object.values(dayData.acts||{});
+    const maxOrder=existingActs.length?Math.max(...existingActs.map(a=>a.order||0)):0;
+    const isNew=!aid;
+    const obj={cat:curAC,name,time:document.getElementById('a_time').value,
+      loc:document.getElementById('a_loc').value.trim(),note:document.getElementById('a_note').value.trim(),
+      cost:hasCost?{amt:costAmt,cur:curACur,paidBy:curAPayer===0?CFG.p1:CFG.p2,split:curASplit}:null,
+      order:isNew?(maxOrder+1):curActOrder};
+    const id=aid||('a'+uid());
     DB.ref('/schedule/'+did+'/acts/'+id).set(obj);
     const expId='actcost_'+did+'_'+id;
     if(hasCost){DB.ref('/expenses/'+expId).set({desc:name,amt:costAmt,cur:curACur,cat:mapActCat(curAC),paidBy:curAPayer===0?CFG.p1:CFG.p2,split:curASplit,date:dayData.date||'',fromAct:true,at:new Date().toISOString()});}
