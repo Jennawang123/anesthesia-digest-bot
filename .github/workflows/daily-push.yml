@@ -5,6 +5,11 @@ on:
     # 週一至週五 01:00 UTC = 09:00 台灣時間
     - cron: '0 1 * * 1-5'
   workflow_dispatch:
+    inputs:
+      force_weekday:
+        description: '強制指定星期幾 (1=週一 … 5=週五)，留空用當日'
+        required: false
+        default: ''
 
 jobs:
   daily-push:
@@ -32,6 +37,7 @@ jobs:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_GROUP_ID: ${{ secrets.LINE_GROUP_ID }}
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          FORCE_WEEKDAY: ${{ github.event.inputs.force_weekday }}
         run: python daily_push.py
