@@ -62,6 +62,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .page{display:none;}.page.on{display:block;}
 .fab{position:fixed;bottom:calc(var(--tab-h) + var(--safe-b) + 14px);right:16px;width:54px;height:54px;border-radius:50%;border:none;cursor:pointer;background:var(--blue);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,119,182,.4);z-index:99;transition:transform .12s,background .2s;}
 .fab:active{transform:scale(.9);}
+.fab-menu{position:fixed;bottom:calc(var(--tab-h) + var(--safe-b) + 76px);right:16px;display:flex;flex-direction:column;gap:8px;z-index:98;opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity .18s,transform .18s;}
+.fab-menu.open{opacity:1;pointer-events:auto;transform:translateY(0);}
+.fab-item{display:flex;align-items:center;gap:10px;background:#fff;border-radius:24px;padding:10px 16px;box-shadow:0 2px 10px rgba(0,0,0,.15);cursor:pointer;font-size:14px;font-weight:600;white-space:nowrap;}
+.fab-item:active{opacity:.7;}
 
 /* Shared */
 .bx{padding:12px 16px;}
@@ -318,6 +322,11 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     </div>
 
   </div>
+  <div class="fab-menu" id="fabMenu">
+    <div class="fab-item" onclick="closeFabMenu();openExpM()">✏️ 手動輸入</div>
+    <div class="fab-item" onclick="closeFabMenu();document.getElementById('receiptFile').click()">📷 掃描收據</div>
+  </div>
+  <input type="file" id="receiptFile" accept="image/*" capture="environment" style="display:none" onchange="onReceiptPick(event)">
   <button class="fab" id="fab" onclick="fabTap()">＋</button>
   <div class="tabbar">
     <div class="ti on" id="t-sched" onclick="goTab('sched')"><span class="ti-i">📅</span><span class="ti-l">行程</span></div>
@@ -416,6 +425,9 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 </div>
 
 <script>
+const RECEIPT_PROMPT=`你是日本收據辨識助手。請分析這張收據圖片，只回傳以下 JSON，不加任何說明：
+{"store":"店名（若看不清則填空字串）","amount":金額數字（日圓整數含稅）,"currency":"JPY","category":"food|transport|hotel|shopping|ticket|activity","date":"YYYY-MM-DD（若看不清則填今天）"}
+注意：日本收據常見外税(8%/10%)與内税，請確認取含税最終金額。`;
 const CATS=[
   {id:'food',ico:'🍽️',name:'餐飲',bg:'#FEF3C7'},{id:'transport',ico:'🚌',name:'交通',bg:'#DBEAFE'},
   {id:'hotel',ico:'🏨',name:'住宿',bg:'#EDE9FE'},{id:'activity',ico:'🎡',name:'活動',bg:'#D1FAE5'},
@@ -484,6 +496,41 @@ async function fetchRate(){
       if(el)el.textContent=`即時匯率 1 JPY ≈ NT$${exchRate.toFixed(4)}（台灣銀行參考）`;
     }
   }catch(e){exchRate=null;}
+}
+
+async function scanReceipt(base64Image){
+  if(!CFG.geminiKey)return null;
+  try{
+    const res=await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CFG.geminiKey}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[
+        {text:RECEIPT_PROMPT},
+        {inline_data:{mime_type:'image/jpeg',data:base64Image}}
+      ]}]})}
+    );
+    const json=await res.json();
+    const raw=json.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    const cleaned=raw.replace(/```json|```/g,'').trim();
+    return JSON.parse(cleaned);
+  }catch(e){return null;}
+}
+
+function onReceiptPick(ev){
+  const f=ev.target.files[0];ev.target.value='';if(!f)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    toast('🔍 辨識收據中…');
+    const base64=e.target.result.split(',')[1];
+    const data=await scanReceipt(base64);
+    if(data&&data.amount>0){
+      openExpMPrefilled(data);
+    }else{
+      toast('⚠️ 辨識失敗，請手動輸入');
+      openExpM();
+    }
+  };
+  reader.readAsDataURL(f);
 }
 
 function weatherDesc(code){
@@ -608,11 +655,18 @@ function goTab(t){
   const fab=document.getElementById('fab');
   fab.style.display=(t==='cfg'||t==='stat')?'none':'flex';
   fab.style.background=t==='exp'?'#F4A261':'var(--blue)';
+  closeFabMenu();
 }
+let fabMenuOpen=false;
 function fabTap(){
-  if(curTab==='sched')openActM('day1');
-  else if(curTab==='exp')openExpM();
+  if(curTab==='sched'){openActM('day1');return;}
+  if(curTab==='exp'){
+    fabMenuOpen=!fabMenuOpen;
+    document.getElementById('fabMenu').classList.toggle('open',fabMenuOpen);
+    return;
+  }
 }
+function closeFabMenu(){fabMenuOpen=false;document.getElementById('fabMenu').classList.remove('open');}
 
 // ─── Drag & Drop ─────────────────────────────────────
 function initDnD(){
@@ -821,6 +875,17 @@ function openExpM(){
   document.getElementById('e_desc').value='';document.getElementById('e_amt').value='';document.getElementById('e_date').value=today();
   curCat='food';renderCatGrid();selPayer(0);selSplit('both');selCur('JPY');
   openM('m-exp');setTimeout(()=>document.getElementById('e_desc').focus(),280);
+}
+
+function openExpMPrefilled(data){
+  document.getElementById('m-exp-t').textContent='確認支出（收據辨識）';
+  document.getElementById('me-id').value='';
+  document.getElementById('e_desc').value=data.store||'';
+  document.getElementById('e_amt').value=data.amount||'';
+  document.getElementById('e_date').value=data.date||today();
+  const cat=(['food','transport','hotel','shopping','ticket','activity'].includes(data.category))?data.category:'food';
+  curCat=cat;renderCatGrid();selPayer(0);selSplit('both');selCur(data.currency||'JPY');
+  openM('m-exp');setTimeout(()=>document.getElementById('e_amt').focus(),280);
 }
 function openExpEdit(eid){
   DB.ref('/expenses/'+eid).once('value',snap=>{
