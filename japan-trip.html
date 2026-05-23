@@ -264,13 +264,15 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="page" id="page-exp">
       <div class="bx">
         <div id="balSec"></div>
-        <div id="pieSec"></div>
         <div id="expList"></div>
       </div>
     </div>
 
-    <div class="page" id="page-notes">
-      <div class="bx" id="notesList"></div>
+    <div class="page" id="page-stat">
+      <div class="bx">
+        <div id="pieSec"></div>
+        <div id="personSec"></div>
+      </div>
     </div>
 
     <div class="page" id="page-cfg">
@@ -320,7 +322,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
   <div class="tabbar">
     <div class="ti on" id="t-sched" onclick="goTab('sched')"><span class="ti-i">📅</span><span class="ti-l">行程</span></div>
     <div class="ti"    id="t-exp"   onclick="goTab('exp')"  ><span class="ti-i">💰</span><span class="ti-l">記帳</span></div>
-    <div class="ti"    id="t-notes" onclick="goTab('notes')"><span class="ti-i">📝</span><span class="ti-l">記事本</span></div>
+    <div class="ti"    id="t-stat"  onclick="goTab('stat')" ><span class="ti-i">📊</span><span class="ti-l">統計</span></div>
     <div class="ti"    id="t-cfg"   onclick="goTab('cfg')"  ><span class="ti-i">⚙️</span><span class="ti-l">設定</span></div>
   </div>
 </div>
@@ -577,7 +579,7 @@ function connectFB(){
       lastExps=d.expenses||{};
       renderSched(sched);
       renderExp(lastExps);
-      renderNotes(d.notes||{});
+      renderStat(lastExps);
       sync(false);
     },err=>{sync(false);toast('⚠️ Firebase 錯誤：'+err.message);});
   }catch(e){sync(false);toast('⚠️ Firebase 初始化失敗');console.error(e);}
@@ -604,13 +606,12 @@ function goTab(t){
   document.getElementById('t-'+t).classList.add('on');
   curTab=t;
   const fab=document.getElementById('fab');
-  fab.style.display=t==='cfg'?'none':'flex';
-  fab.style.background=t==='exp'?'#F4A261':t==='notes'?'#10B981':'var(--blue)';
+  fab.style.display=(t==='cfg'||t==='stat')?'none':'flex';
+  fab.style.background=t==='exp'?'#F4A261':'var(--blue)';
 }
 function fabTap(){
   if(curTab==='sched')openActM('day1');
   else if(curTab==='exp')openExpM();
-  else if(curTab==='notes')openNoteM();
 }
 
 // ─── Drag & Drop ─────────────────────────────────────
@@ -861,6 +862,19 @@ function calcDaySpend(exps,dateStr){
   return totals;
 }
 
+function calcPersonSpend(exps,who){
+  const totals=new Map();
+  Object.values(exps).forEach(e=>{
+    const cur=e.cur||'JPY',amt=e.amt||0;
+    let myAmt=0;
+    if(e.split==='p1'&&who===CFG.p1)myAmt=amt;
+    else if(e.split==='p2'&&who===CFG.p2)myAmt=amt;
+    else if(e.split==='both')myAmt=amt/2;
+    if(myAmt>0)totals.set(cur,(totals.get(cur)||0)+myAmt);
+  });
+  return totals;
+}
+
 // Pie chart
 function drawDonut(canvasId,exps,cur){
   const canvas=document.getElementById(canvasId);if(!canvas)return null;
@@ -941,11 +955,28 @@ function renderPie(exps){
 
 function switchPie(cur){curPieCur=cur;renderPie(lastExps);}
 
+function renderStat(exps){
+  renderPie(exps);
+  const p1=calcPersonSpend(exps,CFG.p1),p2=calcPersonSpend(exps,CFG.p2);
+  const fmtTotals=m=>[...m.entries()].map(([cur,tot])=>`<div style="font-size:20px;font-weight:800">${cur==='JPY'?'¥':'NT$'}${Math.round(tot).toLocaleString('zh-TW')}</div><div style="font-size:11px;color:var(--muted)">${cur}</div>`).join('')||'<div style="color:var(--muted);font-size:13px">無記錄</div>';
+  document.getElementById('personSec').innerHTML=`
+    <div class="card" style="display:flex;gap:0;padding:0;overflow:hidden;margin-bottom:10px">
+      <div style="flex:1;padding:16px;border-right:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">${esc(CFG.p1)}</div>
+        ${fmtTotals(p1)}
+      </div>
+      <div style="flex:1;padding:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">${esc(CFG.p2)}</div>
+        ${fmtTotals(p2)}
+      </div>
+    </div>`;
+}
+
 function renderExp(exps){
   const balSec=document.getElementById('balSec'),expList=document.getElementById('expList');
   const entries=Object.entries(exps);
   if(!entries.length){
-    balSec.innerHTML='';document.getElementById('pieSec').innerHTML='';
+    balSec.innerHTML='';
     expList.innerHTML='<div class="empty"><div class="empty-i">💰</div><div class="empty-h">尚無支出紀錄</div><div class="empty-s">點 ＋ 新增支出</div></div>';
     return;
   }
@@ -968,7 +999,6 @@ function renderExp(exps){
   };
 
   balSec.innerHTML=`<div class="bc-card">${balRow(jpy,'JPY','')}${balRow(twd,'TWD','twd-row')}</div>`;
-  renderPie(exps);
 
   // Expense list
   const groups={};
