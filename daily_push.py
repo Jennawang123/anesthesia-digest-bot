@@ -112,7 +112,7 @@ def load_articles(weekday: int) -> tuple[list[dict], str | None]:
 
 def build_prompt(articles: list[dict], topic: dict, date_str: str, hot_theme: str | None = None) -> str:
     article_block = "\n\n".join(
-        f"[{i+1}] 《{a['journal']}》\n標題：{a['title']}\n摘要：{a['abstract'][:400]}\n連結：{a['url']}"
+        f"[{i+1}] 《{a['journal']}》\n標題：{a['title']}\n發表日期：{a.get('pub_date') or '未知'}\n摘要：{a['abstract'][:400]}\n連結：{a['url']}"
         for i, a in enumerate(articles)
     )
 
@@ -132,7 +132,7 @@ def build_prompt(articles: list[dict], topic: dict, date_str: str, hot_theme: st
 
 [數字emoji] [完整英文標題]
 
-📍 [期刊名] | [發表年月，格式：YYYY年Mon] | [研究設計] | [⭐星級]
+📍 [期刊名] | [發表年月，直接用資料中的發表日期，格式：YYYY年Mon，若未知則寫「-」，絕對不可自行推測] | [研究設計] | [⭐星級]
 
 🔑 [一句話核心發現，繁體中文，醫療術語保留英文]
 
@@ -156,7 +156,8 @@ def build_prompt(articles: list[dict], topic: dict, date_str: str, hot_theme: st
 - 醫療術語、藥名、術式、縮寫、期刊名全部保留英文，不翻譯
 - 專有名詞若非全科通識（如 NephroCheck、MAKE、TEG 等），首次出現時括號補充一句中文解釋，例如：NephroCheck（尿液 TIMP-2×IGFBP7 biomarker 用於 AKI 預測）
 - 📊 bullet points 用 • 開頭，必須列出具體數值（p value、OR、HR、NNT、%、n 數等）或具體介入內容（例：限制術中 IV fluid ≤3 mL/kg/hr、使用 goal-directed therapy protocol）；禁止使用空洞描述如「有效改善」、「結果顯著」、「策略有效」
-- 🔑 一句話核心發現必須說清楚：誰、做了什麼、結果如何（含數字或方向）
+- 🔑 一句話核心發現必須說清楚：誰、做了什麼、結果如何（含數字或方向），例：「HES vs crystalloid 在腹部手術 meta-analysis 中顯示術後 AKI 風險無顯著差異（OR 1.08, 95%CI 0.91–1.28）」
+- 💡 臨床意義必須直接說出結論或建議，不可寫「提供依據」、「有助於重新評估」、「為臨床醫師提供參考」等後設評論；要說清楚：應該怎麼做、用或不用、改變什麼
 - 直接輸出訊息本體，不加任何說明文字
 
 文章資料：
@@ -173,7 +174,7 @@ def format_message(articles: list[dict], topic: dict, date_str: str, hot_theme: 
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=2000,
+        max_tokens=3500,
         messages=[{"role": "user", "content": build_prompt(articles, topic, date_str, hot_theme)}],
     )
     return response.content[0].text.strip()

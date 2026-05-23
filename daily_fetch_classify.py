@@ -77,10 +77,16 @@ def fetch_ncbi(query_term: str, journal_label: str, days_back: int = 30) -> list
             continue
 
         pmid = art.findtext(".//PMID") or ""
+
+        year  = art.findtext(".//PubDate/Year") or art.findtext(".//PubDate/MedlineDate", "")[:4] or ""
+        month = art.findtext(".//PubDate/Month") or ""
+        pub_date = f"{year}/{month}" if month else year
+
         articles.append({
             "title":    title,
             "abstract": abstract[:500],
             "journal":  journal_label,
+            "pub_date": pub_date,
             "url":      f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "",
         })
 
@@ -105,10 +111,17 @@ def fetch_rss(url: str, journal: str) -> list[dict]:
         if len(abstract) < 50:
             continue
 
+        pub_date = ""
+        if hasattr(entry, "published_parsed") and entry.published_parsed:
+            import time as _time
+            t = entry.published_parsed
+            pub_date = f"{t.tm_year}/{_time.strftime('%b', t)}"
+
         articles.append({
             "title":    title,
             "abstract": abstract[:500],
             "journal":  journal,
+            "pub_date": pub_date,
             "url":      entry.get("link", ""),
         })
 
