@@ -333,7 +333,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
   <button class="fab" id="fab" onclick="fabTap()">＋</button>
   <div class="tabbar">
     <div class="ti on" id="t-sched" onclick="goTab('sched')"><span class="ti-i">📅</span><span class="ti-l">行程</span></div>
-    <div class="ti"    id="t-exp"   onclick="goTab('exp')"  ><span class="ti-i">💰</span><span class="ti-l">記帳</span></div>
+    <div class="ti"    id="t-exp"   onclick="goTab('exp')"  ><span class="ti-i">💴</span><span class="ti-l">記帳</span></div>
     <div class="ti"    id="t-stat"  onclick="goTab('stat')" ><span class="ti-i">📊</span><span class="ti-l">統計</span></div>
     <div class="ti"    id="t-cfg"   onclick="goTab('cfg')"  ><span class="ti-i">⚙️</span><span class="ti-l">設定</span></div>
   </div>
@@ -722,6 +722,7 @@ function initDnD(){
   });
   box.addEventListener('dragstart',e=>{
     const row=e.target.closest('.act-row');if(!row)return;
+    if(e.target.closest('.act-handle'))return; // 交給 initActDnD 處理
     e.dataTransfer.setData('dnd',JSON.stringify({did:row.dataset.did,aid:row.dataset.aid}));
     setTimeout(()=>row.classList.add('dragging'),0);
   });
