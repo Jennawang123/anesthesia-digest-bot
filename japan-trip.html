@@ -232,10 +232,17 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
       <div class="fg"><label class="lb">天數</label><input class="inp" id="s_days" type="number" value="7" min="1" max="30"></div>
     </div>
     <div class="fg"><label class="lb">Header 照片網址（選填）</label><input class="inp" id="s_photo" type="url" placeholder="https://...jpg"></div>
-    <div class="fr">
-      <div class="fg"><label class="lb">目的地緯度</label><input class="inp" id="s_lat" type="number" step="0.01" placeholder="例：35.68（東京）"></div>
-      <div class="fg"><label class="lb">目的地經度</label><input class="inp" id="s_lng" type="number" step="0.01" placeholder="例：139.69（東京）"></div>
+    <div class="fg"><label class="lb">主要城市</label>
+      <select class="inp" id="s_city">
+        <option value="東京">東京</option>
+        <option value="大阪">大阪</option>
+        <option value="京都">京都</option>
+        <option value="岡山" selected>岡山</option>
+        <option value="札幌">札幌</option>
+        <option value="福岡">福岡</option>
+      </select>
     </div>
+    <div class="fg"><label class="lb">Gemini API Key</label><input class="inp" id="s_gemini" type="password" placeholder="AIza…"></div>
     <button class="btn btn-b btn-w" onclick="doSetup()">開始使用 →</button>
     <p class="hint">Firebase Console → Realtime Database → 建立資料庫（測試模式）→ 複製網址</p>
   </div>
@@ -284,10 +291,17 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
             <div class="fg"><label class="lb">天數</label><input class="inp" id="c_days" type="number" min="1" max="30"></div>
           </div>
           <div class="fg"><label class="lb">Header 照片網址（選填）</label><input class="inp" id="c_photo" type="url" placeholder="https://...jpg"></div>
-          <div class="fr">
-            <div class="fg"><label class="lb">緯度</label><input class="inp" id="c_lat" type="number" step="0.01"></div>
-            <div class="fg"><label class="lb">經度</label><input class="inp" id="c_lng" type="number" step="0.01"></div>
+          <div class="fg"><label class="lb">主要城市</label>
+            <select class="inp" id="c_city">
+              <option value="東京">東京</option>
+              <option value="大阪">大阪</option>
+              <option value="京都">京都</option>
+              <option value="岡山">岡山</option>
+              <option value="札幌">札幌</option>
+              <option value="福岡">福岡</option>
+            </select>
           </div>
+          <div class="fg"><label class="lb">Gemini API Key</label><input class="inp" id="c_gemini" type="password" placeholder="AIza…"></div>
           <button class="btn btn-b btn-w" onclick="saveCfg()">儲存設定</button>
         </div>
         <div class="slbl" style="margin-top:8px">行程日期</div>
@@ -419,6 +433,14 @@ const ACTS=[
   {id:'beach',ico:'🏖️',name:'海灘',bg:'#E0F2FE'},{id:'other',ico:'📌',name:'其他',bg:'#F3F4F6'},
 ];
 const ACTM=Object.fromEntries(ACTS.map(c=>[c.id,c]));
+const CITIES={
+  '東京':{lat:35.68,lng:139.69},
+  '大阪':{lat:34.69,lng:135.50},
+  '京都':{lat:35.01,lng:135.77},
+  '岡山':{lat:34.66,lng:133.93},
+  '札幌':{lat:43.06,lng:141.35},
+  '福岡':{lat:33.59,lng:130.40},
+};
 // Map schedule activity type → expense category
 function mapActCat(actCat){
   if(actCat==='food')return'food';
@@ -495,14 +517,16 @@ async function fetchWeather(){
 function doSetup(){
   const url=document.getElementById('s_url').value.trim();
   if(!url){alert('請輸入 Firebase 資料庫網址');return;}
-  CFG={url,title:document.getElementById('s_title').value.trim()||'旅遊計畫',
+  const city=document.getElementById('s_city').value||'東京';
+  const coords=CITIES[city]||{lat:35.68,lng:139.69};
+  CFG={url,title:document.getElementById('s_title').value.trim()||'日本之旅',
     p1:document.getElementById('s_p1').value.trim()||'旅伴1',
     p2:document.getElementById('s_p2').value.trim()||'旅伴2',
     start:document.getElementById('s_start').value||today(),
     days:parseInt(document.getElementById('s_days').value)||7,
     photo:document.getElementById('s_photo').value.trim(),
-    lat:parseFloat(document.getElementById('s_lat').value)||35.68,
-    lng:parseFloat(document.getElementById('s_lng').value)||139.69};
+    city,lat:coords.lat,lng:coords.lng,
+    geminiKey:document.getElementById('s_gemini').value.trim()};
   localStorage.setItem('japan_trip',JSON.stringify(CFG));
   bootApp();
 }
@@ -528,8 +552,8 @@ function bootApp(){
   document.getElementById('c_start').value=CFG.start;document.getElementById('c_days').value=CFG.days;
   document.getElementById('c_url').value=CFG.url;
   document.getElementById('c_photo').value=CFG.photo||'';
-  document.getElementById('c_lat').value=CFG.lat||'';
-  document.getElementById('c_lng').value=CFG.lng||'';
+  document.getElementById('c_city').value=CFG.city||'東京';
+  document.getElementById('c_gemini').value=CFG.geminiKey||'';
   const ph=document.getElementById('hdrPhoto');
   if(CFG.photo){ph.src=CFG.photo;ph.style.display='';}else{ph.style.display='none';}
   renderCatGrid();renderACGrid();initDnD();
@@ -1030,8 +1054,9 @@ function saveCfg(){
   const dateChanged=newStart!==CFG.start;
   CFG.start=newStart;CFG.days=parseInt(document.getElementById('c_days').value)||CFG.days;
   CFG.photo=document.getElementById('c_photo').value.trim();
-  CFG.lat=parseFloat(document.getElementById('c_lat').value)||CFG.lat;
-  CFG.lng=parseFloat(document.getElementById('c_lng').value)||CFG.lng;
+  const newCity=document.getElementById('c_city').value||CFG.city;
+  if(newCity!==CFG.city){CFG.city=newCity;const coords=CITIES[newCity]||{lat:35.68,lng:139.69};CFG.lat=coords.lat;CFG.lng=coords.lng;}
+  CFG.geminiKey=document.getElementById('c_gemini').value.trim()||CFG.geminiKey;
   const ph=document.getElementById('hdrPhoto');
   if(CFG.photo){ph.src=CFG.photo;ph.style.display='';}else{ph.style.display='none';}
   localStorage.setItem('japan_trip',JSON.stringify(CFG));
