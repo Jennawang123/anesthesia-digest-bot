@@ -117,7 +117,8 @@ def fetch_rss(url: str, journal: str) -> list[dict]:
 
 # ── 2. Classify ───────────────────────────────────────────────────────────────
 
-def classify_articles(articles: list[dict]) -> dict[str, dict]:
+def _call1_classify_and_score(articles: list[dict]) -> tuple[dict[str, list[int]], dict[int, int]]:
+    """Call 1：分類 + 重要性評分（依研究設計等級）"""
     numbered = "\n".join(
         f"{i+1}. [{a['journal']}] {a['title']} | {a['abstract'][:200]}"
         for i, a in enumerate(articles)
@@ -132,42 +133,109 @@ Fixed topics:
 4: Pediatric anesthesia / Obstetric anesthesia / neonatal / infant / labor / cesarean / maternal
 5: Cardiac anesthesia / cardiac surgery / CPB / TAVI / TAVR / ECMO / valve / coronary / aortic
 
+Evidence hierarchy score (1–10):
+10: RCT, Phase 3 trial
+8–9: Meta-analysis, systematic review
+7: Phase 2 RCT, large prospective cohort (n>500)
+5–6: Retrospective cohort, registry study, prospective cohort (n<500)
+3–4: Cross-sectional, case-control, genetic association
+1–2: Case series, case report, narrative review, expert opinion
+
 Articles (1-based index):
 {numbered}
 
-Task 1 — Classify each article into the most relevant topic(s).
-Task 2 — Identify hot themes: specific clinical topics that appear in articles from 2+ different journals this week. For each hot theme, assign it to the single most relevant fixed topic (1–5). A topic may have at most 1 hot theme. If no cross-journal theme exists for a topic, set null.
-
-Return ONLY valid JSON with no explanation:
+Return ONLY valid JSON:
 {{
   "assignments": {{"1":[indices],"2":[indices],"3":[indices],"4":[indices],"5":[indices]}},
-  "hot_themes": {{"1":"theme name or null","2":"theme name or null","3":"theme name or null","4":"theme name or null","5":"theme name or null"}}
+  "scores": {{"index": score, ...}}
 }}
-
 Rules:
-- assignments: 1-based indices; an article may appear in multiple topics
-- hot_themes: concise English phrase (e.g. "Perioperative Hypotension", "PONV Prevention"); null if no cross-journal theme
-- Omit articles that do not fit any topic"""
+- assignments: 1-based indices; article may appear in multiple topics; omit if no topic fits
+- scores: keys are 1-based string indices ("1","2",...); value is integer 1–10"""
 
-    response = client.messages.create(
+    resp = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=800,
+        max_tokens=900,
         messages=[{"role": "user", "content": prompt}],
     )
-
-    raw = response.content[0].text.strip()
+    raw   = resp.content[0].text.strip()
     match = re.search(r"\{.*\}", raw, re.DOTALL)
     if not match:
-        return {k: {"hot_theme": None, "items": []} for k in "12345"}
+        return {k: [] for k in "12345"}, {}
+
+    parsed     = json.loads(match.group())
+    assignment = parsed.get("assignments", {})
+    scores_raw = parsed.get("scores", {})
+    scores     = {int(k): int(v) for k, v in scores_raw.items() if str(k).isdigit()}
+    return assignment, scores
+
+
+def _call2_hot_themes(classified: dict[str, list[dict]]) -> dict[str, str | None]:
+    """Call 2：在已分類結果中，偵測跨期刊熱點"""
+    topic_blocks = []
+    for tid, items in classified.items():
+        if not items:
+            continue
+        lines = [f"Topic {tid}:"]
+        for a in items:
+            lines.append(f"  [{a['journal']}] {a['title']}")
+        topic_blocks.append("\n".join(lines))
+
+    if not topic_blocks:
+        return {k: None for k in "12345"}
+
+    prompt = f"""You are a medical literature analyst.
+
+Below are this week's anesthesia articles grouped by topic. For each topic, identify if there is a prominent hot theme — a specific clinical question or intervention where 2+ DIFFERENT journals published relevant articles this week.
+
+{chr(10).join(topic_blocks)}
+
+Return ONLY valid JSON:
+{{"1":"hot theme or null","2":"hot theme or null","3":"hot theme or null","4":"hot theme or null","5":"hot theme or null"}}
+
+Rules:
+- Hot theme: concise English phrase (≤6 words), e.g. "Remimazolam vs Propofol Sedation"
+- Must appear in 2+ different journals within that topic; otherwise null
+- null if topic has 0 articles"""
+
+    resp = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=200,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw   = resp.content[0].text.strip()
+    match = re.search(r"\{.*\}", raw, re.DOTALL)
+    if not match:
+        return {k: None for k in "12345"}
 
     parsed = json.loads(match.group())
-    assignment  = parsed.get("assignments", {})
-    hot_themes  = parsed.get("hot_themes", {})
+    return {k: parsed.get(k) or None for k in "12345"}
+
+
+def classify_articles(articles: list[dict]) -> dict[str, dict]:
+    # Call 1：分類 + 評分
+    assignment, scores = _call1_classify_and_score(articles)
+
+    # 組裝各主題文章（附 score 欄位）
+    classified_items: dict[str, list[dict]] = {}
+    for tid in "12345":
+        items = []
+        for i in assignment.get(tid, []):
+            if 1 <= i <= len(articles):
+                art = dict(articles[i - 1])
+                art["score"] = scores.get(i, 5)
+                items.append(art)
+        # 依重要性分數排序
+        items.sort(key=lambda x: x["score"], reverse=True)
+        classified_items[tid] = items
+
+    # Call 2：熱點偵測
+    hot_themes = _call2_hot_themes(classified_items)
 
     return {
         tid: {
-            "hot_theme": hot_themes.get(tid) or None,
-            "items": [articles[i - 1] for i in assignment.get(tid, []) if 1 <= i <= len(articles)],
+            "hot_theme": hot_themes.get(tid),
+            "items":     classified_items[tid],
         }
         for tid in "12345"
     }
