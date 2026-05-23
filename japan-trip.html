@@ -354,7 +354,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
       <div class="fr">
         <div class="fg" style="flex:0 0 130px"><label class="lb">金額</label><input class="inp" id="a_cost" type="number" placeholder="0.00" step="0.01" min="0"></div>
         <div class="fg"><label class="lb">幣別</label>
-          <div class="cur-row"><div class="cr aud on" id="acur-aud" onclick="selACur('AUD')">🇦🇺 AUD</div><div class="cr twd" id="acur-twd" onclick="selACur('TWD')">🇹🇼 TWD</div></div>
+          <div class="cur-row"><div class="cr aud on" id="acur-jpy" onclick="selACur('JPY')">🇯🇵 JPY</div><div class="cr twd" id="acur-twd" onclick="selACur('TWD')">🇹🇼 TWD</div></div>
         </div>
       </div>
       <div class="fg"><label class="lb">誰付</label><div class="pr"><div class="pb p1" id="apb1" onclick="selAPayer(0)"></div><div class="pb p2" id="apb2" onclick="selAPayer(1)"></div></div></div>
@@ -376,7 +376,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="fr">
       <div class="fg" style="flex:0 0 130px"><label class="lb">金額</label><input class="inp" id="e_amt" type="number" placeholder="0.00" step="0.01" min="0"></div>
       <div class="fg"><label class="lb">幣別</label>
-        <div class="cur-row"><div class="cr aud on" id="cur-aud" onclick="selCur('AUD')">🇦🇺 AUD</div><div class="cr twd" id="cur-twd" onclick="selCur('TWD')">🇹🇼 TWD</div></div>
+        <div class="cur-row"><div class="cr aud on" id="cur-jpy" onclick="selCur('JPY')">🇯🇵 JPY</div><div class="cr twd" id="cur-twd" onclick="selCur('TWD')">🇹🇼 TWD</div></div>
       </div>
     </div>
     <div class="fg"><label class="lb">日期</label><input class="inp" id="e_date" type="date"></div>
@@ -451,7 +451,7 @@ let CFG={},DB=null,curTab='sched';
 let weatherByDate=new Map();
 let curCat='food',curPayer=0,curSplit='both',curCur='JPY';
 let curAC='sight',curACur='JPY',curAPayer=0,curASplit='both';
-let curNT='text',curImg=null,curPieCur='AUD',lastExps={},exchRate=null;
+let curNT='text',curImg=null,curPieCur='JPY',lastExps={},exchRate=null;
 const DG={on:false,did:null,aid:null,act:null,srcEl:null,ghost:null,timer:null,sx:0,sy:0};
 
 // ─── Utils ───────────────────────────────────────────
@@ -474,12 +474,12 @@ document.querySelectorAll('.ov').forEach(el=>el.addEventListener('click',e=>{if(
 // ─── Exchange rate ────────────────────────────────────
 async function fetchRate(){
   try{
-    const r=await fetch('https://open.er-api.com/v6/latest/AUD');
+    const r=await fetch('https://open.er-api.com/v6/latest/JPY');
     const d=await r.json();
     if(d.result==='success'&&d.rates?.TWD){
       exchRate=d.rates.TWD;
       const el=document.getElementById('pieRate');
-      if(el)el.textContent=`即時匯率 1 AUD ≈ NT$${exchRate.toFixed(2)}（台灣銀行參考）`;
+      if(el)el.textContent=`即時匯率 1 JPY ≈ NT$${exchRate.toFixed(4)}（台灣銀行參考）`;
     }
   }catch(e){exchRate=null;}
 }
@@ -690,7 +690,7 @@ function moveAct(fromDid,aid,act,toDid){
     DB.ref('/schedule/'+fromDid+'/acts/'+aid).remove();
     if(act.cost?.amt>0){
       DB.ref('/expenses/actcost_'+fromDid+'_'+aid).remove();
-      DB.ref('/expenses/actcost_'+toDid+'_'+aid).set({desc:act.name,amt:act.cost.amt,cur:act.cost.cur||'AUD',cat:mapActCat(act.cat),paidBy:act.cost.paidBy||CFG.p1,split:act.cost.split||'both',date:newDate,fromAct:true,at:new Date().toISOString()});
+      DB.ref('/expenses/actcost_'+toDid+'_'+aid).set({desc:act.name,amt:act.cost.amt,cur:act.cost.cur||'JPY',cat:mapActCat(act.cat),paidBy:act.cost.paidBy||CFG.p1,split:act.cost.split||'both',date:newDate,fromAct:true,at:new Date().toISOString()});
     }
     toast('✅ 已移動到 '+toDid.replace('day','Day '));
   });
@@ -701,7 +701,7 @@ function renderACGrid(){
   document.getElementById('acGrid').innerHTML=ACTS.map(c=>`<div class="ac-btn ${c.id===curAC?'on':''}" id="ac-${c.id}" onclick="selAC('${c.id}')"><span class="ac-i">${c.ico}</span><span class="ac-n">${c.name}</span></div>`).join('');
 }
 function selAC(id){curAC=id;document.querySelectorAll('.ac-btn').forEach(e=>e.classList.remove('on'));document.getElementById('ac-'+id)?.classList.add('on');}
-function selACur(c){curACur=c;document.getElementById('acur-aud').classList.toggle('on',c==='AUD');document.getElementById('acur-twd').classList.toggle('on',c==='TWD');}
+function selACur(c){curACur=c;document.getElementById('acur-jpy').classList.toggle('on',c==='JPY');document.getElementById('acur-twd').classList.toggle('on',c==='TWD');}
 function selAPayer(i){curAPayer=i;document.getElementById('apb1').classList.toggle('on',i===0);document.getElementById('apb2').classList.toggle('on',i===1);}
 function selASplit(m){curASplit=m;['both','p1','p2'].forEach(x=>document.getElementById('asp-'+x).classList.toggle('on',x===m));}
 
@@ -717,8 +717,8 @@ function renderSched(sched){
     const wChip=wInfo?`<span class="wchip">${wInfo.icon} ${wInfo.temp}°C ${wInfo.desc}</span>`:'';
     const spend=calcDaySpend(lastExps,day.date);
     const sChips=[...spend.entries()].map(([cur,tot])=>{
-      const sym=cur==='AUD'?'$':'NT$';
-      const ico=cur==='AUD'?'💵':'💴';
+      const sym=cur==='JPY'?'¥':'NT$';
+      const ico='💴';
       return`<span class="schip">${ico} ${sym}${Math.round(tot).toLocaleString('zh-TW')} ${cur}</span>`;
     }).join('');
     const metaRow=(wChip||sChips)?`<div class="day-meta">${wChip}${sChips}</div>`:'';
@@ -736,8 +736,8 @@ function renderSched(sched){
           acts.map(([aid,act])=>{
             const ac=ACTM[act.cat]||ACTM.other;
             const mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(act.loc||'');
-            const sym=(act.cost?.cur||'AUD')==='AUD'?'$':'NT$';
-            const dp=(act.cost?.cur||'AUD')==='AUD'?2:0;
+            const sym=(act.cost?.cur||'JPY')==='JPY'?'¥':'NT$';
+            const dp=0;
             return `<div class="act-row" draggable="true" data-did="${did}" data-aid="${aid}">
               <div class="act-ico" style="background:${ac.bg}">${ac.ico}</div>
               <div class="act-body">
@@ -745,7 +745,7 @@ function renderSched(sched){
                 <div class="act-name">${esc(act.name||'')}</div>
                 ${act.loc?`<div class="act-loc"><a href="${mapUrl}" target="_blank">📍 ${esc(act.loc)}</a></div>`:''}
                 ${act.note?`<div class="act-note-t">💬 ${esc(act.note)}</div>`:''}
-                ${act.cost?.amt>0?`<div class="act-cost">💰 ${sym}${parseFloat(act.cost.amt).toFixed(dp)} ${act.cost.cur||'AUD'}</div>`:''}
+                ${act.cost?.amt>0?`<div class="act-cost">💰 ${sym}${parseFloat(act.cost.amt).toFixed(dp)} ${act.cost.cur||'JPY'}</div>`:''}
               </div>
               <div class="act-btns">
                 <button class="ib" onclick="openActEdit('${did}','${aid}')">✎</button>
@@ -770,7 +770,7 @@ function openActM(did){
   document.getElementById('ma-did').value=did;document.getElementById('ma-aid').value='';
   document.getElementById('a_time').value='';document.getElementById('a_name').value='';
   document.getElementById('a_loc').value='';document.getElementById('a_note').value='';document.getElementById('a_cost').value='';
-  curAC='sight';renderACGrid();selAPayer(0);selASplit('both');selACur('AUD');
+  curAC='sight';renderACGrid();selAPayer(0);selASplit('both');selACur('JPY');
   openM('m-act');setTimeout(()=>document.getElementById('a_name').focus(),280);
 }
 function openActEdit(did,aid){
@@ -782,7 +782,7 @@ function openActEdit(did,aid){
     document.getElementById('a_loc').value=a.loc||'';document.getElementById('a_note').value=a.note||'';
     document.getElementById('a_cost').value=a.cost?.amt||'';
     curAC=a.cat||'sight';renderACGrid();
-    selACur(a.cost?.cur||'AUD');selAPayer(a.cost?.paidBy===CFG.p2?1:0);selASplit(a.cost?.split||'both');
+    selACur(a.cost?.cur||'JPY');selAPayer(a.cost?.paidBy===CFG.p2?1:0);selASplit(a.cost?.split||'both');
     openM('m-act');
   });
 }
@@ -813,12 +813,12 @@ function renderCatGrid(){
 function selCat(id){curCat=id;document.querySelectorAll('.cat-btn').forEach(e=>e.classList.remove('on'));document.getElementById('cat-'+id)?.classList.add('on');}
 function selPayer(i){curPayer=i;document.getElementById('pb1').classList.toggle('on',i===0);document.getElementById('pb2').classList.toggle('on',i===1);}
 function selSplit(m){curSplit=m;['both','p1','p2'].forEach(x=>document.getElementById('sp-'+x).classList.toggle('on',x===m));}
-function selCur(c){curCur=c;document.getElementById('cur-aud').classList.toggle('on',c==='AUD');document.getElementById('cur-twd').classList.toggle('on',c==='TWD');}
+function selCur(c){curCur=c;document.getElementById('cur-jpy').classList.toggle('on',c==='JPY');document.getElementById('cur-twd').classList.toggle('on',c==='TWD');}
 
 function openExpM(){
   document.getElementById('m-exp-t').textContent='新增支出';document.getElementById('me-id').value='';
   document.getElementById('e_desc').value='';document.getElementById('e_amt').value='';document.getElementById('e_date').value=today();
-  curCat='food';renderCatGrid();selPayer(0);selSplit('both');selCur('AUD');
+  curCat='food';renderCatGrid();selPayer(0);selSplit('both');selCur('JPY');
   openM('m-exp');setTimeout(()=>document.getElementById('e_desc').focus(),280);
 }
 function openExpEdit(eid){
@@ -826,7 +826,7 @@ function openExpEdit(eid){
     const e=snap.val();if(!e)return;
     document.getElementById('m-exp-t').textContent='編輯支出';document.getElementById('me-id').value=eid;
     document.getElementById('e_desc').value=e.desc||'';document.getElementById('e_amt').value=e.amt||'';document.getElementById('e_date').value=e.date||today();
-    curCat=e.cat||'food';renderCatGrid();selPayer(e.paidBy===CFG.p2?1:0);selSplit(e.split||'both');selCur(e.cur||'AUD');
+    curCat=e.cat||'food';renderCatGrid();selPayer(e.paidBy===CFG.p2?1:0);selSplit(e.split||'both');selCur(e.cur||'JPY');
     openM('m-exp');
   });
 }
@@ -842,7 +842,7 @@ function delExp(eid){if(!confirm('確定刪除？'))return;DB.ref('/expenses/'+e
 
 function calcBal(exps,cur){
   let p1p=0,p2p=0,p1s=0,p2s=0;
-  Object.values(exps).filter(e=>(e.cur||'AUD')===cur).forEach(e=>{
+  Object.values(exps).filter(e=>(e.cur||'JPY')===cur).forEach(e=>{
     const a=e.amt||0;
     if(e.paidBy===CFG.p1)p1p+=a;else p2p+=a;
     if(e.split==='p1')p1s+=a;else if(e.split==='p2')p2s+=a;else{p1s+=a/2;p2s+=a/2;}
@@ -854,7 +854,7 @@ function calcDaySpend(exps,dateStr){
   const totals=new Map();
   Object.values(exps).forEach(e=>{
     if(e.date!==dateStr)return;
-    const cur=e.cur||'AUD';
+    const cur=e.cur||'JPY';
     totals.set(cur,(totals.get(cur)||0)+(e.amt||0));
   });
   totals.forEach((v,k)=>{if(v<=0)totals.delete(k);});
@@ -869,7 +869,7 @@ function drawDonut(canvasId,exps,cur){
   const rate=exchRate||21.5,isCombined=cur==='combined';
   const totals={};
   Object.values(exps).forEach(e=>{
-    if(!isCombined&&(e.cur||'AUD')!==cur)return;
+    if(!isCombined&&(e.cur||'JPY')!==cur)return;
     const cat=e.cat||'other';
     let amt=e.amt||0;
     if(isCombined)amt=(e.cur==='TWD')?amt:amt*rate;
@@ -888,7 +888,7 @@ function drawDonut(canvasId,exps,cur){
     angle+=slice;
   });
   ctx.beginPath();ctx.arc(cx,cy,ir,0,2*Math.PI);ctx.fillStyle='#fff';ctx.fill();
-  const sym=(cur==='AUD')?'$':'NT$',dp=(cur==='AUD')?2:0;
+  const sym=(cur==='JPY')?'¥':'NT$',dp=0;
   const dispTotal=isCombined?total.toFixed(0):total.toFixed(dp);
   ctx.fillStyle='#1A1A2E';ctx.textAlign='center';
   ctx.font='bold 11px sans-serif';ctx.fillText('總計',cx,cy-7);
@@ -897,18 +897,18 @@ function drawDonut(canvasId,exps,cur){
 }
 
 function renderPie(exps){
-  const hasAUD=Object.values(exps).some(e=>(e.cur||'AUD')==='AUD'&&(e.amt||0)>0);
+  const hasJPY=Object.values(exps).some(e=>(e.cur||'JPY')==='JPY'&&(e.amt||0)>0);
   const hasTWD=Object.values(exps).some(e=>e.cur==='TWD'&&(e.amt||0)>0);
-  if(!hasAUD&&!hasTWD){document.getElementById('pieSec').innerHTML='';return;}
+  if(!hasJPY&&!hasTWD){document.getElementById('pieSec').innerHTML='';return;}
 
   // Ensure curPieCur is valid
-  if(curPieCur==='AUD'&&!hasAUD)curPieCur=hasTWD?'TWD':'combined';
-  if(curPieCur==='TWD'&&!hasTWD)curPieCur=hasAUD?'AUD':'combined';
+  if(curPieCur==='JPY'&&!hasJPY)curPieCur=hasTWD?'TWD':'combined';
+  if(curPieCur==='TWD'&&!hasTWD)curPieCur=hasJPY?'JPY':'combined';
 
   const tabs=[];
-  if(hasAUD)tabs.push({k:'AUD',label:'🇦🇺 AUD',cls:''});
+  if(hasJPY)tabs.push({k:'JPY',label:'🇯🇵 JPY',cls:''});
   if(hasTWD)tabs.push({k:'TWD',label:'🇹🇼 TWD',cls:'twd'});
-  if(hasAUD&&hasTWD)tabs.push({k:'combined',label:'合計(TWD)',cls:'twd'});
+  if(hasJPY&&hasTWD)tabs.push({k:'combined',label:'合計(TWD)',cls:'twd'});
 
   document.getElementById('pieSec').innerHTML=`<div class="pie-card">
     <div class="pie-hdr">
@@ -919,13 +919,13 @@ function renderPie(exps){
       <canvas id="pieCanvas" width="140" height="140" style="flex-shrink:0"></canvas>
       <div class="pie-legend" id="pieLegend"></div>
     </div>
-    <div class="pie-rate" id="pieRate">${exchRate?`即時匯率 1 AUD ≈ NT$${exchRate.toFixed(2)}（台灣銀行參考）`:''}</div>
+    <div class="pie-rate" id="pieRate">${exchRate?`即時匯率 1 JPY ≈ NT$${exchRate.toFixed(4)}（台灣銀行參考）`:''}</div>
   </div>`;
 
   const result=drawDonut('pieCanvas',exps,curPieCur);
   if(!result)return;
   const{entries,total}=result;
-  const sym=(curPieCur==='AUD')?'$':'NT$',dp=(curPieCur==='AUD')?2:0;
+  const sym=(curPieCur==='JPY')?'¥':'NT$',dp=0;
   document.getElementById('pieLegend').innerHTML=entries.map(([cat,val])=>{
     const c=CATM[cat]||CATM.other;
     const pct=((val/total)*100).toFixed(0);
@@ -949,25 +949,25 @@ function renderExp(exps){
     expList.innerHTML='<div class="empty"><div class="empty-i">💰</div><div class="empty-h">尚無支出紀錄</div><div class="empty-s">點 ＋ 新增支出</div></div>';
     return;
   }
-  const aud=calcBal(exps,'AUD'),twd=calcBal(exps,'TWD');
+  const jpy=calcBal(exps,'JPY'),twd=calcBal(exps,'TWD');
 
   const balRow=(b,cur,rowCls)=>{
     if(b.total<=0)return'';
-    const sym=cur==='AUD'?'$':'NT$',dp=cur==='AUD'?2:0;
+    const sym=cur==='JPY'?'¥':'NT$',dp=0;
     const sAmt=Math.abs(b.settle);
     const settleHtml=sAmt>0.005
       ?`<span class="bc-settle">${b.settle>0?esc(CFG.p2)+'→'+esc(CFG.p1):esc(CFG.p1)+'→'+esc(CFG.p2)} ${sym}${sAmt.toFixed(dp)}</span>`
       :`<span class="bc-settle ok">✅ 結清</span>`;
     return`<div class="bc-row ${rowCls}">
       <div>
-        <span class="bc-flag">${cur==='AUD'?'🇦🇺':'🇹🇼'}</span><span class="bc-tot">${sym}${b.total.toFixed(dp)}</span>
+        <span class="bc-flag">${cur==='JPY'?'🇯🇵':'🇹🇼'}</span><span class="bc-tot">${sym}${b.total.toFixed(dp)}</span>
         <div class="bc-ps">${esc(CFG.p1)} ${sym}${b.p1p.toFixed(dp)} &nbsp;·&nbsp; ${esc(CFG.p2)} ${sym}${b.p2p.toFixed(dp)}</div>
       </div>
       ${settleHtml}
     </div>`;
   };
 
-  balSec.innerHTML=`<div class="bc-card">${balRow(aud,'AUD','')}${balRow(twd,'TWD','twd-row')}</div>`;
+  balSec.innerHTML=`<div class="bc-card">${balRow(jpy,'JPY','')}${balRow(twd,'TWD','twd-row')}</div>`;
   renderPie(exps);
 
   // Expense list
@@ -978,14 +978,14 @@ function renderExp(exps){
     groups[date].map(([id,e])=>{
       const cat=CATM[e.cat]||CATM.other,isP1=e.paidBy===CFG.p1;
       const slbl=e.split==='both'?'均分':e.split==='p1'?esc(CFG.p1)+'自付':esc(CFG.p2)+'自付';
-      const sym=(e.cur||'AUD')==='AUD'?'$':'NT$',dp=(e.cur||'AUD')==='AUD'?2:0;
+      const sym=(e.cur||'JPY')==='JPY'?'¥':'NT$',dp=0;
       return`<div class="er">
         <div class="ei" style="background:${cat.bg}">${cat.ico}</div>
         <div class="einfo">
           <div class="edesc">${esc(e.desc||'')}</div>
           <div class="emeta">
             <span class="bdg ${isP1?'bp1':'bp2'}">${esc(e.paidBy)}</span>
-            <span class="bdg ${(e.cur||'AUD')==='AUD'?'baud':'btwd'}">${e.cur||'AUD'}</span>
+            <span class="bdg ${(e.cur||'JPY')==='JPY'?'baud':'btwd'}">${e.cur||'JPY'}</span>
             ${e.fromAct?'<span class="bdg bact">📅行程</span>':''}
             ${slbl}
           </div>
