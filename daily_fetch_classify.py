@@ -117,7 +117,7 @@ def fetch_rss(url: str, journal: str) -> list[dict]:
 
 # ── 2. Classify ───────────────────────────────────────────────────────────────
 
-def classify_articles(articles: list[dict]) -> dict[str, list[dict]]:
+def classify_articles(articles: list[dict]) -> dict[str, dict]:
     numbered = "\n".join(
         f"{i+1}. [{a['journal']}] {a['title']} | {a['abstract'][:200]}"
         for i, a in enumerate(articles)
@@ -125,7 +125,7 @@ def classify_articles(articles: list[dict]) -> dict[str, list[dict]]:
 
     prompt = f"""You are an anesthesia research classifier.
 
-Topics:
+Fixed topics:
 1: Critical care / ICU / vasopressor / ARDS / sepsis / mechanical ventilation / hemodynamics
 2: Pain / Regional anesthesia / nerve block / opioid / epidural / spinal / CRPS / analgesic
 3: General anesthesia / Airway / PONV / propofol / volatile / neuromuscular / Neuroanesthesia / ICP / TBI / craniotomy
@@ -135,27 +135,40 @@ Topics:
 Articles (1-based index):
 {numbered}
 
-Return ONLY valid JSON with no explanation.
-Format: {{"1":[indices],"2":[indices],"3":[indices],"4":[indices],"5":[indices]}}
+Task 1 — Classify each article into the most relevant topic(s).
+Task 2 — Identify hot themes: specific clinical topics that appear in articles from 2+ different journals this week. For each hot theme, assign it to the single most relevant fixed topic (1–5). A topic may have at most 1 hot theme. If no cross-journal theme exists for a topic, set null.
+
+Return ONLY valid JSON with no explanation:
+{{
+  "assignments": {{"1":[indices],"2":[indices],"3":[indices],"4":[indices],"5":[indices]}},
+  "hot_themes": {{"1":"theme name or null","2":"theme name or null","3":"theme name or null","4":"theme name or null","5":"theme name or null"}}
+}}
+
 Rules:
-- Use 1-based indices matching the list above
-- An article may appear in multiple topics if clearly relevant to both
+- assignments: 1-based indices; an article may appear in multiple topics
+- hot_themes: concise English phrase (e.g. "Perioperative Hypotension", "PONV Prevention"); null if no cross-journal theme
 - Omit articles that do not fit any topic"""
 
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=600,
+        max_tokens=800,
         messages=[{"role": "user", "content": prompt}],
     )
 
     raw = response.content[0].text.strip()
     match = re.search(r"\{.*\}", raw, re.DOTALL)
     if not match:
-        return {k: [] for k in "12345"}
+        return {k: {"hot_theme": None, "items": []} for k in "12345"}
 
-    assignment = json.loads(match.group())
+    parsed = json.loads(match.group())
+    assignment  = parsed.get("assignments", {})
+    hot_themes  = parsed.get("hot_themes", {})
+
     return {
-        tid: [articles[i - 1] for i in assignment.get(tid, []) if 1 <= i <= len(articles)]
+        tid: {
+            "hot_theme": hot_themes.get(tid) or None,
+            "items": [articles[i - 1] for i in assignment.get(tid, []) if 1 <= i <= len(articles)],
+        }
         for tid in "12345"
     }
 
@@ -205,8 +218,9 @@ def main():
 
     print("Classifying with Haiku...")
     classified = classify_articles(unique)
-    for tid, arts in classified.items():
-        print(f"  Topic {tid} ({TOPICS[tid]['name']}): {len(arts)}")
+    for tid, val in classified.items():
+        hot = val["hot_theme"] or "-"
+        print(f"  Topic {tid} ({TOPICS[tid]['name']}): {len(val['items'])} articles | hot: {hot}")
 
     now = datetime.now(timezone.utc)
     data = {

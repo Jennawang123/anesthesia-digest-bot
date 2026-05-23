@@ -34,10 +34,62 @@ def taiwan_now() -> datetime:
     return datetime.now(timezone.utc) + timedelta(hours=8)
 
 
-def load_articles(weekday: int) -> list[dict]:
+def load_sent_urls() -> set[str]:
+    try:
+        with open("daily_data/sent_articles.json", "r", encoding="utf-8") as f:
+            return set(json.load(f).get("sent_urls", []))
+    except FileNotFoundError:
+        return set()
+
+
+def save_sent_urls(urls: set[str]) -> None:
+    gh_token = os.environ.get("GITHUB_TOKEN")
+    gh_repo  = os.environ.get("GITHUB_REPOSITORY")
+    data     = {"sent_urls": sorted(urls)}
+
+    with open("daily_data/sent_articles.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    if gh_token and gh_repo:
+        import base64
+        content_b64 = base64.b64encode(
+            json.dumps(data, ensure_ascii=False, indent=2).encode()
+        ).decode()
+        headers = {
+            "Authorization": f"Bearer {gh_token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        url = f"https://api.github.com/repos/{gh_repo}/contents/daily_data/sent_articles.json"
+        get  = requests.get(url, headers=headers)
+        sha  = get.json().get("sha") if get.status_code == 200 else None
+        payload: dict = {
+            "message": "chore: update sent articles [skip ci]",
+            "content": content_b64,
+            "committer": {"name": "github-actions[bot]", "email": "github-actions[bot]@users.noreply.github.com"},
+        }
+        if sha:
+            payload["sha"] = sha
+        requests.put(url, headers=headers, json=payload).raise_for_status()
+
+
+def load_articles(weekday: int) -> tuple[list[dict], str | None]:
     with open("daily_data/week.json", "r", encoding="utf-8") as f:
         data = json.load(f)
-    arts = data["articles"].get(str(weekday), [])
+
+    topic_data = data["articles"].get(str(weekday), {})
+    # 新格式：{"hot_theme": "...", "items": [...]}
+    # 舊格式相容：直接是 list
+    if isinstance(topic_data, dict):
+        hot_theme = topic_data.get("hot_theme")
+        arts = topic_data.get("items", [])
+    else:
+        hot_theme = None
+        arts = topic_data
+
+    # 過濾已推送文章
+    sent = load_sent_urls()
+    arts = [a for a in arts if a.get("url", "") not in sent]
 
     # 每本期刊最多 2 篇，確保來源多元，總篇數 3–5
     seen: dict[str, int] = {}
@@ -50,16 +102,15 @@ def load_articles(weekday: int) -> list[dict]:
         if len(selected) == 5:
             break
 
-    # 若多元篩選後不足 3 篇，直接取前 5（寧可重複期刊也要夠篇數）
     if len(selected) < 3:
         selected = arts[:5]
 
-    return selected
+    return selected, hot_theme
 
 
 # ── 2. Format ─────────────────────────────────────────────────────────────────
 
-def build_prompt(articles: list[dict], topic: dict, date_str: str) -> str:
+def build_prompt(articles: list[dict], topic: dict, date_str: str, hot_theme: str | None = None) -> str:
     article_block = "\n\n".join(
         f"[{i+1}] 《{a['journal']}》\n標題：{a['title']}\n摘要：{a['abstract'][:400]}\n連結：{a['url']}"
         for i, a in enumerate(articles)
@@ -68,11 +119,13 @@ def build_prompt(articles: list[dict], topic: dict, date_str: str) -> str:
     number_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
     n = len(articles)
 
+    hot_line = f"\n🔥 本週熱點：{hot_theme}" if hot_theme else ""
+
     return f"""你是麻醉科日報編輯，請將以下文章整理成 LINE 推播日報。
 
 開頭固定格式：
 🩺 麻醉科日報 {date_str}（{topic['day']}）
-主題：{topic['name']}
+主題：{topic['name']}{hot_line}
 ━━━━━━━━━━━━━━━━━━━━
 
 每篇文章格式（依序用 {" ".join(number_emojis[:n])} 編號，嚴格照此結構，不可有 ### 或 > 符號）：
@@ -108,7 +161,7 @@ def build_prompt(articles: list[dict], topic: dict, date_str: str) -> str:
 {article_block}"""
 
 
-def format_message(articles: list[dict], topic: dict, date_str: str) -> str:
+def format_message(articles: list[dict], topic: dict, date_str: str, hot_theme: str | None = None) -> str:
     if not articles:
         return (
             f"🩺 麻醉科日報 {date_str}（{topic['day']}）\n"
@@ -119,7 +172,7 @@ def format_message(articles: list[dict], topic: dict, date_str: str) -> str:
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=1800,
-        messages=[{"role": "user", "content": build_prompt(articles, topic, date_str)}],
+        messages=[{"role": "user", "content": build_prompt(articles, topic, date_str, hot_theme)}],
     )
     return response.content[0].text.strip()
 
@@ -198,10 +251,10 @@ def main():
     topic = TOPICS[weekday]
     print(f"{date_str} {topic['day']} | 主題：{topic['name']}")
 
-    articles = load_articles(weekday)
-    print(f"文章數：{len(articles)}")
+    articles, hot_theme = load_articles(weekday)
+    print(f"文章數：{len(articles)} | 熱點：{hot_theme or '-'}")
 
-    message = format_message(articles, topic, date_str)
+    message = format_message(articles, topic, date_str, hot_theme)
     print(f"訊息字數：{len(message)}")
 
     parts = split_message(message)
@@ -213,7 +266,11 @@ def main():
         if i < len(parts):
             time.sleep(1)
 
-    print("完成。")
+    # 更新已推送文章記錄
+    sent = load_sent_urls()
+    sent.update(a["url"] for a in articles if a.get("url"))
+    save_sent_urls(sent)
+    print(f"已記錄 {len(articles)} 篇，累計 {len(sent)} 篇。")
 
 
 if __name__ == "__main__":
