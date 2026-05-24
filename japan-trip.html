@@ -225,10 +225,10 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
   <p>輸入 Firebase Realtime Database 網址開始</p>
   <div class="scard">
     <div class="fg"><label class="lb">Firebase 資料庫網址</label><input class="inp" id="s_url" type="url" placeholder="https://xxx-default-rtdb.firebaseio.com"></div>
-    <div class="fg"><label class="lb">旅遊標題</label><input class="inp" id="s_title" placeholder="例：東京之旅 🗾"></div>
+    <div class="fg"><label class="lb">旅遊標題</label><input class="inp" id="s_title" value="岡山倉敷之旅" placeholder="例：東京之旅 🗾"></div>
     <div class="fr">
-      <div class="fg"><label class="lb">旅伴 1</label><input class="inp" id="s_p1" placeholder="Jenna"></div>
-      <div class="fg"><label class="lb">旅伴 2</label><input class="inp" id="s_p2" placeholder="男友"></div>
+      <div class="fg"><label class="lb">旅伴 1</label><input class="inp" id="s_p1" value="瑜" placeholder="Jenna"></div>
+      <div class="fg"><label class="lb">旅伴 2</label><input class="inp" id="s_p2" value="b06" placeholder="男友"></div>
     </div>
     <div class="fr">
       <div class="fg"><label class="lb">出發日期</label><input class="inp" id="s_start" type="date"></div>
@@ -568,9 +568,9 @@ function doSetup(){
   if(!url){alert('請輸入 Firebase 資料庫網址');return;}
   const city=document.getElementById('s_city').value||'東京';
   const coords=CITIES[city]||{lat:35.68,lng:139.69};
-  CFG={url,title:document.getElementById('s_title').value.trim()||'日本之旅',
-    p1:document.getElementById('s_p1').value.trim()||'旅伴1',
-    p2:document.getElementById('s_p2').value.trim()||'旅伴2',
+  CFG={url,title:document.getElementById('s_title').value.trim()||'岡山倉敷之旅',
+    p1:document.getElementById('s_p1').value.trim()||'瑜',
+    p2:document.getElementById('s_p2').value.trim()||'b06',
     start:document.getElementById('s_start').value||today(),
     days:parseInt(document.getElementById('s_days').value)||7,
     photo:document.getElementById('s_photo').value.trim(),
