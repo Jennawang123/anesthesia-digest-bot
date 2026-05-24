@@ -228,11 +228,11 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="fg"><label class="lb">旅遊標題</label><input class="inp" id="s_title" value="岡山倉敷之旅" placeholder="例：東京之旅 🗾"></div>
     <div class="fr">
       <div class="fg"><label class="lb">旅伴 1</label><input class="inp" id="s_p1" value="瑜" placeholder="Jenna"></div>
-      <div class="fg"><label class="lb">旅伴 2</label><input class="inp" id="s_p2" value="b06" placeholder="男友"></div>
+      <div class="fg"><label class="lb">旅伴 2</label><input class="inp" id="s_p2" value="然" placeholder="男友"></div>
     </div>
     <div class="fr">
-      <div class="fg"><label class="lb">出發日期</label><input class="inp" id="s_start" type="date"></div>
-      <div class="fg"><label class="lb">天數</label><input class="inp" id="s_days" type="number" value="7" min="1" max="30"></div>
+      <div class="fg"><label class="lb">出發日期</label><input class="inp" id="s_start" type="date" value="2026-06-23"></div>
+      <div class="fg"><label class="lb">天數</label><input class="inp" id="s_days" type="number" value="6" min="1" max="30"></div>
     </div>
     <div class="fg"><label class="lb">Header 照片網址（選填）</label><input class="inp" id="s_photo" type="url" placeholder="https://...jpg"></div>
     <div class="fg"><label class="lb">主要城市</label>
@@ -570,7 +570,7 @@ function doSetup(){
   const coords=CITIES[city]||{lat:35.68,lng:139.69};
   CFG={url,title:document.getElementById('s_title').value.trim()||'岡山倉敷之旅',
     p1:document.getElementById('s_p1').value.trim()||'瑜',
-    p2:document.getElementById('s_p2').value.trim()||'b06',
+    p2:document.getElementById('s_p2').value.trim()||'然',
     start:document.getElementById('s_start').value||today(),
     days:parseInt(document.getElementById('s_days').value)||7,
     photo:document.getElementById('s_photo').value.trim(),
@@ -582,7 +582,6 @@ function doSetup(){
 window.onload=()=>{
   const s=localStorage.getItem('japan_trip');
   if(s){CFG=JSON.parse(s);bootApp();}
-  else document.getElementById('s_start').value=today();
 };
 
 // ─── Boot ────────────────────────────────────────────
