@@ -108,7 +108,27 @@ def load_articles(weekday: int) -> tuple[list[dict], str | None]:
     return selected, hot_theme
 
 
-# ── 2. Format ─────────────────────────────────────────────────────────────────
+# ── 2. Daily Quote ────────────────────────────────────────────────────────────
+
+QUOTE_PROMPT = """你是一位了解住院醫師生活的前輩。
+請用繁體中文寫一句「心情小語」，給一位麻醉科住院醫師，在每天早上開始工作前看到。
+
+要求：
+- 一句話，30 字以內
+- 溫暖但不煽情，實際且有力量
+- 不要說教，不要解釋，不要加標題
+- 直接輸出那一句話，不加任何其他文字"""
+
+def get_daily_quote() -> str:
+    resp = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=100,
+        messages=[{"role": "user", "content": QUOTE_PROMPT}],
+    )
+    return resp.content[0].text.strip()
+
+
+# ── 3. Format ─────────────────────────────────────────────────────────────────
 
 def build_prompt(articles: list[dict], topic: dict, date_str: str, hot_theme: str | None = None) -> str:
     article_block = "\n\n".join(
@@ -257,7 +277,11 @@ def main():
     articles, hot_theme = load_articles(weekday)
     print(f"文章數：{len(articles)} | 熱點：{hot_theme or '-'}")
 
+    quote = get_daily_quote()
+    print(f"心情小語：{quote}")
+
     message = format_message(articles, topic, date_str, hot_theme)
+    message = f"💬 {quote}\n\n{message}"
     print(f"訊息字數：{len(message)}")
 
     parts = split_message(message)
