@@ -110,23 +110,30 @@ def load_articles(weekday: int) -> tuple[list[dict], str | None]:
 
 # ── 2. Daily Quote ────────────────────────────────────────────────────────────
 
-QUOTE_PROMPT = """Write one short quote for a anesthesia resident at the start of their workday.
+QUOTE_PROMPT = """Write one short quote for an anesthesia resident at the start of their workday.
 
 Tone: like a confident senior speaking to a junior — direct, grounded, no drama.
 Theme: curiosity, learning, growth as a clinician. NOT about surviving hardship or enduring pain.
 Style: actionable or specific mindset shift. NOT generic affirmation.
 
-Good examples:
+Language: randomly alternate between English and Traditional Chinese (繁體中文). Some days English, some days Chinese — vary it naturally, not by any fixed pattern.
+
+Good examples (English):
 - "You're not expected to know everything — you're expected to grow."
 - "Don't be afraid to ask 'why' or 'what if.' Senior residents and attendings respect curiosity."
 - "Every case you haven't seen before is the point — not the problem."
 
+Good examples (Chinese):
+- 「不懂就問，這才是住院醫師該做的事。」
+- 「今天遇到的陌生情況，就是你來這裡的原因。」
+- 「問出好問題，比答對所有問題更難，也更值得。」
+
 Bad examples (do not write like this):
 - "Every tired night is proof of your growth." (dramatic, vague)
 - "You're stronger than you think." (generic affirmation)
-- "Keep going, you're almost there." (endurance framing)
+- 「每個疲憊都是成長的印記。」(雞湯，空洞)
 
-Output only the quote. No title, no explanation, no quotes marks."""
+Output only the quote. No title, no explanation, no quote marks."""
 
 def get_daily_quote() -> str:
     resp = client.messages.create(
