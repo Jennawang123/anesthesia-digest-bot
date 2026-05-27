@@ -263,8 +263,11 @@ def main():
     # PubMed journal names（用 ISSN 避免縮寫差異）
     ncbi_journals = [
         ("Anesthesiology",  "0003-3022"),
-        ("Anesth Analg",    "0003-2999 OR 1526-7598"),  # Anesthesia & Analgesia (print + eISSN)
-        ("Anaesthesia",     "0003-2409 OR 1365-2044"),  # Anaesthesia (print + eISSN)
+        ("Anaesthesia",     "0003-2409 OR 1365-2044"),   # Anaesthesia (print + eISSN)
+        ("PAIN",            "0304-3959 OR 1872-6623"),   # PAIN (IASP)
+        ("Lancet Resp Med", "2213-2600 OR 2213-2619"),   # Lancet Respiratory Medicine
+        ("Intensive Care",  "0342-4642 OR 1432-1238"),   # Intensive Care Medicine
+        ("AJRCCM",          "1073-449X OR 1535-4970"),   # Am J Respir Crit Care Med
     ]
     for journal, issns in ncbi_journals:
         # 多個 ISSN 用 OR 串接
