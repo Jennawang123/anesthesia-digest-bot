@@ -2,8 +2,8 @@ name: 麻醉科日報 - 每日推送
 
 on:
   schedule:
-    # 週一至週五 01:00 UTC = 09:00 台灣時間
-    - cron: '0 1 * * 1-5'
+    # 週一至週五 01:05 UTC = 09:05 台灣時間
+    - cron: '5 1 * * 1-5'
   workflow_dispatch:
     inputs:
       force_weekday:
