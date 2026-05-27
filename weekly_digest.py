@@ -34,7 +34,7 @@ RSS_FEEDS = {
 # 使用 NCBI E-utilities 的期刊（官網有 Cloudflare 封鎖）
 PUBMED_JOURNALS = {
     "Anesthesiology": '"Anesthesiology"[Journal]',
-    "Anesthesia & Analgesia": '"Anesthesia and Analgesia"[Journal]',
+    "PAIN": '0304-3959[ISSN] OR 1872-6623[ISSN]',
     "Anaesthesia": '"Anaesthesia"[Journal]',
 }
 
