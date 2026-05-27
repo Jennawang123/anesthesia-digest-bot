@@ -1,72 +1,176 @@
 {
   "week": "2026-W22",
-  "fetched_at": "2026-05-25T05:09:58.319149+00:00",
+  "fetched_at": "2026-05-27T14:24:59.509932+00:00",
   "articles": {
     "1": {
-      "hot_theme": "Intravenous fluid conservation and management",
+      "hot_theme": "Acute respiratory distress syndrome phenotyping",
       "items": [
+        {
+          "title": "Intervals For Oscillometric Arterial Pressure Monitoring During Noncardiac Surgery: the '2.5-Minute Versus 5-Minute' Randomized Clinical Trial.",
+          "abstract": "Guidelines recommend measuring arterial pressure at least every 5 minutes during surgery. However, it remains unknown whether shortening the measurement interval of intermittent oscillometric arterial pressure monitoring can help reduce intraoperative hypotension. This trial tested the primary hypothesis that oscillometric arterial pressure monitoring at 2.5-minute versus 5-minute intervals reduces intraoperative hypotension in noncardiac surgery patients under general anesthesia.",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42102346/",
+          "score": 10
+        },
+        {
+          "title": "Oxygen saturation thresholds in children with acute respiratory distress (OxyKids): a multicentre, open, parallel-group, randomised clinical trial.",
+          "abstract": "Current peripheral oxygen saturation (SpO",
+          "journal": "Lancet Resp Med",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42119581/",
+          "score": 10
+        },
+        {
+          "title": "Effects of out-of-bed armchair positioning on oxygenation in spontaneously breathing ICU patients receiving respiratory support: a randomized controlled trial.",
+          "abstract": "Comparing the effects of an out-of-bed armchair position versus an in-bed semi-recumbent position on oxygenation in spontaneously breathing intensive care unit (ICU) patients, receiving respiratory support is a common practice with limited supported evidence.",
+          "journal": "Intensive Care",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42149248/",
+          "score": 10
+        },
+        {
+          "title": "The FICUS cluster randomized controlled trial of a family support intervention in adult intensive care units: mental health and family functioning outcomes.",
+          "abstract": "To examine the effect of a multicomponent, nurse-led, interprofessional family support intervention on family functioning and mental health in adult intensive care units (ICUs).",
+          "journal": "Intensive Care",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42149244/",
+          "score": 10
+        },
         {
           "title": "Hydroxyethyl Starch and Perioperative Complications: a Systematic Review and Meta-analysis.",
           "abstract": "Based on renal injury reported in critically ill and septic patients, the Food and Drug Administration issued a black box warning regarding hydroxyethyl starch (HES 130/0.4) use in 2013, and expanded the warning to surgical and trauma patients in 2021. Similarly, the European Medicines Agency initiated withdrawal of hydroxyethyl starch in 2022. We therefore conducted a new meta-analysis focused on renal injury designed to complement a 2021 meta-analysis of perioperative hydroxyethyl starch use, ",
           "journal": "Anesthesiology",
           "pub_date": "2026/May",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42160629/",
+          "score": 9
+        },
+        {
+          "title": "Extracorporeal membrane oxygenation, acute kidney injury, fluid balance, and continuous renal replacement therapy: Acute Disease Quality Initiative (ADQI) and Extracorporeal Life Support Organization (ELSO) joint consensus conference.",
+          "abstract": "Extracorporeal membrane oxygenation (ECMO) is increasingly being utilized for life-threatening cardiac and/or respiratory failure refractory to conventional treatment. Acute kidney injury (AKI) and fluid balance disorders commonly occur both before and during ECMO, with approximately half of cases receiving treatment with continuous renal replacement therapy (CRRT). Acute kidney injury, fluid balance disorders, and CRRT influence both short- and long-term outcomes in this population. The 36th Ac",
+          "journal": "Intensive Care",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42113209/",
           "score": 8
         },
         {
-          "title": "Clinical Performance in Critical Care Simulation Under Sleep Deprivation: Effects of Power Napping in the R-NAP Randomized Controlled Trial.",
-          "abstract": "Sleep deprivation is common among anesthesia residents and impairs both technical and non-technical skills such as leadership. Napping is recommended in fatigue management across healthcare and other safety-sensitive sectors, yet its effectiveness for healthcare providers remains underexplored. This study evaluated whether a 30-min nap opportunity improved simulated crisis performance after a 24-h shift.",
+          "title": "Temporal trends and prognostic factors in critically ill adult patients with acute leukemia: an individual participant data meta-analysis.",
+          "abstract": "Critically ill patients with acute leukemia often require an intensive care unit (ICU) admission. As major therapeutic advances have been made during the last decades, the aim of this study was to assess temporal trends in ICU mortality, and identify prognostic factors to inform clinician decision-making.",
+          "journal": "Intensive Care",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42081104/",
+          "score": 8
+        },
+        {
+          "title": "Outflow Tract Patency and Ventricular Compression as Determinants of CPR Hemodynamics in a TEE-Guided Swine Model of Cardiac Arrest.",
+          "abstract": "Perioperative cardiac arrest carries high mortality. Standard landmark-guided chest compressions (CC) frequently overlie the left ventricular outflow tract (LVOT). In the operating room, transesophageal echocardiography (TEE) can guide compression location in real time. Because LVOT-centered compressions may narrow the outflow tract and reduce direct LV compression, we hypothesized that continuous intra-arrest TEE guidance to maintain mid-LV compressions would improve hemodynamics versus LVOT-ce",
           "journal": "Anesthesiology",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42101030/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42166795/",
           "score": 7
         },
         {
-          "title": "Short- and Long-Term Efficacy and Safety of Levosimendan in VA-ECMO Weaning: The WEANILEVO Randomized Double-Blind Multicenter Trial.",
-          "abstract": "Liberation from veno-arterial extracorporeal membrane oxygenation (VA-ECMO) remains challenging. To date, we have limited evidence from observational studies supporting pharmacological interventions to facilitate successful VA-ECMO weaning. The present study aimed to evaluate the efficacy and safety of a single dose of levosimendan in patients supported by VA-ECMO who met predefined criteria for weaning.",
-          "journal": "Anesthesiology",
+          "title": "Platelet function in patients undergoing major non-cardiac vascular surgery (PLUGS): a prospective cohort study.",
+          "abstract": "Patients who require major vascular surgery often receive antiplatelet therapy for primary or secondary prevention of cardiovascular disease. Clopidogrel resistance and variability in platelet recovery after drug discontinuation pose clinical challenges, particularly for regional anaesthesia and blood management. The aim of this study was to characterise platelet function and determine the prevalence of antiplatelet resistance using near-patient viscoelastic testing in patients undergoing major,",
+          "journal": "Anaesthesia",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42101006/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42125980/",
           "score": 7
         },
         {
-          "title": "Mechanical power and energy in invasively ventilated newborn infants.",
-          "abstract": "Mechanical power estimates the amount of energy delivered to ventilated lungs but there are no available data in neonates. We aim to provide a real-world description of power and investigate its relationship with clinical variables in neonates.",
-          "journal": "Anesthesiology",
+          "title": "Comorbid diabetes disease severity and microbial changes in patients with bronchiectasis: a combined analysis of data from the EMBARC, EMBARC-India, Australian, and BE-China registries.",
+          "abstract": "Bronchiectasis and diabetes commonly coexist and are associated with immune dysfunction and increased susceptibility to infection. Although diabetes is associated with worse prognosis in cystic fibrosis-related bronchiectasis, data are scarce for its impact on non-cystic fibrosis bronchiectasis. This study aimed to characterise the impact of diabetes on clinical outcomes and microbial and inflammatory profiles in patients with bronchiectasis.",
+          "journal": "Lancet Resp Med",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42101008/",
-          "score": 5
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42155496/",
+          "score": 7
         },
         {
-          "title": "Intraoperative Adverse Events, Waste, and Costs Before and After Implementation of Intravenous Fluid Conservation During a National Shortage.",
-          "abstract": "Both medication shortages and hospital waste are important challenges in contemporary medicine. These challenges must be balanced to favor patient safety, which remains a fundamental goal of anesthesiology.",
-          "journal": "Anesth Analg",
+          "title": "Biological subphenotypes in severe acute hypoxaemic respiratory failure and acute respiratory distress syndrome using rapid prospective classification (SPARC) in the USA: a multicentre, observational, study.",
+          "abstract": "Two biological subphenotypes in acute respiratory distress syndrome (ARDS) have been identified in retrospective analyses, with differential clinical outcomes and post-hoc responses to investigational treatments. The ability to identify biological subphenotypes in real-time is unknown. We aimed to evaluate the feasibility of using the multisite ISPY COVID Network to prospectively evaluate biological subphenotypes in real-time.",
+          "journal": "Lancet Resp Med",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42127426/",
-          "score": 5
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42140220/",
+          "score": 7
         },
         {
-          "title": "Hyperlactataemia in laparoscopic fundoplication: insights from a quality improvement project",
-          "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Jessica Quimpo, Meera Sodha, Paul Bassett, Francesco DiMaggio, Ashok Sundar",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001534?dgcid=rss_sd_all",
-          "score": 5
+          "title": "Epidemiology, ventilation management, and clinical outcomes in children (PRoVENT-PED): first results from the 10-year, investigator-initiated, international, multicentre, prospective cohort study.",
+          "abstract": "Evidence supporting lung-protective ventilation in children overwhelmingly stems from adult trials. This study aimed to assess the epidemiology, ventilation management, and outcomes across predefined age groups of invasively ventilated critically ill children with or without paediatric acute respiratory distress syndrome (PARDS), and to identify potentially modifiable factors associated with outcome.",
+          "journal": "Lancet Resp Med",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42081907/",
+          "score": 7
         },
         {
-          "title": "CPET trajectories in Long COVID syndrome without graded exercise therapy: a longitudinal study",
-          "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Sundar Raj Ashok, Timothy Wallis, Ben Marshell, Anindo Banerjee, Elizabeth Worsley, Denny Levett, Mark Edwards, Anna Freeman",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001510?dgcid=rss_sd_all",
-          "score": 5
+          "title": "Reproducible clinical archetypes in acute respiratory failure: a multi-cohort trajectory analysis.",
+          "abstract": "Acute hypoxemic respiratory failure (AHRF) is common and biologically heterogeneous. Static phenotyping at a single time point does not capture illness evolution and risks stage-mixing; reproducible clinical course archetypes may address this. We aimed to identify, externally validate, and predict trajectory classes (TCs) of persistent AHRF.",
+          "journal": "Intensive Care",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42149243/",
+          "score": 7
         },
         {
-          "title": "Does supplemental oxygen affect the humidity provided by tracheostomy heat and moisture exchange devices?",
-          "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Sara Ilyas, Brendan A. McGrath, Athia Haron",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001492?dgcid=rss_sd_all",
+          "title": "The predicted body weight equation overestimates lung sizes of female, critically ill patients: an analysis of randomized, controlled trials and real-world clinical data.",
+          "abstract": "Low tidal volume (Vt) ventilation is the standard of care among critically ill patients. Guidelines recommend scaling Vt to the predicted body weight (PBW) to avoid ventilator-induced lung injury (VILI). Concerns exist that the PBW overestimates lung volumes of critically ill females. We investigated whether this applies to clinically relevant measures of lung volume, whether PBW-guided mechanical ventilation yields comparable risk of lung stress among male and female patients, and whether this ",
+          "journal": "Intensive Care",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42096093/",
+          "score": 7
+        },
+        {
+          "title": "Standard of care for rehabilitation in critical illness.",
+          "abstract": "Rehabilitation is recognised as a cornerstone of intensive care, essential for optimising functional recovery and reducing long-term disability. Contemporary ICU populations, characterised by advanced age, multimorbidity, and prolonged stays, are at heightened risk of muscle wasting, immobility, frailty, cognitive decline, and functional dependence. Mitigation of these sequelae requires careful interprofessional collaboration for person-centred rehabilitation across the care continuum.",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Apr",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42059920/",
+          "score": 7
+        },
+        {
+          "title": "Rocuronium Dose and First-Attempt Intubation Success in the Critically Ill: Secondary Analysis of Two Multicenter Trials.",
+          "abstract": "Neuromuscular blockade dose may affect intubation success on the first attempt, thereby impacting outcomes for patients undergoing emergency tracheal intubation.",
+          "journal": "AJRCCM",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42149702/",
+          "score": 7
+        },
+        {
+          "title": "Pre-operative anaemia, red blood cell transfusion and mortality after cardiac surgery: a Netherlands Heart Registration mediation analysis.",
+          "abstract": "Pre-operative anaemia is an established risk factor for mortality after cardiac surgery. The extent to which this risk is mediated by complications related to red blood cell transfusion remains uncertain, particularly across different age groups.",
+          "journal": "Anaesthesia",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41388606/",
+          "score": 6
+        },
+        {
+          "title": "Effects of inflammatory phenotypes in acute respiratory distress syndrome on mortality and partitioning of lung and chest wall mechanics in patients in the USA and Canada: a retrospective cohort study.",
+          "abstract": "Inflammatory phenotypes of acute respiratory distress syndrome (ARDS) predict outcomes and can respond differently to treatment strategies. We aimed to establish whether these phenotypes differ in respiratory mechanics and in response to lung-protective ventilation strategies.",
+          "journal": "Lancet Resp Med",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42155495/",
+          "score": 6
+        },
+        {
+          "title": "Determinants of tidal recruitment/derecruitment assessed by electrical impedance tomography in spontaneously breathing ARDS patients.",
+          "abstract": "Tidal recruitment/derecruitment (R/D) is a well-known mechanism of lung injury in ARDS patients, but its bedside identification is challenging during assisted ventilation.",
+          "journal": "AJRCCM",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42178817/",
+          "score": 6
+        },
+        {
+          "title": "Airway management in critically ill patients with obesity.",
+          "abstract": "Obesity is a global health challenge. An increasing number of patients with obesity are admitted to an intensive care unit. Airway management in these patients represents a unique challenge due to significant anatomical and physiological alterations. Increased adipose tissue in the face, cheeks, pharynx, hypopharynx, and neck narrows the upper airway, renders soft tissues more collapsible, and complicates airway management. In addition, the functional residual capacity is reduced, resulting in m",
+          "journal": "Intensive Care",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42126552/",
+          "score": 4
+        },
+        {
+          "title": "Stepwise clinical and diagnostic strategy for coma of unknown origin.",
+          "abstract": "Coma represents a critical failure of brain systems regulating arousal and awareness, posing significant diagnostic challenges when its origin is unknown. Accurate and timely diagnosis is essential to identify reversible causes and guide treatment. Here, we propose a comprehensive stepwise diagnostic algorithm integrating clinical examination, electroencephalography, neuroimaging, and laboratory investigations, emphasizing iterative reassessment to inform early decision-making. This approach, gr",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Apr",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42059919/",
           "score": 4
         },
         {
@@ -80,31 +184,31 @@
       ]
     },
     "2": {
-      "hot_theme": "Methadone use in perioperative settings",
+      "hot_theme": "Opioid-sparing analgesia and pain management",
       "items": [
         {
-          "title": "Post-dural Puncture Headache in Dural Puncture Epidural and Combined Spinal-Epidural Using 24- and 25-Gauge Needles Versus Conventional Epidural Labor Analgesia: A Systematic Review and Meta-analysis.",
-          "abstract": "Compared to standard labor epidurals, placement of a dural puncture epidural (DPE) has been shown to improve labor analgesia efficacy, speed onset of analgesia, and decrease failure rates. However, there is a concern of increased post-dural puncture headache (PDPH) risk. A 25-gauge or larger spinal needle is typically needed for a DPE to have improved efficacy over a standard epidural. A prior meta-analysis comparing combined spinal-epidurals (CSEs) with epidurals did not identify a difference i",
-          "journal": "Anesth Analg",
+          "title": "Effect of Paroxetine or Escitalopram Coadministered with Oxycodone versus Oxycodone Alone on Ventilation during Hypercapnia: A Randomized Clinical Trial.",
+          "abstract": "Opioid-induced respiratory depression remains a critical public safety concern. Previous clinical findings demonstrated decreased hypercapnic ventilation after 5 days when paroxetine, a selective serotonin reuptake inhibitor (SSRI), was administered alone or with oxycodone. However, uncertainty remained whether chronic use of SSRIs could cause similar respiratory effects. This study investigated whether chronic use of paroxetine and another SSRI, escitalopram, led to a similar decrease in ventil",
+          "journal": "Anesthesiology",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42155003/",
-          "score": 8
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41849255/",
+          "score": 10
         },
         {
-          "title": "Respiratory Depression after Perioperative Methadone Administration: A Systematic Review and Meta-analysis.",
-          "abstract": "Despite evidence supporting methadone analgesic efficacy, perioperative methadone use remains limited due to concerns regarding respiratory depression. The aim of this systematic review and meta-analysis is to objectively evaluate the current evidence on the association between perioperative intravenous methadone administration and postoperative respiratory depression, compared with other opioids.1.",
-          "journal": "Anesth Analg",
+          "title": "Amitriptyline for neuropathic pain in patients with leprosy: a bicenter randomized controlled trial.",
+          "abstract": "In this bicenter, randomized, double-blind, placebo-controlled trial, we evaluated the effectiveness and safety of amitriptyline as an add-on therapy for leprosy-related neuropathic pain. A total of 117 participants were randomly assigned to receive amitriptyline or placebo for 9 weeks. The primary outcome was the change in pain intensity on a 100-mm visual analogue scale. Secondary outcomes included pain interference, responder rates, neuropathic pain symptoms, mood, sleep, catastrophizing, qua",
+          "journal": "PAIN",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42102090/",
-          "score": 8
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42152617/",
+          "score": 10
         },
         {
-          "title": "The Use of Methadone in Adult Cardiac Surgery: A Systematic Review With Narrative Synthesis.",
-          "abstract": "Methadone is a long-acting opioid with multifaceted analgesic properties that is under increasing investigation as an intraoperative analgesic in cardiac surgery. A systematic search of United States National Library of Medicine Database (MEDLINE) and Excerpta Medica Database (EMBASE) databases identified publications investigating the use of intraoperative methadone in adult cardiac surgical patients. The risk of bias and quality of evidence of these studies were assessed, and data from these r",
-          "journal": "Anesth Analg",
+          "title": "Prophylactic interventions to prevent rebound pain after peripheral nerve block in adults: a systematic review and network meta-analysis of randomised controlled trials.",
+          "abstract": "Rebound pain after peripheral nerve block is recognised increasingly as a postoperative complication that may diminish the benefits of regional anaesthesia. We undertook a systematic review and network meta-analysis to evaluate pharmacological strategies for its prevention.",
+          "journal": "Anaesthesia",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42085333/",
-          "score": 8
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42187168/",
+          "score": 9
         },
         {
           "title": "Opioid-free vs. opioid-inclusive anaesthesia with or without regional anaesthesia for postoperative pain: a systematic review with network meta-analysis of randomised controlled trials.",
@@ -112,7 +216,15 @@
           "journal": "Anaesthesia",
           "pub_date": "2026/May",
           "url": "https://pubmed.ncbi.nlm.nih.gov/41487040/",
-          "score": 8
+          "score": 9
+        },
+        {
+          "title": "The influence of chronotype on pain: a systematic review and meta-analysis.",
+          "abstract": "Sleep and circadian rhythms play critical roles in pain regulation, yet the influence of chronotype remains underexplored. This systematic review and meta-analysis synthesized evidence across 43 studies (cross-sectional, cohort, and Mendelian randomization designs) investigating associations between chronotype and pain outcomes. Participants ranged from small clinical cohorts to large-scale biobanks and represented diverse pain conditions, including fibromyalgia, temporomandibular disorders, mig",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42153471/",
+          "score": 9
         },
         {
           "title": "Analgesic effects of intramuscular nalbuphine in adults undergoing surgery: a systematic review and meta-analysis",
@@ -123,35 +235,163 @@
           "score": 8
         },
         {
-          "title": "Effect of Paroxetine or Escitalopram Coadministered with Oxycodone versus Oxycodone Alone on Ventilation during Hypercapnia: A Randomized Clinical Trial.",
-          "abstract": "Opioid-induced respiratory depression remains a critical public safety concern. Previous clinical findings demonstrated decreased hypercapnic ventilation after 5 days when paroxetine, a selective serotonin reuptake inhibitor (SSRI), was administered alone or with oxycodone. However, uncertainty remained whether chronic use of SSRIs could cause similar respiratory effects. This study investigated whether chronic use of paroxetine and another SSRI, escitalopram, led to a similar decrease in ventil",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41849255/",
-          "score": 7
-        },
-        {
-          "title": "The Effect of Immersive Virtual Reality on Anterograde Amnesia and Subjective Pain During Procedures: A Within-Subject Randomized Controlled Study.",
-          "abstract": "Immersive virtual reality (VR) distraction reduces procedural pain. The current study explores whether immersive VR also reduces how much people can remember about a painful experience: anterograde amnesia for pain.",
-          "journal": "Anesth Analg",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42138978/",
-          "score": 7
-        },
-        {
           "title": "Clinical Decision Support to Reduce Opioid Prescribing at Discharge for Inpatients Undergoing Surgery (LESS Study): An Interrupted Time Series Analysis.",
           "abstract": "Unnecessary opioid prescribing following surgery is wasteful and expands the reservoir for non-medical use, thereby contributing to preventable morbidity and mortality. We used an interrupted time series design to evaluate whether implementing a system-wide clinical decision support (CDS) intervention reduced opioid prescribing at discharge.",
           "journal": "Anesthesiology",
           "pub_date": "2026/May",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42166796/",
+          "score": 7
+        },
+        {
+          "title": "A prospective study of high-impact chronic pain in sickle cell disease: the Sickle Pain-Related Impact (SPiRIt) study.",
+          "abstract": "Risk factors and outcomes of high-impact chronic pain (HICP), ie, chronic pain (CP) and substantial restriction of participation in work, social, or self-care activities, are not known in sickle cell disease (SCD). The Sickle Pain-Related Impact (SPiRIt) study is the first prospective longitudinal study of HICP . Ninety persons with SCD and CP aged 16 to 40 years reported pain and pain-related outcomes at enrollment (T1) and at an optional 6-month timepoint (T2). We found that participants with ",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42017907/",
+          "score": 7
+        },
+        {
+          "title": "Longitudinal pain intensity and interference symptomatology in mild traumatic brain injury: a TRACK-TBI study.",
+          "abstract": "An estimated 50% to 75% of patients with mild traumatic brain injury (mTBI) report chronic pain. Symptomatology evolution, subtypes, and risk factors remain poorly understood. We evaluated patient-reported pain intensity and interference with daily function in a longitudinal U.S. mTBI cohort. The Transforming Research and Clinical Knowledge in Traumatic Brain Injury Study prospectively enrolled patients with TBI across 18 trauma centers who received head computed tomography (CT) within 24 hours ",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41734261/",
+          "score": 7
+        },
+        {
+          "title": "The Veterans Affairs’ Whole Health Approach for Chronic Pain Management",
+          "abstract": "This randomized clinical trial examines the effectiveness of a whole health team intervention in veterans with chronic pain compared with cognitive behavioral therapy and usual care in reducing long-term pain interference.",
+          "journal": "JAMA",
+          "pub_date": "2026/May",
+          "url": "https://jamanetwork.com/journals/jama/fullarticle/2848379",
+          "score": 7
+        },
+        {
+          "title": "The Veterans Affairs’ Whole Health Approach for Chronic Pain Management Research Summary",
+          "abstract": "This study aimed to determine whether the US Department of Veterans Affairs (VA) whole health team approach reduces pain interference more than cognitive behavioral therapy and usual care among veterans with chronic pain.",
+          "journal": "JAMA",
+          "pub_date": "2026/May",
+          "url": "https://jamanetwork.com/journals/jama/fullarticle/2848377",
+          "score": 7
+        },
+        {
+          "title": "Ethological profiling defines pain behaviors and parses analgesia from drug side effects in a mouse model of complex regional pain syndrome.",
+          "abstract": "Complex regional pain syndrome (CRPS) is a form of chronic postinjury pain affecting the extremities with contributions from the somatic and sympathetic nervous systems. The mouse tibial fracture-cast model was developed to enable preclinical study of CRPS mechanisms and guide condition-specific drug development. Given the inherent limitations of reflex pain measures in mice, we sought to holistically characterize pain-like behaviors in this model in neutral and aversive environments using quant",
+          "journal": "PAIN",
+          "pub_date": "2026/Jun",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42133564/",
           "score": 5
         },
         {
-          "title": "Outflow Tract Patency and Ventricular Compression as Determinants of CPR Hemodynamics in a TEE-Guided Swine Model of Cardiac Arrest.",
-          "abstract": "Perioperative cardiac arrest carries high mortality. Standard landmark-guided chest compressions (CC) frequently overlie the left ventricular outflow tract (LVOT). In the operating room, transesophageal echocardiography (TEE) can guide compression location in real time. Because LVOT-centered compressions may narrow the outflow tract and reduce direct LV compression, we hypothesized that continuous intra-arrest TEE guidance to maintain mid-LV compressions would improve hemodynamics versus LVOT-ce",
-          "journal": "Anesthesiology",
+          "title": "Male-specific analgesic effects of minocycline in sickle cell disease are mediated by microglia and the microbiome.",
+          "abstract": "Over 50% of individuals with sickle cell disease (SCD) experience chronic pain that is phenotypically distinct from their acute, vaso-occlusive crisis pain. Chronic SCD pain is commonly managed with opioid-based drugs that are associated with unwanted side effects, incomplete pain relief, and-in this population-accessibility issues. Thus, new treatments for chronic SCD pain are desperately needed. Here, we examined the analgesic efficacy of acute minocycline treatment in transgenic SCD mice. Sic",
+          "journal": "PAIN",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42166795/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42187072/",
+          "score": 5
+        },
+        {
+          "title": "Distribution of divalent small interfering RNA into neurons of sensory ganglia produces selective, durable knockdown of Nav1.7 and strong analgesia.",
+          "abstract": "Humans missing the SCN9A gene encoding the Nav1.7 sodium ion channel are wholly insensitive to pain, but Nav1.7 inhibitors to date have not produced correspondingly strong analgesia in clinical trials. In this study, we address whether potential challenges of selectivity, tissue distribution, and target engagement might be addressed by divalent small interfering RNA (di-siRNA), a modality for transcript knockdown throughout the CNS following dosing into cerebrospinal fluid. Small interfering RNA",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42187058/",
+          "score": 5
+        },
+        {
+          "title": "Patients with different putative chronic pain mechanisms have different cortical complexity and synchrony.",
+          "abstract": "Mechanism-based classification of chronic pain includes nociceptive, neuropathic, and nociplastic descriptors, which are believed to relate to three different clinical phenotypes. It remains unknown whether such classification translates into measurable differences in inter-regional cortical connectivity. Here, we hypothesized that cortical oscillatory responses measured at cortical areas implicated in different dimensions of pain processing: cognitive-evaluative (dorsolateral prefrontal cortex)",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42152687/",
+          "score": 5
+        },
+        {
+          "title": "Hypermobility and chronic pain in adolescents: diverging functional and neural profiles without sensory differences.",
+          "abstract": "Chronic pain (CP) affects approximately 20% of children, significantly impacting their physical, emotional, and social well-being. Hypermobility disorders (HDs) are prevalent in pediatric populations, including those with CP, and often contribute to impairments in psychological and physical functioning. This study examined differences in sensory, functional, and neural circuitry among CP in youth with and without comorbid HD (CP + HD). Contrary to our a priori hypothesis and previous literature ",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42187063/",
+          "score": 5
+        },
+        {
+          "title": "Topical capsaicin 8% differentially blocks activation of nociceptors by mechanical, heat, and electrical stimuli in human skin.",
+          "abstract": "Capsaicin can cause long-lasting analgesia in patients but the time course of the underlying C-nociceptor functional loss remains unclear. We investigated functional loss and sensory recovery of \"polymodal\" and \"silent\" C-nociceptors after topical 8% capsaicin treatment for 12 weeks. The volar forearms of 20 healthy volunteers received two 8% capsaicin patches (1.5 cm2, Qutenza) spaced 2 cm apart and one placebo patch over 4 consecutive days. Sensitivity of C-nociceptors was evaluated weekly by ",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42152692/",
+          "score": 5
+        },
+        {
+          "title": "A multiverse approach to heat-evoked skin conductance analysis: evaluating the influence of analytic pipeline on associations between skin conductance and pain.",
+          "abstract": "Indices of physiological arousal and sympathetic nervous system activity provide important information about pain that can supplement verbal reports. Numerous studies focus on electrodermal activity, which is easy to measure and can provide insights on relationships between pain and arousal through the quantification of skin-conductance response (SCR). Despite SCR's value, there is no standard way to quantify SCR in response to noxious stimulation, and conclusions may vary depending on analytic ",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42152694/",
+          "score": 5
+        },
+        {
+          "title": "Distinct social pathways in the links between pain interference and psychological function in youth with chronic pain.",
+          "abstract": "Evidence suggests that pain interference is linked to depression and anxiety in youth with chronic pain, yet the contributions of the social environment to these associations remain unclear. Guided by the Stress-Buffering Model of Social Support, this study tested theory-driven mediation and moderation models to examine whether peer relationships and bullying contribute to or modify concurrent and short-term longitudinal associations between pain interference and psychological function. A cross-",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42152696/",
+          "score": 5
+        },
+        {
+          "title": "Characterization of the circular RNA landscape of human dorsal root ganglia reveals a neurotrophin-related circRNA is modulated by opioid exposure.",
+          "abstract": "Opioids are among the most widely prescribed treatments for pain; however, prolonged use leads to adverse effects, including tolerance and opioid-induced hyperalgesia. Neurons that detect noxious stimuli (nociceptors) within the dorsal root ganglion (DRG) are critical for both the analgesic and adverse effects of opioids. Although post-transcriptional RNA control is critical for DRG function, the role of circular RNAs (circRNAs), an evolutionarily conserved and highly stable class of RNA, in noc",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42152618/",
+          "score": 5
+        },
+        {
+          "title": "The role of physical activity in children and adolescents with chronic pain: the moderating effects of psychological symptoms and sleep difficulties.",
+          "abstract": "Chronic pain in children and adolescents affects physical, psychological, social, and academic function. Although physical activity may play a role, its direct effects and its interactions with sleep difficulties and psychological symptoms remain unclear. This cross-sectional study examined whether physical activity is associated with chronic pain, and whether these associations vary by sleep difficulties and psychological symptoms. We analyzed data from 212,105 individuals (49% girls, age: 11-1",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42093187/",
+          "score": 5
+        },
+        {
+          "title": "Impaired skin reinnervation in Epidermolysis Bullosa due to neurotrophic deficiency.",
+          "abstract": "The skin is densely innervated by peripheral sensory neurons that detect various stimuli through specialized nerve endings in the dermis and epidermis. In recessive dystrophic epidermolysis bullosa (RDEB), repeated skin injury disrupts epidermal nerve fibers, leading to neuropathic pain and reduced thermal sensitivity. Normally, keratinocyte-derived neurotrophic signals guide sensory fiber re-entry into healed epidermis. We hypothesized that impaired neurotrophic support underlies failed reinner",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42093186/",
+          "score": 5
+        },
+        {
+          "title": "The neural oscillations of chronic low back pain.",
+          "abstract": "Chronic low back pain (cLBP) is associated with fear-related behavioral adaptations and changes in brain function, but the spatial location and frequency of resting neural oscillations that underlie cLBP are not well-understood. In this study we used 128-channel resting-state electroencephalography in older adults with cLBP and high fear, cLBP and low fear, and healthy controls to close this critical gap. Source-space analyses and the Fitting Oscillations and One Over F algorithm were implemente",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42153470/",
+          "score": 5
+        },
+        {
+          "title": "Temporal dynamics of mental defeat in chronic pain: a longitudinal network analysis of ecological momentary assessment data.",
+          "abstract": "Mental defeat-negative self-appraisals in relation to pain-has been linked to greater pain interference, disability, and suicide risk in chronic pain populations. However, little is understood about how fluctuations in mental defeat shape daily pain experiences and responses. This study applied network analysis on time series data from an experience sampling study to examine these dynamic within-person relationships in 137 adults (M age = 41.9, 84.7% female) with chronic noncancer pain, who comp",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42093175/",
+          "score": 5
+        },
+        {
+          "title": "C-C motif chemokine ligand 12 (CCL12) is a critical chemokine driving postoperative pain.",
+          "abstract": "The development of persistent postoperative pain remains a major clinical challenge, partly because of limited understanding of the molecular mediators driving inflammation and pain after surgery. The interaction between the nervous and immune systems plays a critical role in the initiation and maintenance of pain, but immune mediators in this process remain poorly characterized. Targeting cytokines and chemokines represents an attractive strategy to regulate inflammation in both the peripheral ",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41800753/",
+          "score": 5
+        },
+        {
+          "title": "Endometriosis Pain Index: development of a model to predict poor pain-related quality of life after endometriosis surgery through machine learning analysis of registry data.",
+          "abstract": "Predictive tools are lacking for pain-related outcomes after endometriosis surgery. The objective of this study was to develop and validate a machine learning-based clinical model to predict poor pain-related quality of life after endometriosis surgery. Registry data from a prospective longitudinal cohort at a tertiary referral center (2013-2020) was used for model development and validation. Participants underwent an index endometriosis surgery, and completed the pain subscale of the Endometrio",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41746699/",
           "score": 5
         },
         {
@@ -163,11 +403,27 @@
           "score": 5
         },
         {
+          "title": "Fibromyalgia Analog Model index analysis demonstrates the predictive validity of the Dahl S rat as a model of fibromyalgia.",
+          "abstract": "Animal models of disease are frequently used to test the safety and efficacy of new treatments and to explore mechanistic insights. The most useful models are those that accurately predict therapeutic success in humans of both pharmacologic and nonpharmacologic interventions. Here, we tested the predictive validity of the Dahl salt-sensitive (SS) rat strain as a model of fibromyalgia syndrome (FMS), a chronic disorder characterized by widespread musculoskeletal pain, fatigue, and mood disorders.",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41734041/",
+          "score": 4
+        },
+        {
           "title": "What are patients asking about regional anaesthesia? An analysis of common Google search questions and website quality",
           "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Renee Ren, Junying Wang, Tina Chen, Mia Zonies, Alexandra Sideris, Jiabin Liu, Stavros Memtsoudis, Jashvant Poeran",
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S000709122600142X?dgcid=rss_sd_all",
+          "score": 4
+        },
+        {
+          "title": "Exclusion of psychiatric disorders in neuropathic pain research: a secondary analysis of 312 randomized controlled trials.",
+          "abstract": "Chronic neuropathic pain frequently coincides with psychiatric disorders. Randomized controlled trials (RCTs), which underpin treatment guidelines, often seek to reduce confounding variables through exclusion criteria. This may affect the representation of populations with psychiatric comorbidities. This secondary analysis of 312 RCTs on neuropathic pain interventions examined how psychiatric-related exclusions are reported. Data were drawn from a published systematic review of neuropathic pain ",
+          "journal": "PAIN",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42153807/",
           "score": 3
         },
         {
@@ -181,8 +437,24 @@
       ]
     },
     "3": {
-      "hot_theme": "Pediatric anesthesia workstation ventilation",
+      "hot_theme": "Anesthesia workstation ventilation performance",
       "items": [
+        {
+          "title": "Preoperative Olanzapine and Quality of Recovery after Ambulatory Surgery: A Randomized Clinical Trial.",
+          "abstract": "Postdischarge nausea and vomiting (PDNV) negatively impact recovery after surgery. Preoperative administration of olanzapine 10 mg decreases PDNV but increases sedation. No data are available on the impact of olanzapine on global quality of recovery.",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42160634/",
+          "score": 10
+        },
+        {
+          "title": "Choice of anesthesia in microelectrode recording-guided deep brain stimulation surgery for Parkinson's disease (CHAMPION): A noninferiority randomized controlled trial.",
+          "abstract": "Deep brain stimulation for Parkinson's disease is often performed under conscious sedation or general anesthesia. However, anesthetic agents may influence intraoperative microelectrode recording, and the optimal anesthesia method for microelectrode recording remains unclear. This study compared general anesthesia and conscious sedation in preserving microelectrode recording signal intensity during deep brain stimulation.",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42102350/",
+          "score": 10
+        },
         {
           "title": "Total intravenous anaesthesia versus inhalational anaesthesia for gastric cancer surgery: a systematic review of intra-operative and postoperative outcomes",
           "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Ffion Samuels, Christopher Hillyar, Natasha White, Patrick Oliver",
@@ -192,19 +464,19 @@
           "score": 8
         },
         {
-          "title": "Preoperative Olanzapine and Quality of Recovery after Ambulatory Surgery: A Randomized Clinical Trial.",
-          "abstract": "Postdischarge nausea and vomiting (PDNV) negatively impact recovery after surgery. Preoperative administration of olanzapine 10 mg decreases PDNV but increases sedation. No data are available on the impact of olanzapine on global quality of recovery.",
-          "journal": "Anesthesiology",
+          "title": "Diagnostic value of the percentage of glottic opening score for classifying videolaryngoscopy in children: a prospective validation study.",
+          "abstract": "The percentage of glottic opening (POGO) score quantifies the laryngeal view obtained during laryngoscopy. This secondary analysis of the prospective observational PeDiAC study aimed to compare the POGO score with subjective glottic view ratings on a visual analogue scale (VAS) for classifying difficult videolaryngoscopic tracheal intubation.",
+          "journal": "Anaesthesia",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42160634/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42145174/",
           "score": 7
         },
         {
-          "title": "Choice of anesthesia in microelectrode recording-guided deep brain stimulation surgery for Parkinson's disease (CHAMPION): A noninferiority randomized controlled trial.",
-          "abstract": "Deep brain stimulation for Parkinson's disease is often performed under conscious sedation or general anesthesia. However, anesthetic agents may influence intraoperative microelectrode recording, and the optimal anesthesia method for microelectrode recording remains unclear. This study compared general anesthesia and conscious sedation in preserving microelectrode recording signal intensity during deep brain stimulation.",
-          "journal": "Anesthesiology",
+          "title": "Rocuronium Dose and First-Attempt Intubation Success in the Critically Ill: Secondary Analysis of Two Multicenter Trials.",
+          "abstract": "Neuromuscular blockade dose may affect intubation success on the first attempt, thereby impacting outcomes for patients undergoing emergency tracheal intubation.",
+          "journal": "AJRCCM",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42102350/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42149702/",
           "score": 7
         },
         {
@@ -224,11 +496,11 @@
           "score": 5
         },
         {
-          "title": "Diagnostic value of the percentage of glottic opening score for classifying videolaryngoscopy in children: a prospective validation study.",
-          "abstract": "The percentage of glottic opening (POGO) score quantifies the laryngeal view obtained during laryngoscopy. This secondary analysis of the prospective observational PeDiAC study aimed to compare the POGO score with subjective glottic view ratings on a visual analogue scale (VAS) for classifying difficult videolaryngoscopic tracheal intubation.",
+          "title": "Artificial intelligence-assisted peri-operative echocardiography: a multicentre observational study.",
+          "abstract": "Point-of-care transthoracic echocardiography performed by anaesthetists can influence peri-operative management but is constrained by time, the need for measurements and advanced skill requirements. Artificial intelligence-driven analysis may streamline this assessment and yield benefits to clinicians and patients.",
           "journal": "Anaesthesia",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42145174/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42086509/",
           "score": 5
         },
         {
@@ -240,28 +512,20 @@
           "score": 5
         },
         {
+          "title": "Does supplemental oxygen affect the humidity provided by tracheostomy heat and moisture exchange devices?",
+          "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Sara Ilyas, Brendan A. McGrath, Athia Haron",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001492?dgcid=rss_sd_all",
+          "score": 5
+        },
+        {
           "title": "Processed electroencephalogram indices misclassify the conscious state in Guillain–Barré syndrome",
           "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Anita M. Flynn, Angus W. Carter, Peter J. Schuller",
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001455?dgcid=rss_sd_all",
-          "score": 5
-        },
-        {
-          "title": "Evaluation of two consecutive one-way valves for propofol infusion <em>in vitro</em>",
-          "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Thomas Senot, Thomas Stalder, Jérôme Chatelain, Mourad Ben Mahi, Noémie Regennass, Guillaume Besch, Francis Berthier",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001236?dgcid=rss_sd_all",
           "score": 4
-        },
-        {
-          "title": "Neuronal Cell Death Modalities and Protective Mechanisms Induced By Sevoflurane: A Narrative Review.",
-          "abstract": "Sevoflurane is a widely used inhaled anesthetic for adult and pediatric surgeries. In both populations, sevoflurane has been reported to have neurotoxic long-term effects such as cognitive impairment. One of the most important mechanisms for neurotoxicity mediated by sevoflurane is neuronal cell death. In this review, we analyze published data from animal and clinical studies that investigate the potential neurotoxic effects of sevoflurane in both the developing and aged brains. We briefly intro",
-          "journal": "Anesth Analg",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42090240/",
-          "score": 2
         },
         {
           "title": "Monitoring intraoperative EEG: importance of monitor settings for individualised anaesthesia",
@@ -269,53 +533,37 @@
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001698?dgcid=rss_sd_all",
-          "score": 1
+          "score": 4
+        },
+        {
+          "title": "Evaluation of two consecutive one-way valves for propofol infusion <em>in vitro</em>",
+          "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Thomas Senot, Thomas Stalder, Jérôme Chatelain, Mourad Ben Mahi, Noémie Regennass, Guillaume Besch, Francis Berthier",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001236?dgcid=rss_sd_all",
+          "score": 3
+        },
+        {
+          "title": "Impact of desflurane removal from the operating room on carbon dioxide emissions at a tertiary academic medical centre: potential impact on anaesthesia time. Response to <em>Br J Anaesth</em> 2026; 136: 1036–7",
+          "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Eva-Lotte Seibold, Bela-Simon Paschold, Maximilian S. Schaefer, Luca J. Wachtendorf",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001741?dgcid=rss_sd_all",
+          "score": 3
+        },
+        {
+          "title": "Five years later: how Ireland’s inhaled anaesthetic gas emissions have changed from 2019 to 2024. Comment on <em>Br</em> <em>J Anaesth</em> 2023; 130: e13–e6",
+          "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Ola L. Nordrum, Oscar Duffy, Tricia Cummins, Damien Clarke, Anna Impiumi, Dónall Ó’Cróinín, Tim Keady",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001406?dgcid=rss_sd_all",
+          "score": 3
         }
       ]
     },
     "4": {
-      "hot_theme": "Pediatric ventilation and airway management",
+      "hot_theme": null,
       "items": [
-        {
-          "title": "Hydroxyethyl Starch and Perioperative Complications: a Systematic Review and Meta-analysis.",
-          "abstract": "Based on renal injury reported in critically ill and septic patients, the Food and Drug Administration issued a black box warning regarding hydroxyethyl starch (HES 130/0.4) use in 2013, and expanded the warning to surgical and trauma patients in 2021. Similarly, the European Medicines Agency initiated withdrawal of hydroxyethyl starch in 2022. We therefore conducted a new meta-analysis focused on renal injury designed to complement a 2021 meta-analysis of perioperative hydroxyethyl starch use, ",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42160629/",
-          "score": 8
-        },
-        {
-          "title": "Guidelines for anaesthesia and sedation for patients who are breastfeeding: Guidelines from the Association of Anaesthetists.",
-          "abstract": "Breastfeeding is acknowledged widely as one of the most effective ways to ensure the health and well-being of both child and birth parent. Historically, advice given to patients who required an anaesthetic while breastfeeding was variable and inconsistent, sometimes resulting in the interruption of feeding for ≥ 24 h, or expressing and discarding breastmilk because of concerns regarding the possible adverse effects secondary to medicines passing into the breastmilk. This can be a contributory fa",
-          "journal": "Anaesthesia",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41532178/",
-          "score": 8
-        },
-        {
-          "title": "Minimum Effective Dose of Prophylactic Oxytocin Infusion During Cesarean Delivery in Preterm and Term Pregnancy: A Sequential Allocation Dose Finding Study.",
-          "abstract": "There is a paucity of uterine oxytocin receptors during preterm gestation. Whether this affects the requirement of oxytocin dose for uterine contraction in patients with preterm gestation is not researched. We compared effective dose in 90% of target population (ED90) of oxytocin infusion for satisfactory uterine tone during cesarean delivery in patients with preterm and term pregnancy.",
-          "journal": "Anesth Analg",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42148902/",
-          "score": 7
-        },
-        {
-          "title": "Anesthesia workstation performance in pediatric ventilation - Part 1: Precision of ventilation.",
-          "abstract": "Mechanical ventilation of children sets the highest demands on the performance of anesthesia workstations. Different ventilator technologies are available, each representing unique pneumatic characteristics. We hypothesized that precision of delivered ventilation parameters depends on the ventilator type.",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42127252/",
-          "score": 5
-        },
-        {
-          "title": "Anesthesia workstation performance in pediatric ventilation - Part 2: Characteristics during pressure support ventilation and oxygen rise times.",
-          "abstract": "Modern anesthesia workstations include various ventilator technologies, but the effects on pediatric ventilation are unclear. We hypothesized that performance during pressure support ventilation and times to increase oxygen concentrations depend on the type of anesthesia workstation.",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42127247/",
-          "score": 5
-        },
         {
           "title": "Mechanical power and energy in invasively ventilated newborn infants.",
           "abstract": "Mechanical power estimates the amount of energy delivered to ventilated lungs but there are no available data in neonates. We aim to provide a real-world description of power and investigate its relationship with clinical variables in neonates.",
@@ -325,12 +573,20 @@
           "score": 5
         },
         {
-          "title": "Validation and diagnostic performance of the novel B-APNEIC score for predicting severe obstructive sleep apnoea: a cross-sectional study in an Australian population.",
-          "abstract": "The STOP-BANG questionnaire assesses the peri-operative risk of obstructive sleep apnoea and relies on subjective components, which limit its reliability. The B-APNEIC score was proposed as a more objective alternative, incorporating just four STOP-BANG variables: BMI > 35 kg.m",
+          "title": "Neuraxial regional anaesthesia, general anaesthesia and conversion rates in obstetric anaesthesia: a 6-month retrospective audit",
+          "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Salman Bin Ihsan, Shahana Rahat, Omar Farooq, Mahendar Kumar",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001558?dgcid=rss_sd_all",
+          "score": 5
+        },
+        {
+          "title": "Guidelines for anaesthesia and sedation for patients who are breastfeeding: Guidelines from the Association of Anaesthetists.",
+          "abstract": "Breastfeeding is acknowledged widely as one of the most effective ways to ensure the health and well-being of both child and birth parent. Historically, advice given to patients who required an anaesthetic while breastfeeding was variable and inconsistent, sometimes resulting in the interruption of feeding for ≥ 24 h, or expressing and discarding breastmilk because of concerns regarding the possible adverse effects secondary to medicines passing into the breastmilk. This can be a contributory fa",
           "journal": "Anaesthesia",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41387237/",
-          "score": 5
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41532178/",
+          "score": 2
         },
         {
           "title": "Impact of preoperative fasting duration on perioperative complications in elective paediatric procedures. Response to <em>Br J Anaesth</em> 2026; 136: 995–6",
@@ -338,60 +594,28 @@
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001285?dgcid=rss_sd_all",
-          "score": 1
+          "score": 2
+        },
+        {
+          "title": "Association between preoperative anaemia, transfusion, and outcomes in children undergoing noncardiac surgery. Comment on <em>Br J Anaesth</em> 2025; 135: 375–81",
+          "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Dilek Ucak",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S000709122600173X?dgcid=rss_sd_all",
+          "score": 2
         }
       ]
     },
     "5": {
-      "hot_theme": "Acute kidney injury after cardiac surgery",
+      "hot_theme": "Opioid-free cardiac surgery anesthesia",
       "items": [
         {
-          "title": "The Use of Methadone in Adult Cardiac Surgery: A Systematic Review With Narrative Synthesis.",
-          "abstract": "Methadone is a long-acting opioid with multifaceted analgesic properties that is under increasing investigation as an intraoperative analgesic in cardiac surgery. A systematic search of United States National Library of Medicine Database (MEDLINE) and Excerpta Medica Database (EMBASE) databases identified publications investigating the use of intraoperative methadone in adult cardiac surgical patients. The risk of bias and quality of evidence of these studies were assessed, and data from these r",
-          "journal": "Anesth Analg",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42085333/",
-          "score": 8
-        },
-        {
-          "title": "Short- and Long-Term Efficacy and Safety of Levosimendan in VA-ECMO Weaning: The WEANILEVO Randomized Double-Blind Multicenter Trial.",
-          "abstract": "Liberation from veno-arterial extracorporeal membrane oxygenation (VA-ECMO) remains challenging. To date, we have limited evidence from observational studies supporting pharmacological interventions to facilitate successful VA-ECMO weaning. The present study aimed to evaluate the efficacy and safety of a single dose of levosimendan in patients supported by VA-ECMO who met predefined criteria for weaning.",
+          "title": "Opioid Free anesthesia in cardiac surgery: The OFACAR randomized clinical trial.",
+          "abstract": "Opioid-free anesthesia (OFA) may reduce postoperative complications in cardiac surgery, but evidence from large randomized trials is limited.",
           "journal": "Anesthesiology",
           "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42101006/",
-          "score": 7
-        },
-        {
-          "title": "Influence of Pre-emptive Haptoglobin on Postoperative Acute Kidney Injury in Cardiac Surgical Patients: A Randomized Controlled Trial.",
-          "abstract": "Haptoglobin may reduce hemolysis-induced kidney injury in patients undergoing cardiovascular surgery with cardiopulmonary bypass (CPB). Haptoglobin may be given empirically when hemolytic urine is observed, or pre-emptively when detected by elevated free hemoglobin concentrations. In the present study, we investigated whether pre-emptive haptoglobin therapy guided by serum-free hemoglobin concentrations could prevent postoperative renal dysfunction in patients who underwent major cardiovascular ",
-          "journal": "Anesth Analg",
-          "pub_date": "2026/Jun",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41650332/",
-          "score": 7
-        },
-        {
-          "title": "Outflow Tract Patency and Ventricular Compression as Determinants of CPR Hemodynamics in a TEE-Guided Swine Model of Cardiac Arrest.",
-          "abstract": "Perioperative cardiac arrest carries high mortality. Standard landmark-guided chest compressions (CC) frequently overlie the left ventricular outflow tract (LVOT). In the operating room, transesophageal echocardiography (TEE) can guide compression location in real time. Because LVOT-centered compressions may narrow the outflow tract and reduce direct LV compression, we hypothesized that continuous intra-arrest TEE guidance to maintain mid-LV compressions would improve hemodynamics versus LVOT-ce",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42166795/",
-          "score": 5
-        },
-        {
-          "title": "Nephrocheck for Prediction of In-Hospital Acute Kidney Injury and Major Adverse Kidney Events After Cardiac Surgery.",
-          "abstract": "Acute kidney injury (AKI) is a common complication after cardiac surgery and is a risk factor for long-term major adverse kidney events (MAKE). This study aimed to evaluate the association between postoperative Nephrocheck AKI risk score with postoperative in-hospital AKI and MAKE up to 5 years after cardiac surgery.",
-          "journal": "Anesth Analg",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42085354/",
-          "score": 5
-        },
-        {
-          "title": "Platelet function in patients undergoing major non-cardiac vascular surgery (PLUGS): a prospective cohort study.",
-          "abstract": "Patients who require major vascular surgery often receive antiplatelet therapy for primary or secondary prevention of cardiovascular disease. Clopidogrel resistance and variability in platelet recovery after drug discontinuation pose clinical challenges, particularly for regional anaesthesia and blood management. The aim of this study was to characterise platelet function and determine the prevalence of antiplatelet resistance using near-patient viscoelastic testing in patients undergoing major,",
-          "journal": "Anaesthesia",
-          "pub_date": "2026/May",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42125980/",
-          "score": 5
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42190101/",
+          "score": 10
         },
         {
           "title": "Pre-operative anaemia, red blood cell transfusion and mortality after cardiac surgery: a Netherlands Heart Registration mediation analysis.",
@@ -399,15 +623,23 @@
           "journal": "Anaesthesia",
           "pub_date": "2026/May",
           "url": "https://pubmed.ncbi.nlm.nih.gov/41388606/",
-          "score": 5
+          "score": 6
         },
         {
-          "title": "Evaluation of postoperative outcomes after fascia iliaca block and local infiltration in hip surgery",
-          "abstract": "Publication date: June 2026   Source:  British Journal of Anaesthesia, Volume 136, Issue 6  Author(s): Joseph Ruddy, Sumayah Khan, Pawan K. Gupta",
-          "journal": "BJA",
+          "title": "Advancing Perioperative Medicine: A Multistakeholder Perspective.",
+          "abstract": "Perioperative medicine spans the entire surgical care continuum, improving patient outcomes while reducing morbidity and mortality. Anesthesiology is uniquely positioned to influence the continued development of perioperative medicine. Recognizing this opportunity, the American Society of Anesthesiologists (Schaumburg, Illinois) established the Center for Perioperative Medicine as an organizational framework to actively implement perioperative medicine. Whereas earlier efforts focused on why ane",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/May",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42132392/",
+          "score": 2
+        },
+        {
+          "title": "Therapy for Atrial Fibrillation in Patients with Drug-Eluting Stents",
+          "abstract": "New England Journal of Medicine, Volume 394, Issue 19, Page 1964-1966, May 14/21, 2026.",
+          "journal": "NEJM",
           "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226001546?dgcid=rss_sd_all",
-          "score": 5
+          "url": "https://www.nejm.org/doi/full/10.1056/NEJMc2603462?af=R&rss=currentIssue",
+          "score": 2
         }
       ]
     }
