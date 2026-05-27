@@ -130,12 +130,17 @@ def fetch_rss(url: str, journal: str) -> list[dict]:
 
 # ── 2. Classify ───────────────────────────────────────────────────────────────
 
-def _call1_classify_and_score(articles: list[dict]) -> tuple[dict[str, list[int]], dict[int, int]]:
-    """Call 1：分類 + 重要性評分（依研究設計等級）"""
+BATCH_SIZE = 60  # max articles per Haiku call
+
+
+def _call1_batch(articles: list[dict], offset: int) -> tuple[dict[str, list[int]], dict[int, int]]:
+    """對單一批次（最多 BATCH_SIZE 篇）執行分類+評分，回傳全域 1-based index。"""
     numbered = "\n".join(
-        f"{i+1}. [{a['journal']}] {a['title']} | {a['abstract'][:200]}"
+        f"{offset+i+1}. [{a['journal']}] {a['title']} | {a['abstract'][:200]}"
         for i, a in enumerate(articles)
     )
+    start_idx = offset + 1
+    end_idx   = offset + len(articles)
 
     prompt = f"""You are an anesthesia research classifier.
 
@@ -154,7 +159,7 @@ Evidence hierarchy score (1–10):
 3–4: Cross-sectional, case-control, genetic association
 1–2: Case series, case report, narrative review, expert opinion
 
-Articles (1-based index):
+Articles (indices {start_idx}–{end_idx}):
 {numbered}
 
 Return ONLY valid JSON:
@@ -163,12 +168,12 @@ Return ONLY valid JSON:
   "scores": {{"index": score, ...}}
 }}
 Rules:
-- assignments: 1-based indices; article may appear in multiple topics; omit if no topic fits
-- scores: keys are 1-based string indices ("1","2",...); value is integer 1–10"""
+- assignments: use the exact indices shown above ({start_idx}–{end_idx}); article may appear in multiple topics; omit if no topic fits
+- scores: keys are string indices ("{start_idx}"–"{end_idx}"); value is integer 1–10"""
 
     resp = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=900,
+        max_tokens=2500,
         messages=[{"role": "user", "content": prompt}],
     )
     raw   = resp.content[0].text.strip()
@@ -181,6 +186,24 @@ Rules:
     scores_raw = parsed.get("scores", {})
     scores     = {int(k): int(v) for k, v in scores_raw.items() if str(k).isdigit()}
     return assignment, scores
+
+
+def _call1_classify_and_score(articles: list[dict]) -> tuple[dict[str, list[int]], dict[int, int]]:
+    """Call 1：分類 + 重要性評分，超過 BATCH_SIZE 自動分批合併。"""
+    merged_assign: dict[str, list[int]] = {k: [] for k in "12345"}
+    merged_scores: dict[int, int] = {}
+
+    for batch_start in range(0, len(articles), BATCH_SIZE):
+        batch = articles[batch_start:batch_start + BATCH_SIZE]
+        print(f"  Classifying batch {batch_start+1}–{batch_start+len(batch)} / {len(articles)} ...")
+        assign, scores = _call1_batch(batch, offset=batch_start)
+        for tid in "12345":
+            merged_assign[tid].extend(assign.get(tid, []))
+        merged_scores.update(scores)
+        if batch_start + BATCH_SIZE < len(articles):
+            time.sleep(1)
+
+    return merged_assign, merged_scores
 
 
 def _call2_hot_themes(classified: dict[str, list[dict]]) -> dict[str, str | None]:
