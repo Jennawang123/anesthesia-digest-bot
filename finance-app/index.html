@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<title>財務管理</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;overscroll-behavior:none}
+
+/* Tab bar */
+.tabs{display:flex;background:#0f172a;position:sticky;top:0;z-index:100;border-bottom:1px solid #1e293b;padding-top:env(safe-area-inset-top)}
+.tab{flex:1;padding:14px 0 12px;background:none;border:none;color:#64748b;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab.on{color:#38bdf8;border-bottom-color:#38bdf8}
+
+/* Pages */
+.page{display:none;padding:16px;padding-bottom:32px}
+.page.on{display:block}
+
+/* Cards */
+.card{background:#1e293b;border-radius:16px;padding:16px;margin-bottom:12px}
+.label{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.big{font-size:28px;font-weight:700}
+.big.red{color:#f87171}.big.green{color:#4ade80}.big.blue{color:#60a5fa}
+
+/* Grid */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.grid2 .card{margin-bottom:0}
+
+/* Month select */
+.month-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.month-row select{flex:1;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:10px;padding:10px 12px;font-size:14px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2364748b' d='M6 8L0 0h12z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+
+/* Transaction list */
+.tx{display:flex;align-items:center;gap:12px;background:#1e293b;border-radius:12px;padding:12px;margin-bottom:8px}
+.tx-icon{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.tx-body{flex:1;min-width:0}
+.tx-name{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-meta{font-size:12px;color:#64748b;margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.badge{font-size:11px;background:#0f172a;color:#38bdf8;padding:2px 8px;border-radius:20px;cursor:pointer;white-space:nowrap;border:1px solid #1e3a5f}
+.tx-amt{font-size:16px;font-weight:700;color:#f87171;white-space:nowrap}
+
+/* Category icon bg */
+.ic-日常{background:#7c3aed1a}.ic-房租{background:#ea580c1a}.ic-交通{background:#0891b21a}
+.ic-旅遊{background:#0284c71a}.ic-娛樂{background:#db27771a}.ic-教育{background:#16a34a1a}
+.ic-醫療{background:#dc26261a}.ic-贈與{background:#d974231a}.ic-長期規劃{background:#71717a1a}
+
+/* Modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end}
+.overlay.on{display:flex}
+.modal{background:#1e293b;border-radius:24px 24px 0 0;padding:24px;width:100%;max-height:85vh;overflow-y:auto;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:16px}
+.mrow{width:100%;padding:13px 16px;margin-bottom:8px;background:#0f172a;color:#e2e8f0;border:none;border-radius:12px;font-size:15px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px}
+.mrow:active{background:#334155}
+.mclose{width:100%;padding:12px;background:none;border:none;color:#64748b;font-size:14px;cursor:pointer;margin-top:4px}
+
+/* Form */
+input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:10px;padding:12px;font-size:15px;width:100%;margin-bottom:10px}
+.btn{width:100%;padding:14px;background:#38bdf8;color:#0f172a;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin-top:4px}
+.btn-ghost{background:#1e293b;color:#e2e8f0}
+.form-label{font-size:13px;color:#64748b;margin-bottom:6px;margin-top:10px}
+
+/* Import area */
+.import-box{border:2px dashed #334155;border-radius:16px;padding:32px 20px;text-align:center;cursor:pointer;transition:border-color .2s}
+.import-box:hover,.import-box.drag{border-color:#38bdf8}
+.import-box input{display:none}
+.import-icon{font-size:40px;margin-bottom:8px}
+.import-text{color:#64748b;font-size:14px}
+
+/* Stock rows */
+.srow{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #1e293b}
+.srow:last-child{border-bottom:none}
+.sticker{font-size:14px;font-weight:700;color:#38bdf8}
+.sname{font-size:12px;color:#64748b}
+.sval{text-align:right}
+.sprice{font-size:14px;font-weight:600}
+.sshares{font-size:11px;color:#64748b}
+
+/* Net worth hero */
+.nw-hero{text-align:center;padding:24px 0 8px}
+.nw-label{font-size:13px;color:#64748b;margin-bottom:6px}
+.nw-val{font-size:40px;font-weight:800}
+.nw-val.pos{color:#4ade80}.nw-val.neg{color:#f87171}
+
+/* Chart */
+.chart-wrap{position:relative;height:190px;margin:8px 0}
+
+/* Section title */
+.section-title{font-size:13px;font-weight:600;color:#94a3b8;margin:16px 0 8px;display:flex;justify-content:space-between;align-items:center}
+.section-title button{font-size:12px;background:#1e293b;color:#94a3b8;border:none;border-radius:8px;padding:4px 10px;cursor:pointer}
+
+/* Import preview */
+.preview-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #1e293b;font-size:14px}
+.preview-item:last-child{border-bottom:none}
+.preview-left{flex:1;min-width:0;padding-right:8px}
+.preview-merchant{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preview-meta{font-size:12px;color:#64748b}
+.preview-right{text-align:right;white-space:nowrap}
+.preview-amt{font-weight:700;color:#f87171}
+.preview-cat select{font-size:12px;background:#0f172a;color:#38bdf8;border:none;border-radius:6px;padding:2px 4px}
+
+/* Empty state */
+.empty{text-align:center;padding:40px 20px;color:#64748b;font-size:14px}
+
+/* Upload progress */
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid #334155;border-top-color:#38bdf8;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Settings */
+.settings-group{margin-bottom:20px}
+.settings-group h4{font-size:13px;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.settings-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px}
+.settings-row input{margin-bottom:0}
+.settings-row .btn-sm{white-space:nowrap;padding:12px 14px;background:#334155;color:#e2e8f0;border:none;border-radius:10px;font-size:13px;cursor:pointer;flex-shrink:0}
+
+/* Toast */
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#334155;color:#e2e8f0;padding:10px 20px;border-radius:20px;font-size:14px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <button class="tab on" onclick="go('expenses')">💸 支出</button>
+  <button class="tab" onclick="go('cashflow')">📈 收支</button>
+  <button class="tab" onclick="go('assets')">🏦 資產</button>
+</div>
+
+<!-- ═══════════════════ TAB 1: 支出 ═══════════════════ -->
+<div id="page-expenses" class="page on">
+  <div class="month-row">
+    <select id="sel-exp" onchange="loadExpenses()"></select>
+    <button onclick="openImport()" style="background:#38bdf8;color:#0f172a;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">＋ 匯入</button>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="label">本月支出</div><div class="big red" id="exp-total">--</div></div>
+    <div class="card"><div class="label">筆數</div><div class="big" id="exp-count">--</div></div>
+  </div>
+  <div class="card">
+    <div class="label">類別分佈</div>
+    <div class="chart-wrap"><canvas id="cat-chart"></canvas></div>
+  </div>
+  <div id="tx-list"><div class="empty">尚無交易記錄</div></div>
+</div>
+
+<!-- ═══════════════════ TAB 2: 收支 ═══════════════════ -->
+<div id="page-cashflow" class="page">
+  <div class="month-row">
+    <select id="sel-cf" onchange="loadCashflow()"></select>
+    <button onclick="openIncomeModal()" style="background:#4ade80;color:#0f172a;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">＋ 收入</button>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="label">收入</div><div class="big green" id="cf-income">--</div></div>
+    <div class="card"><div class="label">支出</div><div class="big red" id="cf-expense">--</div></div>
+  </div>
+  <div class="card"><div class="label">結餘</div><div class="big blue" id="cf-balance" style="font-size:34px">--</div></div>
+  <div class="card">
+    <div class="label">近12個月趨勢</div>
+    <div class="chart-wrap"><canvas id="cf-chart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="label">收入明細</div>
+    <div id="income-list"><div class="empty">尚無收入記錄</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB 3: 資產 ═══════════════════ -->
+<div id="page-assets" class="page">
+  <div class="nw-hero">
+    <div class="nw-label">淨資產</div>
+    <div class="nw-val" id="nw-val">--</div>
+  </div>
+  <div class="card">
+    <div class="label">淨資產走勢</div>
+    <div class="chart-wrap"><canvas id="nw-chart"></canvas></div>
+  </div>
+
+  <div class="section-title">
+    <span>台股</span>
+    <button onclick="refreshPrices('TW')">更新價格</button>
+  </div>
+  <div class="card" id="tw-stocks"><div class="empty">尚未設定</div></div>
+
+  <div class="section-title">
+    <span>美股</span>
+    <button onclick="refreshPrices('US')">更新價格</button>
+  </div>
+  <div class="card" id="us-stocks"><div class="empty">尚未設定</div></div>
+
+  <div class="section-title">存款／現金</div>
+  <div class="card" id="cash-list"><div class="empty">尚未設定</div></div>
+
+  <div class="section-title" style="color:#f87171">負債</div>
+  <div class="card" id="liab-list"><div class="empty">無負債</div></div>
+
+  <div style="display:flex;gap:8px;margin-top:4px">
+    <button class="btn btn-ghost" style="flex:1" onclick="openAssetEdit()">✏️ 編輯</button>
+    <button class="btn btn-ghost" style="flex:1" onclick="saveSnapshot()">📸 快照</button>
+  </div>
+</div>
+
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+
+<!-- Category edit -->
+<div class="overlay" id="cat-overlay">
+  <div class="modal">
+    <h3>更改類別</h3>
+    <div id="cat-buttons"></div>
+    <button class="mclose" onclick="closeOverlay('cat-overlay')">取消</button>
+  </div>
+</div>
+
+<!-- Income add -->
+<div class="overlay" id="income-overlay">
+  <div class="modal">
+    <h3>新增收入</h3>
+    <div class="form-label">來源</div>
+    <input id="inc-src" placeholder="薪資 / 獎金 / 其他">
+    <div class="form-label">金額</div>
+    <input id="inc-amt" type="number" placeholder="80000">
+    <div class="form-label">備註（選填）</div>
+    <input id="inc-note" placeholder="">
+    <button class="btn" onclick="submitIncome()">存入</button>
+    <button class="mclose" onclick="closeOverlay('income-overlay')">取消</button>
+  </div>
+</div>
+
+<!-- Screenshot import -->
+<div class="overlay" id="import-overlay">
+  <div class="modal">
+    <h3>匯入對帳單截圖</h3>
+    <div class="form-label">銀行</div>
+    <select id="imp-bank">
+      <option value="永豐">永豐銀行</option>
+      <option value="國泰">國泰世華</option>
+      <option value="第一">第一銀行</option>
+      <option value="其他">其他</option>
+    </select>
+    <div class="form-label">年份</div>
+    <input id="imp-year" type="number" placeholder="2026" value="2026">
+    <div class="form-label">截圖</div>
+    <label class="import-box" id="drop-zone">
+      <input type="file" id="imp-file" accept="image/*" onchange="onFileChange(this)">
+      <div class="import-icon">📷</div>
+      <div class="import-text">點擊選取截圖<br>或拖曳到此處</div>
+    </label>
+    <div id="imp-status"></div>
+    <div id="imp-preview"></div>
+    <button class="btn" id="imp-confirm" onclick="confirmImport()" style="display:none">確認存入 (<span id="imp-count">0</span> 筆)</button>
+    <button class="mclose" onclick="closeOverlay('import-overlay')">取消</button>
+  </div>
+</div>
+
+<!-- Asset edit -->
+<div class="overlay" id="asset-overlay">
+  <div class="modal">
+    <h3>編輯資產／負債</h3>
+
+    <div class="settings-group">
+      <h4>API 設定</h4>
+      <div class="form-label">後端 URL</div>
+      <input id="cfg-url" placeholder="https://xxx.railway.app" value="">
+      <div class="form-label">API Key</div>
+      <input id="cfg-key" placeholder="your-api-key" value="">
+      <button class="btn" onclick="saveConfig()">儲存設定</button>
+    </div>
+
+    <div class="settings-group">
+      <h4>台股</h4>
+      <div class="settings-row">
+        <input id="tw-t" placeholder="代號 2330" style="width:90px">
+        <input id="tw-n" placeholder="名稱 台積電">
+        <input id="tw-s" type="number" placeholder="股數" style="width:80px">
+        <button class="btn-sm" onclick="addHolding('TW')">加</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>美股</h4>
+      <div class="settings-row">
+        <input id="us-t" placeholder="AAPL" style="width:90px">
+        <input id="us-n" placeholder="Apple">
+        <input id="us-s" type="number" placeholder="股數" style="width:80px">
+        <button class="btn-sm" onclick="addHolding('US')">加</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>存款／現金</h4>
+      <div class="settings-row">
+        <input id="cash-n" placeholder="帳戶名稱">
+        <input id="cash-b" type="number" placeholder="金額">
+        <button class="btn-sm" onclick="addCash()">更新</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>負債</h4>
+      <div class="form-label">類型</div>
+      <select id="liab-t"><option>信貸</option><option>質押借款</option><option>房貸</option></select>
+      <div class="settings-row">
+        <input id="liab-n" placeholder="名稱（如玉山信貸）">
+        <input id="liab-b" type="number" placeholder="餘額">
+      </div>
+      <div class="settings-row">
+        <input id="liab-m" type="number" placeholder="月繳金額（選填）">
+        <button class="btn-sm" onclick="addLiability()">更新</button>
+      </div>
+    </div>
+
+    <button class="mclose" onclick="closeOverlay('asset-overlay')">關閉</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────
+let API = localStorage.getItem('api_url') || '';
+let KEY = localStorage.getItem('api_key') || '';
+
+function H() { return {'Content-Type':'application/json','x-api-key':KEY}; }
+
+async function api(path, opts={}) {
+  const r = await fetch(API+path, {headers:H(),...opts});
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2500);
+}
+
+// ── Routing ─────────────────────────────────────────────────
+const TABS = ['expenses','cashflow','assets'];
+let cur = 'expenses';
+
+function go(tab) {
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',TABS[i]===tab));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.getElementById('page-'+tab).classList.add('on');
+  cur = tab;
+  if (!API) { openAssetEdit(); return; }
+  if (tab==='expenses') loadExpenses();
+  else if (tab==='cashflow') loadCashflow();
+  else loadAssets();
+}
+
+// ── Month helpers ────────────────────────────────────────────
+function buildMonths(selId) {
+  const sel = document.getElementById(selId);
+  if (sel.options.length) return sel.value;
+  const now = new Date();
+  for (let i=0;i<24;i++) {
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const v = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    sel.add(new Option(v,v));
+  }
+  return sel.value;
+}
+
+// ── CAT icons ────────────────────────────────────────────────
+const ICONS = {日常:'🛒',房租:'🏠',交通:'🚗',旅遊:'✈️',娛樂:'🎬',教育:'📚',醫療:'🏥',贈與:'🎁',長期規劃:'💰'};
+const CATS = ['日常','房租','交通','旅遊','娛樂','教育','醫療','贈與','長期規劃'];
+
+// ── TAB 1: 支出 ──────────────────────────────────────────────
+let catChart = null;
+
+async function loadExpenses() {
+  if (!API) return;
+  const ym = buildMonths('sel-exp');
+  try {
+    const txs = await api(`/finance/transactions?year_month=${ym}`);
+    renderExpenses(txs);
+  } catch(e) { console.error(e); }
+}
+
+function renderExpenses(txs) {
+  const total = txs.reduce((s,t)=>s+t.amount,0);
+  document.getElementById('exp-total').textContent = `NT$${total.toLocaleString()}`;
+  document.getElementById('exp-count').textContent = `${txs.length} 筆`;
+
+  // Pie chart
+  const catMap = {};
+  txs.forEach(t=>{ catMap[t.category]=(catMap[t.category]||0)+t.amount; });
+  const labels = Object.keys(catMap);
+  const vals = labels.map(c=>catMap[c]);
+  const colors = ['#7c3aed','#ea580c','#0891b2','#0284c7','#db2777','#16a34a','#dc2626','#d97423','#71717a'];
+  if (catChart) catChart.destroy();
+  catChart = new Chart(document.getElementById('cat-chart'),{
+    type:'doughnut',
+    data:{labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:0}]},
+    options:{plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:11},boxWidth:12}}},cutout:'62%'}
+  });
+
+  // List
+  const ul = document.getElementById('tx-list');
+  if (!txs.length) { ul.innerHTML='<div class="empty">本月無記錄</div>'; return; }
+  ul.innerHTML = txs.map(tx=>`
+    <div class="tx">
+      <div class="tx-icon ic-${tx.category}">${ICONS[tx.category]||'💳'}</div>
+      <div class="tx-body">
+        <div class="tx-name">${tx.merchant}</div>
+        <div class="tx-meta">
+          <span>${tx.date.slice(5)}</span>
+          <span>${tx.bank}</span>
+          <span class="badge" onclick="openCatEdit(${tx.id},'${tx.category}')">${tx.category}</span>
+          ${tx.is_travel?'✈️':''}
+        </div>
+      </div>
+      <div class="tx-amt">-NT$${tx.amount.toLocaleString()}</div>
+    </div>`).join('');
+}
+
+// Category edit
+let editId = null;
+function openCatEdit(id, cur) {
+  editId = id;
+  document.getElementById('cat-buttons').innerHTML = CATS.map(c=>`
+    <button class="mrow" onclick="applyCategory('${c}')">
+      <span>${ICONS[c]}</span><span>${c}</span>${c===cur?' ✓':''}
+    </button>`).join('');
+  openOverlay('cat-overlay');
+}
+async function applyCategory(cat) {
+  try {
+    await api(`/finance/transactions/${editId}/category`,{method:'PATCH',body:JSON.stringify({category:cat})});
+    closeOverlay('cat-overlay');
+    loadExpenses();
+    toast(`已改為「${cat}」`);
+  } catch(e) { toast('錯誤：'+e.message); }
+}
+
+// ── Import screenshot ────────────────────────────────────────
+let pendingTxs = [];
+
+function openImport() {
+  pendingTxs = [];
+  document.getElementById('imp-status').innerHTML = '';
+  document.getElementById('imp-preview').innerHTML = '';
+  document.getElementById('imp-confirm').style.display = 'none';
+  document.getElementById('imp-file').value = '';
+  openOverlay('import-overlay');
+}
+
+function onFileChange(input) {
+  if (input.files[0]) processImage(input.files[0]);
+}
+
+// Drag & drop
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>{ e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{ e.preventDefault(); dz.classList.remove('drag'); if(e.dataTransfer.files[0]) processImage(e.dataTransfer.files[0]); });
+
+async function processImage(file) {
+  const bank = document.getElementById('imp-bank').value;
+  const year = document.getElementById('imp-year').value;
+  document.getElementById('imp-status').innerHTML = '<span class="spinner"></span>解析中，請稍候...';
+  document.getElementById('imp-confirm').style.display = 'none';
+  document.getElementById('imp-preview').innerHTML = '';
+
+  const fd = new FormData();
+  fd.append('image', file);
+  fd.append('bank', bank);
+  fd.append('year', year);
+
+  try {
+    const r = await fetch(API+'/finance/import/screenshot', {
+      method:'POST', headers:{'x-api-key':KEY}, body:fd
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    pendingTxs = data.transactions;
+
+    document.getElementById('imp-status').innerHTML = `✅ 解析到 <b>${data.count}</b> 筆交易，請確認：`;
+    document.getElementById('imp-count').textContent = data.count;
+    document.getElementById('imp-confirm').style.display = 'block';
+    renderPreview(pendingTxs);
+  } catch(e) {
+    document.getElementById('imp-status').innerHTML = `❌ 解析失敗：${e.message}`;
+  }
+}
+
+function renderPreview(txs) {
+  document.getElementById('imp-preview').innerHTML = txs.map((tx,i)=>`
+    <div class="preview-item">
+      <div class="preview-left">
+        <div class="preview-merchant">${tx.merchant}</div>
+        <div class="preview-meta">${tx.date}</div>
+      </div>
+      <div class="preview-right">
+        <div class="preview-amt">-NT$${tx.amount.toLocaleString()}</div>
+        <div class="preview-cat">
+          <select onchange="pendingTxs[${i}].category=this.value" style="font-size:12px;background:#0f172a;color:#38bdf8;border:none;border-radius:6px;padding:2px 4px">
+            ${CATS.map(c=>`<option value="${c}" ${c===tx.category?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function confirmImport() {
+  try {
+    const res = await api('/finance/transactions/batch',{method:'POST',body:JSON.stringify(pendingTxs)});
+    closeOverlay('import-overlay');
+    toast(`✅ 已存入 ${res.count} 筆`);
+    loadExpenses();
+  } catch(e) { toast('錯誤：'+e.message); }
+}
+
+// ── TAB 2: 收支 ──────────────────────────────────────────────
+let cfChart = null;
+
+async function loadCashflow() {
+  if (!API) return;
+  const ym = buildMonths('sel-cf');
+  try {
+    const [summary, allIncome] = await Promise.all([
+      api(`/finance/summary/${ym}`),
+      api('/finance/income')
+    ]);
+
+    document.getElementById('cf-income').textContent = `NT$${summary.total_income.toLocaleString()}`;
+    document.getElementById('cf-expense').textContent = `NT$${summary.total_expense.toLocaleString()}`;
+    const bal = summary.balance;
+    const el = document.getElementById('cf-balance');
+    el.textContent = `${bal>=0?'+':''}NT$${bal.toLocaleString()}`;
+    el.className = `big ${bal>=0?'green':'red'}`;
+
+    // Income detail
+    const mine = allIncome.filter(i=>i.year_month===ym);
+    document.getElementById('income-list').innerHTML = mine.length
+      ? mine.map(i=>`<div class="srow">
+          <div><div class="sticker">${i.source}</div>${i.note?`<div class="sname">${i.note}</div>`:''}</div>
+          <div class="sval"><div class="sprice" style="color:#4ade80">+NT$${i.amount.toLocaleString()}</div>
+          <div class="sshares" onclick="delIncome(${i.id})" style="cursor:pointer;color:#f87171">刪除</div></div>
+        </div>`).join('')
+      : '<div class="empty">點 ＋ 收入 新增</div>';
+
+    // Trend
+    const months = Array.from({length:12},(_,i)=>{
+      const d=new Date(); d.setMonth(d.getMonth()-11+i);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    });
+    const summaries = await Promise.all(months.map(m=>api(`/finance/summary/${m}`)));
+    if (cfChart) cfChart.destroy();
+    cfChart = new Chart(document.getElementById('cf-chart'),{
+      type:'line',
+      data:{
+        labels:months.map(m=>m.slice(5)),
+        datasets:[
+          {label:'收入',data:summaries.map(s=>s.total_income),borderColor:'#4ade80',tension:.3,fill:false,pointRadius:3},
+          {label:'支出',data:summaries.map(s=>s.total_expense),borderColor:'#f87171',tension:.3,fill:false,pointRadius:3},
+          {label:'結餘',data:summaries.map(s=>s.balance),borderColor:'#60a5fa',tension:.3,fill:false,pointRadius:3},
+        ]
+      },
+      options:{plugins:{legend:{labels:{color:'#94a3b8',font:{size:11},boxWidth:12}}},
+               scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',font:{size:10}}}}}
+    });
+  } catch(e) { console.error(e); }
+}
+
+function openIncomeModal() {
+  buildMonths('sel-cf');
+  openOverlay('income-overlay');
+}
+
+async function submitIncome() {
+  const ym = document.getElementById('sel-cf').value;
+  const src = document.getElementById('inc-src').value.trim()||'薪資';
+  const amt = parseInt(document.getElementById('inc-amt').value);
+  const note = document.getElementById('inc-note').value.trim();
+  if (isNaN(amt)) { toast('請輸入金額'); return; }
+  try {
+    await api('/finance/income',{method:'POST',body:JSON.stringify({year_month:ym,source:src,amount:amt,note})});
+    closeOverlay('income-overlay');
+    document.getElementById('inc-amt').value='';
+    document.getElementById('inc-src').value='';
+    document.getElementById('inc-note').value='';
+    loadCashflow();
+    toast('收入已記錄');
+  } catch(e) { toast('錯誤：'+e.message); }
+}
+
+async function delIncome(id) {
+  if (!confirm('刪除此收入？')) return;
+  await api(`/finance/income/${id}`,{method:'DELETE'});
+  loadCashflow();
+}
+
+// ── TAB 3: 資產 ──────────────────────────────────────────────
+let nwChart = null;
+const prices = {};
+
+async function loadAssets() {
+  if (!API) return;
+  try {
+    const [holdings, liabs, cash, history] = await Promise.all([
+      api('/finance/holdings'),
+      api('/finance/liabilities'),
+      api('/finance/cash'),
+      api('/finance/networth/history'),
+    ]);
+    await fetchAllPrices(holdings);
+    renderStocks(holdings);
+    renderLiabs(liabs);
+    renderCash(cash);
+
+    const twVal = holdings.filter(h=>h.market==='TW').reduce((s,h)=>s+(prices[`TW:${h.ticker}`]||0)*h.shares,0);
+    const usVal = holdings.filter(h=>h.market==='US').reduce((s,h)=>s+(prices[`US:${h.ticker}`]||0)*h.shares,0);
+    const cashVal = cash.reduce((s,c)=>s+c.balance,0);
+    const totalA = Math.round(twVal+usVal+cashVal);
+    const totalL = liabs.reduce((s,l)=>s+l.balance,0);
+    const nw = totalA - totalL;
+    window._snap = {totalA, totalL};
+
+    const el = document.getElementById('nw-val');
+    el.textContent = `NT$${nw.toLocaleString()}`;
+    el.className = `nw-val ${nw>=0?'pos':'neg'}`;
+
+    if (nwChart) nwChart.destroy();
+    if (history.length>1) {
+      nwChart = new Chart(document.getElementById('nw-chart'),{
+        type:'line',
+        data:{
+          labels:history.map(h=>h.year_month.slice(5)),
+          datasets:[{label:'淨資產',data:history.map(h=>h.net_worth),
+            borderColor:'#4ade80',backgroundColor:'rgba(74,222,128,.1)',fill:true,tension:.3,pointRadius:3}]
+        },
+        options:{plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
+                 scales:{x:{ticks:{color:'#64748b',font:{size:10}}},
+                         y:{ticks:{color:'#64748b',font:{size:10},callback:v=>`${(v/10000).toFixed(0)}萬`}}}}
+      });
+    }
+  } catch(e) { console.error(e); }
+}
+
+async function fetchAllPrices(holdings) {
+  await Promise.all(holdings.map(async h=>{
+    try {
+      const d = await api(`/finance/stock-price?ticker=${h.ticker}&market=${h.market}`);
+      prices[`${h.market}:${h.ticker}`] = d.price;
+    } catch { prices[`${h.market}:${h.ticker}`]=0; }
+  }));
+}
+
+async function refreshPrices(market) {
+  toast('更新股價中...');
+  const holdings = await api('/finance/holdings');
+  await Promise.all(holdings.filter(h=>h.market===market).map(async h=>{
+    try {
+      const d = await api(`/finance/stock-price?ticker=${h.ticker}&market=${h.market}`);
+      prices[`${h.market}:${h.ticker}`]=d.price;
+    } catch {}
+  }));
+  renderStocks(holdings);
+  toast('股價已更新');
+}
+
+function renderStocks(holdings) {
+  ['TW','US'].forEach(m=>{
+    const id = m==='TW'?'tw-stocks':'us-stocks';
+    const h = holdings.filter(x=>x.market===m);
+    document.getElementById(id).innerHTML = h.length
+      ? h.map(s=>{
+          const p=prices[`${m}:${s.ticker}`]||0;
+          const v=Math.round(p*s.shares);
+          const unit=m==='TW'?'NT$':'USD ';
+          return `<div class="srow">
+            <div><div class="sticker">${s.ticker}</div><div class="sname">${s.name}</div></div>
+            <div class="sval">
+              <div class="sprice">NT$${v.toLocaleString()}</div>
+              <div class="sshares">${s.shares}股 × ${unit}${p.toFixed(m==='US'?2:0)}</div>
+            </div>
+          </div>`;
+        }).join('')
+      : '<div class="empty">尚未設定</div>';
+  });
+}
+
+function renderLiabs(liabs) {
+  document.getElementById('liab-list').innerHTML = liabs.length
+    ? liabs.map(l=>`<div class="srow">
+        <div><div class="sticker" style="color:#f87171">${l.name}</div>
+        <div class="sname">${l.type}${l.monthly_payment?` · 月繳NT$${l.monthly_payment.toLocaleString()}`:''}</div></div>
+        <div class="sval"><div class="sprice" style="color:#f87171">-NT$${l.balance.toLocaleString()}</div></div>
+      </div>`).join('')
+    : '<div class="empty">無負債</div>';
+}
+
+function renderCash(cash) {
+  document.getElementById('cash-list').innerHTML = cash.length
+    ? cash.map(c=>`<div class="srow">
+        <div class="sticker" style="color:#4ade80">${c.name}</div>
+        <div class="sprice" style="color:#4ade80">NT$${c.balance.toLocaleString()}</div>
+      </div>`).join('')
+    : '<div class="empty">尚未設定</div>';
+}
+
+async function saveSnapshot() {
+  const now=new Date();
+  const ym=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const s=window._snap||{totalA:0,totalL:0};
+  await api('/finance/networth/snapshot',{method:'POST',body:JSON.stringify({year_month:ym,total_assets:s.totalA,total_liabilities:s.totalL})});
+  toast(`${ym} 快照已儲存`);
+  loadAssets();
+}
+
+// ── Asset edit ───────────────────────────────────────────────
+function openAssetEdit() {
+  document.getElementById('cfg-url').value = API;
+  document.getElementById('cfg-key').value = KEY;
+  openOverlay('asset-overlay');
+}
+
+function saveConfig() {
+  API = document.getElementById('cfg-url').value.trim().replace(/\/$/,'');
+  KEY = document.getElementById('cfg-key').value.trim();
+  localStorage.setItem('api_url', API);
+  localStorage.setItem('api_key', KEY);
+  closeOverlay('asset-overlay');
+  toast('設定已儲存');
+  go(cur);
+}
+
+async function addHolding(market) {
+  const t=document.getElementById(market.toLowerCase()+'-t').value.trim().toUpperCase();
+  const n=document.getElementById(market.toLowerCase()+'-n').value.trim();
+  const s=parseFloat(document.getElementById(market.toLowerCase()+'-s').value);
+  if (!t||!n||isNaN(s)) { toast('請填完整'); return; }
+  await api('/finance/holdings',{method:'POST',body:JSON.stringify({market,ticker:t,name:n,shares:s})});
+  toast(`${t} 已更新`);
+}
+
+async function addCash() {
+  const n=document.getElementById('cash-n').value.trim();
+  const b=parseInt(document.getElementById('cash-b').value);
+  if (!n||isNaN(b)) { toast('請填完整'); return; }
+  await api('/finance/cash',{method:'POST',body:JSON.stringify({name:n,balance:b})});
+  toast('存款已更新');
+}
+
+async function addLiability() {
+  const type=document.getElementById('liab-t').value;
+  const name=document.getElementById('liab-n').value.trim();
+  const balance=parseInt(document.getElementById('liab-b').value);
+  const mp=parseInt(document.getElementById('liab-m').value)||0;
+  if (!name||isNaN(balance)) { toast('請填完整'); return; }
+  await api('/finance/liabilities',{method:'POST',body:JSON.stringify({type,name,balance,monthly_payment:mp})});
+  toast('負債已更新');
+}
+
+// ── Overlay helpers ──────────────────────────────────────────
+function openOverlay(id) { document.getElementById(id).classList.add('on'); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('on'); }
+document.querySelectorAll('.overlay').forEach(el=>{
+  el.addEventListener('click',e=>{ if(e.target===el) el.classList.remove('on'); });
+});
+
+// ── Init ─────────────────────────────────────────────────────
+buildMonths('sel-exp');
+buildMonths('sel-cf');
+if (API) loadExpenses();
+else openAssetEdit();
+</script>
+</body>
+</html>
