@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+anthropic
+python-multipart
+yfinance
+sqlalchemy
+psycopg2-binary
