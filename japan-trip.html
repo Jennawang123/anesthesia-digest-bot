@@ -706,6 +706,12 @@ function initDnD(){
       const r=c.getBoundingClientRect();
       c.classList.toggle('drop-over',t.clientY>=r.top&&t.clientY<=r.bottom);
     });
+    // 同日內高亮目標列
+    const dc=document.getElementById('dc-'+DG.did);
+    if(dc)dc.querySelectorAll('.act-row').forEach(r=>{
+      const rr=r.getBoundingClientRect();
+      r.classList.toggle('drag-over-act',r.dataset.aid!==DG.aid&&t.clientY>=rr.top&&t.clientY<=rr.bottom);
+    });
   },{passive:false});
   document.addEventListener('touchend',e=>{
     clearTimeout(DG.timer);
@@ -719,7 +725,23 @@ function initDnD(){
       if(t.clientY>=r.top&&t.clientY<=r.bottom)tgt=c.id.replace('dc-','');
       c.classList.remove('droppable','drop-over');
     });
-    if(tgt&&tgt!==DG.did)moveAct(DG.did,DG.aid,DG.act,tgt);
+    document.querySelectorAll('.act-row.drag-over-act').forEach(r=>r.classList.remove('drag-over-act'));
+    if(!tgt)return;
+    if(tgt!==DG.did){moveAct(DG.did,DG.aid,DG.act,tgt);return;}
+    // 同日內排序
+    const dc=document.getElementById('dc-'+tgt);
+    const actRows=[...dc.querySelectorAll('.act-row')];
+    const tgtRow=actRows.find(r=>{const rr=r.getBoundingClientRect();return r.dataset.aid!==DG.aid&&t.clientY>=rr.top&&t.clientY<=rr.bottom;});
+    if(!tgtRow)return;
+    const srcIdx=actRows.findIndex(r=>r.dataset.aid===DG.aid);
+    const tgtIdx=actRows.findIndex(r=>r.dataset.aid===tgtRow.dataset.aid);
+    if(srcIdx<0||tgtIdx<0||srcIdx===tgtIdx)return;
+    const aids=actRows.map(r=>r.dataset.aid);
+    aids.splice(srcIdx,1);aids.splice(tgtIdx,0,DG.aid);
+    const upd={};
+    aids.forEach((a,i)=>upd['/schedule/'+tgt+'/acts/'+a+'/order']=i);
+    DB.ref('/').update(upd);
+    toast('✅ 已重新排序');
   });
   box.addEventListener('dragstart',e=>{
     const row=e.target.closest('.act-row');if(!row)return;
