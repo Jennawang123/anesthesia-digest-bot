@@ -157,7 +157,7 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
   </div>
   <div class="card">
     <div class="label">類別分佈</div>
-    <div class="chart-wrap"><canvas id="cat-chart"></canvas></div>
+    <div class="chart-wrap" style="height:320px"><canvas id="cat-chart"></canvas></div>
   </div>
   <div id="tx-list"><div class="empty">尚無交易記錄</div></div>
 </div>
@@ -446,17 +446,17 @@ function renderExpenses(txs) {
   catChart=new Chart(document.getElementById('cat-chart'),{
     type:'doughnut',
     data:{labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:0}]},
-    options:{plugins:{legend:{position:'right',labels:{
-      color:'#94a3b8',font:{size:10},boxWidth:10,
+    options:{plugins:{legend:{position:'bottom',labels:{
+      color:'#e2e8f0',font:{size:11},boxWidth:10,padding:8,
       generateLabels(chart){
         const tot=chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
         return chart.data.labels.map((lbl,i)=>({
-          text:`${lbl} NT$${chart.data.datasets[0].data[i].toLocaleString()} (${tot>0?(chart.data.datasets[0].data[i]/tot*100).toFixed(1):0}%)`,
+          text:`${lbl}  NT$${chart.data.datasets[0].data[i].toLocaleString()}  (${tot>0?(chart.data.datasets[0].data[i]/tot*100).toFixed(1):0}%)`,
           fillStyle:chart.data.datasets[0].backgroundColor[i],
           strokeStyle:'transparent',lineWidth:0,hidden:false,index:i
         }));
       }
-    }}},cutout:'62%'}
+    }}},cutout:'55%'}
   });
 
   const ul=document.getElementById('tx-list');
