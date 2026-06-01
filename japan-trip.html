@@ -359,10 +359,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdl"></div><div class="st" id="m-act-t">新增活動</div>
     <input type="hidden" id="ma-did"><input type="hidden" id="ma-aid">
     <div class="fg"><label class="lb">類型</label><div class="ac-grid" id="acGrid"></div></div>
-    <div class="fr">
-      <div class="fg" style="flex:0 0 120px"><label class="lb">時間</label><input class="inp" id="a_time" type="time"></div>
-      <div class="fg"><label class="lb">活動名稱 *</label><input class="inp" id="a_name" placeholder="例：雪梨歌劇院導覽"></div>
-    </div>
+    <div class="fg"><label class="lb">活動名稱 *</label><input class="inp" id="a_name" placeholder="例：淺草寺參觀"></div>
     <div class="fg"><label class="lb">地點（自動生成 Google Maps 連結）</label><input class="inp" id="a_loc" placeholder="例：Sydney Opera House"></div>
     <div class="fg"><label class="lb">備註</label><textarea class="ta" id="a_note" placeholder="訂位資訊、注意事項…"></textarea></div>
     <div class="cost-box">
@@ -442,10 +439,10 @@ const CATS=[
 const CATM=Object.fromEntries(CATS.map(c=>[c.id,c]));
 const PCOL={food:'#F59E0B',transport:'#3B82F6',hotel:'#8B5CF6',activity:'#10B981',shopping:'#EC4899',ticket:'#EF4444',cafe:'#F97316',other:'#94A3B8'};
 const ACTS=[
-  {id:'sight',ico:'🏛️',name:'景點',bg:'#EDE9FE'},{id:'food',ico:'🍽️',name:'餐廳',bg:'#FEF3C7'},
+  {id:'sight',ico:'📍',name:'景點',bg:'#EDE9FE'},{id:'food',ico:'🍽️',name:'餐廳',bg:'#FEF3C7'},
   {id:'transport',ico:'🚌',name:'交通',bg:'#DBEAFE'},{id:'hotel',ico:'🏨',name:'住宿',bg:'#D1FAE5'},
   {id:'shopping',ico:'🛍️',name:'購物',bg:'#FCE7F3'},{id:'fun',ico:'🎭',name:'娛樂',bg:'#FEE2E2'},
-  {id:'beach',ico:'🏖️',name:'海灘',bg:'#E0F2FE'},{id:'other',ico:'📌',name:'其他',bg:'#F3F4F6'},
+  {id:'dessert',ico:'🍰',name:'甜點咖啡',bg:'#FDF2F8'},{id:'other',ico:'📌',name:'其他',bg:'#F3F4F6'},
 ];
 const ACTM=Object.fromEntries(ACTS.map(c=>[c.id,c]));
 const CITIES={
@@ -504,7 +501,7 @@ async function fetchRate(){
   }catch(e){exchRate=null;}
 }
 
-async function scanReceipt(base64Image){
+async function scanReceipt(base64Image,mimeType='image/jpeg'){
   if(!CFG.geminiKey)return null;
   try{
     const res=await fetch(
@@ -512,14 +509,15 @@ async function scanReceipt(base64Image){
       {method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({contents:[{parts:[
         {text:RECEIPT_PROMPT},
-        {inline_data:{mime_type:'image/jpeg',data:base64Image}}
+        {inline_data:{mime_type:mimeType,data:base64Image}}
       ]}]})}
     );
+    if(!res.ok){console.error('Gemini HTTP',res.status,await res.text());return null;}
     const json=await res.json();
     const raw=json.candidates?.[0]?.content?.parts?.[0]?.text||'';
-    const cleaned=raw.replace(/```json|```/g,'').trim();
-    return JSON.parse(cleaned);
-  }catch(e){return null;}
+    const m=raw.match(/\{[\s\S]*\}/);
+    return m?JSON.parse(m[0]):null;
+  }catch(e){console.error('scanReceipt',e);return null;}
 }
 
 function onReceiptPick(ev){
@@ -527,8 +525,10 @@ function onReceiptPick(ev){
   const reader=new FileReader();
   reader.onload=async e=>{
     toast('🔍 辨識收據中…');
-    const base64=e.target.result.split(',')[1];
-    const data=await scanReceipt(base64);
+    const dataUrl=e.target.result;
+    const mimeType=dataUrl.split(';')[0].split(':')[1]||'image/jpeg';
+    const base64=dataUrl.split(',')[1];
+    const data=await scanReceipt(base64,mimeType);
     if(data&&data.amount>0){
       openExpMPrefilled(data);
     }else{
@@ -723,7 +723,7 @@ function initDnD(){
   });
   box.addEventListener('dragstart',e=>{
     const row=e.target.closest('.act-row');if(!row)return;
-    if(e.target.closest('.act-handle'))return; // 交給 initActDnD 處理
+    if(_actDragFromHandle)return; // 交給 initActDnD 處理
     e.dataTransfer.setData('dnd',JSON.stringify({did:row.dataset.did,aid:row.dataset.aid}));
     setTimeout(()=>row.classList.add('dragging'),0);
   });
@@ -745,19 +745,22 @@ function initDnD(){
 }
 
 const ADG={on:false,did:null,aid:null,srcEl:null};
+let _actDragFromHandle=false;
 function initActDnD(){
   const box=document.getElementById('schedBox');
+  box.addEventListener('mousedown',e=>{_actDragFromHandle=!!e.target.closest('.act-handle');});
+  box.addEventListener('touchstart',e=>{_actDragFromHandle=!!e.target.closest('.act-handle');},{passive:true});
   box.addEventListener('dragstart',e=>{
-    const handle=e.target.closest('.act-handle');
+    if(!_actDragFromHandle)return;
     const row=e.target.closest('.act-row');
-    if(!handle||!row)return;
+    if(!row)return;
     ADG.on=true;ADG.did=row.dataset.did;ADG.aid=row.dataset.aid;ADG.srcEl=row;
     e.dataTransfer.setData('actdnd',JSON.stringify({did:row.dataset.did,aid:row.dataset.aid}));
     e.dataTransfer.effectAllowed='move';
     setTimeout(()=>row.classList.add('dragging'),0);
   });
   box.addEventListener('dragend',e=>{
-    ADG.on=false;
+    ADG.on=false;_actDragFromHandle=false;
     e.target.closest&&e.target.closest('.act-row')?.classList.remove('dragging');
     document.querySelectorAll('.act-row.drag-over-act').forEach(r=>r.classList.remove('drag-over-act'));
   });
@@ -880,7 +883,7 @@ function saveDayLbl(){const did=document.getElementById('md-id').value,lbl=docum
 function openActM(did){
   document.getElementById('m-act-t').textContent='新增活動';
   document.getElementById('ma-did').value=did;document.getElementById('ma-aid').value='';
-  document.getElementById('a_time').value='';document.getElementById('a_name').value='';
+  document.getElementById('a_name').value='';
   document.getElementById('a_loc').value='';document.getElementById('a_note').value='';document.getElementById('a_cost').value='';
   curAC='sight';renderACGrid();selAPayer(0);selASplit('both');selACur('JPY');
   openM('m-act');setTimeout(()=>document.getElementById('a_name').focus(),280);
@@ -890,7 +893,7 @@ function openActEdit(did,aid){
     const a=snap.val();if(!a)return;
     document.getElementById('m-act-t').textContent='編輯活動';
     document.getElementById('ma-did').value=did;document.getElementById('ma-aid').value=aid;
-    document.getElementById('a_time').value=a.time||'';document.getElementById('a_name').value=a.name||'';
+    document.getElementById('a_name').value=a.name||'';
     document.getElementById('a_loc').value=a.loc||'';document.getElementById('a_note').value=a.note||'';
     document.getElementById('a_cost').value=a.cost?.amt||'';
     curAC=a.cat||'sight';renderACGrid();
@@ -909,7 +912,7 @@ function saveAct(){
     const existingActs=Object.values(dayData.acts||{});
     const maxOrder=existingActs.length?Math.max(...existingActs.map(a=>a.order||0)):0;
     const isNew=!aid;
-    const obj={cat:curAC,name,time:document.getElementById('a_time').value,
+    const obj={cat:curAC,name,
       loc:document.getElementById('a_loc').value.trim(),note:document.getElementById('a_note').value.trim(),
       cost:hasCost?{amt:costAmt,cur:curACur,paidBy:curAPayer===0?CFG.p1:CFG.p2,split:curASplit}:null,
       order:isNew?(maxOrder+1):curActOrder};
