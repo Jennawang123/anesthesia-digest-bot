@@ -10,17 +10,16 @@
 <title>日本之旅</title>
 <script>
 (function(){
-  const imgUrl='https://akane77.com/wp-content/uploads/20190615145902_21.jpg';
+  const imgUrl='icon-ajisai.png';
   function setIcon(href){['icon','apple-touch-icon'].forEach(r=>{const l=document.createElement('link');l.rel=r;l.href=href;document.head.appendChild(l);});}
   const S=512,c=document.createElement('canvas');c.width=c.height=S;
   const x=c.getContext('2d');
-  const img=new Image();img.crossOrigin='anonymous';
+  const img=new Image();
   img.onload=function(){
-    const bg=x.createLinearGradient(0,0,0,S);
-    bg.addColorStop(0,'#E8D5F0');bg.addColorStop(1,'#C9B8E8');
-    x.fillStyle=bg;x.beginPath();x.roundRect(0,0,S,S,96);x.fill();
-    const pad=S*0.06;
-    x.drawImage(img,pad,pad,S-pad*2,S-pad*2);
+    x.fillStyle='#ffffff';x.beginPath();x.roundRect(0,0,S,S,96);x.fill();
+    x.save();x.beginPath();x.roundRect(0,0,S,S,96);x.clip();
+    x.drawImage(img,0,0,S,S);
+    x.restore();
     setIcon(c.toDataURL('image/png'));
   };
   img.onerror=()=>setIcon(imgUrl);
