@@ -160,7 +160,8 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
   </div>
   <div class="card">
     <div class="label">類別分佈</div>
-    <div class="chart-wrap" style="height:320px"><canvas id="cat-chart"></canvas></div>
+    <div class="chart-wrap" style="height:200px"><canvas id="cat-chart"></canvas></div>
+    <div id="cat-legend" style="margin-top:12px"></div>
   </div>
   <div id="tx-list"><div class="empty">尚無交易記錄</div></div>
 </div>
@@ -280,9 +281,8 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
     <div class="chart-wrap"><canvas id="nw-chart"></canvas></div>
   </div>
 
-  <div style="display:flex;gap:8px;margin-top:4px">
-    <button class="btn btn-ghost" style="flex:1" onclick="saveSnapshot()">📸 儲存快照</button>
-    <button class="btn btn-ghost" style="flex:1" onclick="openOverlay('cfg-overlay')">⚙️ API 設定</button>
+  <div style="margin-top:4px">
+    <button class="btn btn-ghost" onclick="openOverlay('cfg-overlay')">⚙️ API 設定</button>
   </div>
 </div>
 
@@ -558,23 +558,22 @@ function renderExpenses(txs) {
   // 和色（Japanese traditional colors）
   const CAT_COLORS={日常:'#E8735A',房租:'#4F83B5',交通:'#8EA36E',旅遊:'#4B5FA6',娛樂:'#D4618A',教育:'#3A8B4E',醫療:'#B94047',贈與:'#E8A823',長期規劃:'#7B5EA7'};
   const colors=labels.map(l=>CAT_COLORS[l]||'#64748b');
+  const total=vals.reduce((a,b)=>a+b,0);
   if(catChart) catChart.destroy();
   catChart=new Chart(document.getElementById('cat-chart'),{
     type:'doughnut',
     data:{labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:0}]},
-    options:{plugins:{legend:{position:'bottom',labels:{
-      color:'#e2e8f0',font:{size:11},boxWidth:10,padding:8,
-      generateLabels(chart){
-        const tot=chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
-        return chart.data.labels.map((lbl,i)=>({
-          text:`${lbl}  NT$${chart.data.datasets[0].data[i].toLocaleString()}  (${tot>0?(chart.data.datasets[0].data[i]/tot*100).toFixed(1):0}%)`,
-          fillStyle:chart.data.datasets[0].backgroundColor[i],
-          strokeStyle:'transparent',lineWidth:0,hidden:false,index:i,
-          color:'#e2e8f0'
-        }));
-      }
-    }}},cutout:'55%'}
+    options:{plugins:{legend:{display:false}},cutout:'62%'}
   });
+  // Custom HTML legend — Chart.js canvas text color unreliable; use HTML instead
+  document.getElementById('cat-legend').innerHTML=labels.map((lbl,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #0f172a">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:12px;height:12px;border-radius:3px;background:${colors[i]};flex-shrink:0"></div>
+        <span style="color:#e2e8f0;font-size:13px;font-weight:500">${lbl}</span>
+      </div>
+      <span style="color:#e2e8f0;font-size:13px">NT$${vals[i].toLocaleString()} <span style="color:#94a3b8;font-size:12px">(${total>0?(vals[i]/total*100).toFixed(1):0}%)</span></span>
+    </div>`).join('');
 
   const ul=document.getElementById('tx-list');
   if(!txs.length){ul.innerHTML='<div class="empty">本月無記錄</div>';return;}
@@ -758,8 +757,11 @@ async function loadIncome(){
       type:'line',
       data:{labels:months.map(m=>m.slice(5)),datasets:[
         {label:'收入',data:sums.map(s=>s.total_income),borderColor:'#4ade80',tension:.3,fill:false,pointRadius:3},
+        {label:'支出',data:sums.map(s=>s.total_expense),borderColor:'#f87171',tension:.3,fill:false,pointRadius:3},
+        {label:'結餘',data:sums.map(s=>s.balance),borderColor:'#60a5fa',tension:.3,fill:false,pointRadius:3},
       ]},
-      options:{scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',font:{size:10}}}}}
+      options:{plugins:{legend:{labels:{font:{size:11},boxWidth:12}}},
+               scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',font:{size:10}}}}}
     });
   }catch(e){console.error(e);}
 }
@@ -857,6 +859,11 @@ async function loadAssets(){
     renderCash(); renderLiabs();
     calcNetWorth();
     renderNWChart(history);
+    // Auto-save this month's snapshot whenever assets tab is loaded
+    const _now=new Date();
+    const _ym=`${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}`;
+    const _s=window._snap||{totalA:0,totalL:0};
+    api('/finance/networth/snapshot',{method:'POST',body:JSON.stringify({year_month:_ym,total_assets:_s.totalA,total_liabilities:_s.totalL})}).catch(()=>{});
   }catch(e){console.error(e);}
 }
 
