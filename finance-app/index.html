@@ -141,9 +141,9 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
 
 <div class="tabs">
   <button class="tab on" onclick="go('expenses')">💸 支出</button>
-  <button class="tab" onclick="go('cashflow')">📈 收支</button>
+  <button class="tab" onclick="go('income')">💰 收入</button>
+  <button class="tab" onclick="go('investment')">📈 投資</button>
   <button class="tab" onclick="go('assets')">🏦 資產</button>
-  <button class="tab" onclick="go('futures')">📊 期貨</button>
 </div>
 
 <!-- ══════════════ TAB 1: 支出 ══════════════ -->
@@ -165,38 +165,25 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
   <div id="tx-list"><div class="empty">尚無交易記錄</div></div>
 </div>
 
-<!-- ══════════════ TAB 2: 收支 ══════════════ -->
-<div id="page-cashflow" class="page">
+<!-- ══════════════ TAB 2: 收入 ══════════════ -->
+<div id="page-income" class="page">
   <div class="month-row">
-    <select id="sel-cf" onchange="loadCashflow()"></select>
+    <select id="sel-inc" onchange="loadIncome()"></select>
     <button onclick="openOverlay('income-overlay')" style="background:#4ade80;color:#0f172a;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">＋ 收入</button>
   </div>
-  <div class="grid2">
-    <div class="card"><div class="label">收入</div><div class="big green" id="cf-income">--</div></div>
-    <div class="card"><div class="label">支出</div><div class="big red" id="cf-expense">--</div></div>
-  </div>
-  <div class="card"><div class="label">結餘</div><div class="big blue" id="cf-balance" style="font-size:34px">--</div></div>
-  <div class="card">
-    <div class="label">近12個月趨勢</div>
-    <div class="chart-wrap"><canvas id="cf-chart"></canvas></div>
-  </div>
+  <div class="card"><div class="label">本月收入</div><div class="big green" id="inc-total">--</div></div>
   <div class="card">
     <div class="label">收入明細</div>
     <div id="income-list"><div class="empty">尚無收入記錄</div></div>
   </div>
+  <div class="card">
+    <div class="label">近12個月收入</div>
+    <div class="chart-wrap"><canvas id="inc-chart"></canvas></div>
+  </div>
 </div>
 
-<!-- ══════════════ TAB 3: 資產 ══════════════ -->
-<div id="page-assets" class="page">
-  <div class="nw-hero">
-    <div class="nw-label">淨資產</div>
-    <div class="nw-val" id="nw-val">--</div>
-  </div>
-  <div class="card">
-    <div class="label">淨資產走勢</div>
-    <div class="chart-wrap"><canvas id="nw-chart"></canvas></div>
-  </div>
-
+<!-- ══════════════ TAB 3: 投資 ══════════════ -->
+<div id="page-investment" class="page">
   <!-- 台股 -->
   <div class="asset-section">
     <div class="asset-header">
@@ -204,9 +191,7 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
       <span id="tw-total" style="font-size:13px;color:#e2e8f0;flex:1;text-align:right;margin-right:8px"></span>
       <button class="asset-header-btn" onclick="refreshPrices('TW')">更新價格</button>
     </div>
-    <div class="asset-card" id="tw-card">
-      <div class="empty">尚未設定</div>
-    </div>
+    <div class="asset-card" id="tw-card"><div class="empty">尚未設定</div></div>
   </div>
 
   <!-- 美股 -->
@@ -216,52 +201,89 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
       <span id="usd-rate-label" style="font-size:11px;color:#64748b;flex:1;margin-left:6px"></span>
       <button class="asset-header-btn" onclick="refreshPrices('US')">更新價格</button>
     </div>
-    <div class="asset-card" id="us-card">
-      <div class="empty">尚未設定</div>
+    <div class="asset-card" id="us-card"><div class="empty">尚未設定</div></div>
+  </div>
+
+  <!-- 期貨 -->
+  <div class="asset-section">
+    <div class="asset-header">
+      <span class="asset-header-label">期貨</span>
+      <button onclick="openAddFutures()" style="margin-left:auto;background:#4ade80;color:#0f172a;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer">＋ 新增</button>
+    </div>
+    <div class="grid2" style="margin-bottom:8px">
+      <div class="card" style="margin-bottom:0"><div class="label">已實現損益</div><div class="big" id="ft-pnl" style="font-size:20px">--</div></div>
+      <div class="card" style="margin-bottom:0"><div class="label">勝率 / 筆數</div><div class="big" id="ft-stats" style="font-size:20px">--</div></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button class="btn-sm" id="ft-filter-all" onclick="setFtFilter('all')" style="background:#38bdf8;color:#0f172a">全部</button>
+      <button class="btn-sm" id="ft-filter-open" onclick="setFtFilter('open')">未平倉</button>
+      <button class="btn-sm" id="ft-filter-closed" onclick="setFtFilter('closed')">已平倉</button>
+    </div>
+    <div id="ft-list"><div class="empty">尚無期貨記錄</div></div>
+  </div>
+</div>
+
+<!-- ══════════════ TAB 4: 資產 ══════════════ -->
+<div id="page-assets" class="page">
+  <div class="nw-hero">
+    <div class="nw-label">淨資產</div>
+    <div class="nw-val" id="nw-val">--</div>
+  </div>
+
+  <!-- 投資摘要 -->
+  <div class="section-title">投資部位摘要</div>
+  <div class="grid2">
+    <div class="card">
+      <div class="label">台股市值</div>
+      <div style="font-size:17px;font-weight:700" id="sum-tw-val">--</div>
+      <div style="font-size:12px;margin-top:3px" id="sum-tw-gain"></div>
+    </div>
+    <div class="card">
+      <div class="label">美股市值</div>
+      <div style="font-size:17px;font-weight:700" id="sum-us-val">--</div>
+      <div style="font-size:12px;margin-top:3px" id="sum-us-gain"></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="label">期貨已實現</div>
+      <div style="font-size:17px;font-weight:700" id="sum-ft-pnl">--</div>
+      <div style="font-size:12px;margin-top:3px;color:#64748b" id="sum-ft-stats"></div>
+    </div>
+    <div class="card">
+      <div class="label">存款小計</div>
+      <div style="font-size:17px;font-weight:700;color:#4ade80" id="sum-cash-val">--</div>
     </div>
   </div>
 
-  <!-- 存款 -->
+  <!-- 存款 editable -->
   <div class="asset-section">
     <div class="asset-header">
       <span class="asset-header-label">存款／現金</span>
       <span id="cash-total" style="font-size:13px;color:#4ade80;flex:1;text-align:right"></span>
     </div>
-    <div class="asset-card" id="cash-card">
-      <div class="empty">尚未設定</div>
-    </div>
+    <div class="asset-card" id="cash-card"><div class="empty">尚未設定</div></div>
   </div>
 
-  <!-- 負債 -->
+  <!-- 負債 editable -->
   <div class="asset-section">
     <div class="asset-header">
       <span class="asset-header-label" style="color:#f87171">負債</span>
       <span id="liab-total" style="font-size:13px;color:#f87171;flex:1;text-align:right"></span>
     </div>
-    <div class="asset-card" id="liab-card">
-      <div class="empty">無負債</div>
-    </div>
+    <div class="asset-card" id="liab-card"><div class="empty">無負債</div></div>
+  </div>
+
+  <!-- 走勢圖 -->
+  <div class="card">
+    <div class="label">淨資產走勢</div>
+    <div class="chart-wrap"><canvas id="nw-chart"></canvas></div>
   </div>
 
   <div style="display:flex;gap:8px;margin-top:4px">
     <button class="btn btn-ghost" style="flex:1" onclick="saveSnapshot()">📸 儲存快照</button>
     <button class="btn btn-ghost" style="flex:1" onclick="openOverlay('cfg-overlay')">⚙️ API 設定</button>
   </div>
-</div>
-
-<!-- ══════════════ TAB 4: 期貨 ══════════════ -->
-<div id="page-futures" class="page">
-  <div class="grid2" style="margin-bottom:12px">
-    <div class="card"><div class="label">已實現損益</div><div class="big" id="ft-pnl" style="font-size:22px">--</div></div>
-    <div class="card"><div class="label">勝率 / 筆數</div><div class="big" id="ft-stats" style="font-size:22px">--</div></div>
-  </div>
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button class="btn-sm" id="ft-filter-all" onclick="setFtFilter('all')" style="background:#38bdf8;color:#0f172a">全部</button>
-    <button class="btn-sm" id="ft-filter-open" onclick="setFtFilter('open')">未平倉</button>
-    <button class="btn-sm" id="ft-filter-closed" onclick="setFtFilter('closed')">已平倉</button>
-    <button onclick="openAddFutures()" style="margin-left:auto;background:#4ade80;color:#0f172a;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">＋ 新增</button>
-  </div>
-  <div id="ft-list"><div class="empty">尚無期貨記錄</div></div>
 </div>
 
 <!-- ══════════════ MODALS ══════════════ -->
@@ -388,8 +410,9 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
       <div style="flex:1">
         <div class="form-label">商品</div>
         <select id="ft-symbol" onchange="autoPointValue()">
-          <option value="小台">小台指</option>
-          <option value="台指期">台指期（大台）</option>
+          <option value="微台">微台指（10/點）</option>
+          <option value="小台">小台指（50/點）</option>
+          <option value="台指期">台指期大台（200/點）</option>
           <option value="電子期">電子期</option>
           <option value="金融期">金融期</option>
           <option value="其他">其他</option>
@@ -458,6 +481,8 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
 <div class="toast" id="toast"></div>
 
 <script>
+Chart.defaults.color = '#e2e8f0';
+
 // ── Config ──────────────────────────────────────────────────
 let API = localStorage.getItem('api_url') || '';
 let KEY = localStorage.getItem('api_key') || '';
@@ -479,7 +504,7 @@ function toast(msg, ms=2500) {
 }
 
 // ── Tabs ─────────────────────────────────────────────────────
-const TABS=['expenses','cashflow','assets','futures'];
+const TABS=['expenses','income','investment','assets'];
 let cur='expenses';
 function go(tab) {
   document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',TABS[i]===tab));
@@ -488,9 +513,9 @@ function go(tab) {
   cur=tab;
   if(!API){openOverlay('cfg-overlay');return;}
   if(tab==='expenses') loadExpenses();
-  else if(tab==='cashflow') loadCashflow();
-  else if(tab==='assets') loadAssets();
-  else loadFutures();
+  else if(tab==='income') loadIncome();
+  else if(tab==='investment') loadInvestment();
+  else loadAssets();
 }
 
 // ── Month helpers ─────────────────────────────────────────────
@@ -705,20 +730,14 @@ async function confirmImport(){
   loadExpenses();
 }
 
-// ══════════════ TAB 2: 收支 ══════════════
-let cfChart=null;
-async function loadCashflow(){
+// ══════════════ TAB 2: 收入 ══════════════
+let incChart=null;
+async function loadIncome(){
   if(!API) return;
-  const ym=buildMonths('sel-cf');
-  try {
+  const ym=buildMonths('sel-inc');
+  try{
     const [summary,allIncome]=await Promise.all([api(`/finance/summary/${ym}`),api('/finance/income')]);
-    document.getElementById('cf-income').textContent=`NT$${summary.total_income.toLocaleString()}`;
-    document.getElementById('cf-expense').textContent=`NT$${summary.total_expense.toLocaleString()}`;
-    const bal=summary.balance;
-    const el=document.getElementById('cf-balance');
-    el.textContent=`${bal>=0?'+':''}NT$${bal.toLocaleString()}`;
-    el.className=`big ${bal>=0?'green':'red'}`;
-
+    document.getElementById('inc-total').textContent=`NT$${summary.total_income.toLocaleString()}`;
     const mine=allIncome.filter(i=>i.year_month===ym);
     document.getElementById('income-list').innerHTML=mine.length
       ?mine.map(i=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #0f172a">
@@ -729,27 +748,23 @@ async function loadCashflow(){
           </div>
         </div>`).join('')
       :'<div class="empty">點 ＋ 收入 新增</div>';
-
     const months=Array.from({length:12},(_,i)=>{
       const d=new Date(); d.setMonth(d.getMonth()-11+i);
       return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     });
     const sums=await Promise.all(months.map(m=>api(`/finance/summary/${m}`)));
-    if(cfChart) cfChart.destroy();
-    cfChart=new Chart(document.getElementById('cf-chart'),{
+    if(incChart) incChart.destroy();
+    incChart=new Chart(document.getElementById('inc-chart'),{
       type:'line',
       data:{labels:months.map(m=>m.slice(5)),datasets:[
         {label:'收入',data:sums.map(s=>s.total_income),borderColor:'#4ade80',tension:.3,fill:false,pointRadius:3},
-        {label:'支出',data:sums.map(s=>s.total_expense),borderColor:'#f87171',tension:.3,fill:false,pointRadius:3},
-        {label:'結餘',data:sums.map(s=>s.balance),borderColor:'#60a5fa',tension:.3,fill:false,pointRadius:3},
       ]},
-      options:{plugins:{legend:{labels:{color:'#94a3b8',font:{size:11},boxWidth:12}}},
-               scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',font:{size:10}}}}}
+      options:{scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',font:{size:10}}}}}
     });
-  } catch(e){console.error(e);}
+  }catch(e){console.error(e);}
 }
 async function submitIncome(){
-  const ym=document.getElementById('sel-cf').value;
+  const ym=document.getElementById('sel-inc').value;
   const src=document.getElementById('inc-src').value.trim()||'薪資';
   const amt=parseInt(document.getElementById('inc-amt').value);
   const note=document.getElementById('inc-note').value.trim();
@@ -757,15 +772,15 @@ async function submitIncome(){
   await api('/finance/income',{method:'POST',body:JSON.stringify({year_month:ym,source:src,amount:amt,note})});
   closeOverlay('income-overlay');
   ['inc-src','inc-amt','inc-note'].forEach(id=>document.getElementById(id).value='');
-  loadCashflow(); toast('收入已記錄');
+  loadIncome(); toast('收入已記錄');
 }
 async function delIncome(id){
   if(!confirm('刪除此收入？'))return;
   await api(`/finance/income/${id}`,{method:'DELETE'});
-  loadCashflow();
+  loadIncome();
 }
 
-// ══════════════ TAB 3: 資產 ══════════════
+// ══════════════ TAB 3/4: 投資 + 資產 ══════════════
 let nwChart=null;
 const prices={};
 let _holdings=[], _liabs=[], _cash=[];
@@ -780,16 +795,69 @@ async function fetchUsdRate(){
   }catch(e){console.warn('USD rate unavailable, using default',usdRate);}
 }
 
+async function loadInvestment(){
+  if(!API) return;
+  try{
+    [_holdings,_liabs,_cash]=await Promise.all([api('/finance/holdings'),api('/finance/liabilities'),api('/finance/cash')]);
+    await Promise.all([fetchAllPrices(_holdings), fetchUsdRate()]);
+    renderTW(); renderUS();
+    _ftTrades=await api('/finance/futures');
+    renderFutures();
+  }catch(e){console.error(e);}
+}
+
 async function loadAssets(){
   if(!API) return;
-  try {
+  try{
     [_holdings,_liabs,_cash]=await Promise.all([api('/finance/holdings'),api('/finance/liabilities'),api('/finance/cash')]);
-    const history=await api('/finance/networth/history');
+    const [history,ftTrades]=await Promise.all([api('/finance/networth/history'),api('/finance/futures')]);
     await Promise.all([fetchAllPrices(_holdings), fetchUsdRate()]);
-    renderTW(); renderUS(); renderCash(); renderLiabs();
+
+    // TW stocks summary
+    const twStocks=_holdings.filter(h=>h.market==='TW');
+    const twVal=twStocks.reduce((s,h)=>s+Math.round((prices[`TW:${h.ticker}`]||0)*h.shares),0);
+    const twCost=twStocks.reduce((s,h)=>s+(h.avg_price||0)*h.shares,0);
+    const twGain=twCost>0?twVal-Math.round(twCost):null;
+    const twGainPct=twCost>0?((twGain/twCost)*100).toFixed(1):null;
+
+    // US stocks summary
+    const usStocks=_holdings.filter(h=>h.market==='US');
+    const usValUSD=usStocks.reduce((s,h)=>s+(prices[`US:${h.ticker}`]||0)*h.shares,0);
+    const usCostUSD=usStocks.reduce((s,h)=>s+(h.avg_price||0)*h.shares,0);
+    const usGainUSD=usCostUSD>0?usValUSD-usCostUSD:null;
+    const usGainPct=usCostUSD>0?((usGainUSD/usCostUSD)*100).toFixed(1):null;
+
+    // Futures summary
+    const closedFt=ftTrades.filter(t=>t.exit_price!=null);
+    const ftTotal=closedFt.reduce((s,t)=>s+ftPnL(t),0);
+    const ftWr=closedFt.length?Math.round(closedFt.filter(t=>ftPnL(t)>0).length/closedFt.length*100):0;
+
+    // Cash
+    const cashTotal=_cash.reduce((s,c)=>s+c.balance,0);
+
+    // Update summary elements
+    const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    const setColor=(id,c)=>{const e=document.getElementById(id);if(e)e.style.color=c;};
+
+    setEl('sum-tw-val',twStocks.length?`NT$${twVal.toLocaleString()}`:'--');
+    if(twGain!=null){
+      setEl('sum-tw-gain',`${twGain>=0?'+':''}NT$${twGain.toLocaleString()} (${twGainPct}%)`);
+      setColor('sum-tw-gain',twGain>=0?'#4ade80':'#f87171');
+    }
+    setEl('sum-us-val',usStocks.length?`$${usValUSD.toFixed(2)}`:'--');
+    if(usGainUSD!=null){
+      setEl('sum-us-gain',`${usGainUSD>=0?'+':''}$${usGainUSD.toFixed(2)} (${usGainPct}%)`);
+      setColor('sum-us-gain',usGainUSD>=0?'#4ade80':'#f87171');
+    }
+    setEl('sum-ft-pnl',`${ftTotal>=0?'+':''}NT$${ftTotal.toLocaleString()}`);
+    setColor('sum-ft-pnl',ftTotal>=0?'#4ade80':'#f87171');
+    setEl('sum-ft-stats',`勝率${ftWr}% · ${closedFt.length}筆已平倉`);
+    setEl('sum-cash-val',`NT$${cashTotal.toLocaleString()}`);
+
+    renderCash(); renderLiabs();
     calcNetWorth();
     renderNWChart(history);
-  } catch(e){console.error(e);}
+  }catch(e){console.error(e);}
 }
 
 async function fetchAllPrices(holdings){
@@ -818,8 +886,7 @@ function calcNetWorth(){
   const nw=totalA-totalL;
   window._snap={totalA,totalL};
   const el=document.getElementById('nw-val');
-  el.textContent=`NT$${nw.toLocaleString()}`;
-  el.className=`nw-val ${nw>=0?'pos':'neg'}`;
+  if(el){el.textContent=`NT$${nw.toLocaleString()}`;el.className=`nw-val ${nw>=0?'pos':'neg'}`; }
 }
 
 function renderNWChart(history){
@@ -1160,7 +1227,7 @@ async function delLiab(id){
 
 async function reloadAssets(){
   [_holdings,_liabs,_cash]=await Promise.all([api('/finance/holdings'),api('/finance/liabilities'),api('/finance/cash')]);
-  await fetchAllPrices(_holdings);
+  await Promise.all([fetchAllPrices(_holdings), fetchUsdRate()]);
   renderTW(); renderUS(); renderCash(); renderLiabs(); calcNetWorth();
 }
 
@@ -1174,7 +1241,7 @@ async function saveSnapshot(){
 }
 
 // ══════════════ TAB 4: 期貨 ══════════════
-const POINT_VALUES={小台:50,台指期:200,電子期:4000,金融期:1000,其他:50};
+const POINT_VALUES={微台:10,小台:50,台指期:200,電子期:4000,金融期:1000,其他:50};
 let _ftFilter='all', _ftTrades=[];
 
 function autoPointValue(){
@@ -1331,7 +1398,7 @@ document.querySelectorAll('.overlay').forEach(el=>{
 });
 
 // ── Init ──────────────────────────────────────────────────────
-buildMonths('sel-exp'); buildMonths('sel-cf');
+buildMonths('sel-exp'); buildMonths('sel-inc');
 // Default date to today
 const today=new Date().toISOString().slice(0,10);
 document.getElementById('at-date').value=today;
