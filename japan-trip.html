@@ -426,9 +426,13 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 </div>
 
 <script>
-const RECEIPT_PROMPT=`你是日本收據辨識助手。請分析這張收據圖片，只回傳以下 JSON，不加任何說明：
-{"store":"店名（若看不清則填空字串）","amount":金額數字（日圓整數含稅）,"currency":"JPY","category":"food|transport|hotel|shopping|ticket|activity","date":"YYYY-MM-DD（若看不清則填今天）"}
-注意：日本收據常見外税(8%/10%)與内税，請確認取含税最終金額。`;
+const RECEIPT_PROMPT=`你是日本收據辨識助手。請分析這張收據圖片，回傳 JSON 格式，欄位如下：
+- store: 店名字串（看不清填空字串）
+- amount: 含稅總金額（日圓整數，日本收據有外税8%/10%與内税，取最終合計金額）
+- currency: 固定填 "JPY"
+- category: 從 food/transport/hotel/shopping/ticket/activity 選一個最符合的
+- date: 收據日期 YYYY-MM-DD（看不清填今天日期）
+只輸出 JSON 物件，不加任何說明文字。`;
 const CATS=[
   {id:'food',ico:'🍽️',name:'餐飲',bg:'#FEF3C7'},{id:'transport',ico:'🚌',name:'交通',bg:'#DBEAFE'},
   {id:'hotel',ico:'🏨',name:'住宿',bg:'#EDE9FE'},{id:'activity',ico:'🎡',name:'活動',bg:'#D1FAE5'},
@@ -504,21 +508,26 @@ async function scanReceipt(base64Image,mimeType='image/jpeg'){
   if(!CFG.geminiKey)return null;
   try{
     const res=await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CFG.geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${CFG.geminiKey}`,
       {method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[
-        {text:RECEIPT_PROMPT},
-        {inline_data:{mime_type:mimeType,data:base64Image}}
-      ]}]})}
+      body:JSON.stringify({
+        contents:[{parts:[
+          {text:RECEIPT_PROMPT},
+          {inline_data:{mime_type:mimeType,data:base64Image}}
+        ]}],
+        generation_config:{response_mime_type:'application/json'}
+      })}
     );
     if(!res.ok){const t=await res.text();console.error('Gemini HTTP',res.status,t);return null;}
     const json=await res.json();
     console.log('Gemini raw',JSON.stringify(json).slice(0,400));
     const cand=json.candidates?.[0];
-    if(!cand||cand.finishReason==='SAFETY'||!cand.content){console.warn('Gemini blocked or empty');return null;}
+    if(!cand||cand.finishReason==='SAFETY'||!cand.content){console.warn('Gemini blocked or empty',cand?.finishReason);return null;}
     const raw=cand.content.parts?.[0]?.text||'';
-    const m=raw.match(/\{[\s\S]*?\}/);
-    return m?JSON.parse(m[0]):null;
+    try{return JSON.parse(raw);}catch{
+      const m=raw.match(/\{[\s\S]*\}/);
+      return m?JSON.parse(m[0]):null;
+    }
   }catch(e){console.error('scanReceipt',e);return null;}
 }
 
