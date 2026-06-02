@@ -512,23 +512,31 @@ async function scanReceipt(base64Image,mimeType='image/jpeg'){
         {inline_data:{mime_type:mimeType,data:base64Image}}
       ]}]})}
     );
-    if(!res.ok){console.error('Gemini HTTP',res.status,await res.text());return null;}
+    if(!res.ok){const t=await res.text();console.error('Gemini HTTP',res.status,t);return null;}
     const json=await res.json();
-    const raw=json.candidates?.[0]?.content?.parts?.[0]?.text||'';
-    const m=raw.match(/\{[\s\S]*\}/);
+    console.log('Gemini raw',JSON.stringify(json).slice(0,400));
+    const cand=json.candidates?.[0];
+    if(!cand||cand.finishReason==='SAFETY'||!cand.content){console.warn('Gemini blocked or empty');return null;}
+    const raw=cand.content.parts?.[0]?.text||'';
+    const m=raw.match(/\{[\s\S]*?\}/);
     return m?JSON.parse(m[0]):null;
   }catch(e){console.error('scanReceipt',e);return null;}
 }
 
 function onReceiptPick(ev){
   const f=ev.target.files[0];ev.target.value='';if(!f)return;
-  const reader=new FileReader();
-  reader.onload=async e=>{
-    toast('🔍 辨識收據中…');
-    const dataUrl=e.target.result;
-    const mimeType=dataUrl.split(';')[0].split(':')[1]||'image/jpeg';
-    const base64=dataUrl.split(',')[1];
-    const data=await scanReceipt(base64,mimeType);
+  toast('🔍 辨識收據中…');
+  const objUrl=URL.createObjectURL(f);
+  const img=new Image();
+  img.onload=async()=>{
+    URL.revokeObjectURL(objUrl);
+    const MAX=1536;
+    let w=img.naturalWidth,h=img.naturalHeight;
+    if(w>MAX||h>MAX){if(w>=h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+    const cvs=document.createElement('canvas');cvs.width=w;cvs.height=h;
+    cvs.getContext('2d').drawImage(img,0,0,w,h);
+    const base64=cvs.toDataURL('image/jpeg',0.85).split(',')[1];
+    const data=await scanReceipt(base64,'image/jpeg');
     if(data&&data.amount>0){
       openExpMPrefilled(data);
     }else{
@@ -536,7 +544,8 @@ function onReceiptPick(ev){
       openExpM();
     }
   };
-  reader.readAsDataURL(f);
+  img.onerror=()=>{URL.revokeObjectURL(objUrl);toast('⚠️ 圖片載入失敗');openExpM();};
+  img.src=objUrl;
 }
 
 function weatherDesc(code){
