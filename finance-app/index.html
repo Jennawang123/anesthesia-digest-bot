@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f172a">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>財務管理</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
@@ -141,6 +143,7 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
   <button class="tab on" onclick="go('expenses')">💸 支出</button>
   <button class="tab" onclick="go('cashflow')">📈 收支</button>
   <button class="tab" onclick="go('assets')">🏦 資產</button>
+  <button class="tab" onclick="go('futures')">📊 期貨</button>
 </div>
 
 <!-- ══════════════ TAB 1: 支出 ══════════════ -->
@@ -198,6 +201,7 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
   <div class="asset-section">
     <div class="asset-header">
       <span class="asset-header-label">台股</span>
+      <span id="tw-total" style="font-size:13px;color:#e2e8f0;flex:1;text-align:right;margin-right:8px"></span>
       <button class="asset-header-btn" onclick="refreshPrices('TW')">更新價格</button>
     </div>
     <div class="asset-card" id="tw-card">
@@ -219,7 +223,10 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
 
   <!-- 存款 -->
   <div class="asset-section">
-    <div class="asset-header"><span class="asset-header-label">存款／現金</span></div>
+    <div class="asset-header">
+      <span class="asset-header-label">存款／現金</span>
+      <span id="cash-total" style="font-size:13px;color:#4ade80;flex:1;text-align:right"></span>
+    </div>
     <div class="asset-card" id="cash-card">
       <div class="empty">尚未設定</div>
     </div>
@@ -227,7 +234,10 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
 
   <!-- 負債 -->
   <div class="asset-section">
-    <div class="asset-header"><span class="asset-header-label" style="color:#f87171">負債</span></div>
+    <div class="asset-header">
+      <span class="asset-header-label" style="color:#f87171">負債</span>
+      <span id="liab-total" style="font-size:13px;color:#f87171;flex:1;text-align:right"></span>
+    </div>
     <div class="asset-card" id="liab-card">
       <div class="empty">無負債</div>
     </div>
@@ -237,6 +247,21 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
     <button class="btn btn-ghost" style="flex:1" onclick="saveSnapshot()">📸 儲存快照</button>
     <button class="btn btn-ghost" style="flex:1" onclick="openOverlay('cfg-overlay')">⚙️ API 設定</button>
   </div>
+</div>
+
+<!-- ══════════════ TAB 4: 期貨 ══════════════ -->
+<div id="page-futures" class="page">
+  <div class="grid2" style="margin-bottom:12px">
+    <div class="card"><div class="label">已實現損益</div><div class="big" id="ft-pnl" style="font-size:22px">--</div></div>
+    <div class="card"><div class="label">勝率 / 筆數</div><div class="big" id="ft-stats" style="font-size:22px">--</div></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="btn-sm" id="ft-filter-all" onclick="setFtFilter('all')" style="background:#38bdf8;color:#0f172a">全部</button>
+    <button class="btn-sm" id="ft-filter-open" onclick="setFtFilter('open')">未平倉</button>
+    <button class="btn-sm" id="ft-filter-closed" onclick="setFtFilter('closed')">已平倉</button>
+    <button onclick="openAddFutures()" style="margin-left:auto;background:#4ade80;color:#0f172a;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">＋ 新增</button>
+  </div>
+  <div id="ft-list"><div class="empty">尚無期貨記錄</div></div>
 </div>
 
 <!-- ══════════════ MODALS ══════════════ -->
@@ -354,6 +379,69 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
   </div>
 </div>
 
+<!-- Futures add/edit -->
+<div class="overlay" id="futures-overlay">
+  <div class="modal">
+    <h3 id="ft-modal-title">新增期貨交易</h3>
+    <input type="hidden" id="ft-id">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div style="flex:1">
+        <div class="form-label">商品</div>
+        <select id="ft-symbol" onchange="autoPointValue()">
+          <option value="小台">小台指</option>
+          <option value="台指期">台指期（大台）</option>
+          <option value="電子期">電子期</option>
+          <option value="金融期">金融期</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <div class="form-label">部位</div>
+        <select id="ft-direction">
+          <option value="多">多（買進）</option>
+          <option value="空">空（賣出）</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1">
+        <div class="form-label">口數</div>
+        <input id="ft-contracts" type="number" value="1" min="1">
+      </div>
+      <div style="flex:1">
+        <div class="form-label">每點金額（NT$）</div>
+        <input id="ft-point-value" type="number" value="50">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1">
+        <div class="form-label">進場日期</div>
+        <input id="ft-entry-date" type="date">
+      </div>
+      <div style="flex:1">
+        <div class="form-label">進場點位</div>
+        <input id="ft-entry-price" type="number" placeholder="23175">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1">
+        <div class="form-label">出場日期（選填）</div>
+        <input id="ft-exit-date" type="date">
+      </div>
+      <div style="flex:1">
+        <div class="form-label">出場點位（選填）</div>
+        <input id="ft-exit-price" type="number" placeholder="23563">
+      </div>
+    </div>
+    <div class="form-label">手續費（NT$，選填）</div>
+    <input id="ft-fee" type="number" value="0" placeholder="0">
+    <div class="form-label">備註（選填）</div>
+    <input id="ft-note" placeholder="">
+    <button class="btn" onclick="submitFutures()">儲存</button>
+    <button class="mclose" onclick="closeOverlay('futures-overlay')">取消</button>
+  </div>
+</div>
+
 <!-- API config -->
 <div class="overlay" id="cfg-overlay">
   <div class="modal">
@@ -391,7 +479,7 @@ function toast(msg, ms=2500) {
 }
 
 // ── Tabs ─────────────────────────────────────────────────────
-const TABS=['expenses','cashflow','assets'];
+const TABS=['expenses','cashflow','assets','futures'];
 let cur='expenses';
 function go(tab) {
   document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',TABS[i]===tab));
@@ -401,7 +489,8 @@ function go(tab) {
   if(!API){openOverlay('cfg-overlay');return;}
   if(tab==='expenses') loadExpenses();
   else if(tab==='cashflow') loadCashflow();
-  else loadAssets();
+  else if(tab==='assets') loadAssets();
+  else loadFutures();
 }
 
 // ── Month helpers ─────────────────────────────────────────────
@@ -441,7 +530,9 @@ function renderExpenses(txs) {
   const catMap={};
   txs.forEach(t=>{catMap[t.category]=(catMap[t.category]||0)+t.amount;});
   const labels=Object.keys(catMap), vals=labels.map(c=>catMap[c]);
-  const colors=['#7c3aed','#ea580c','#0891b2','#0284c7','#db2777','#16a34a','#dc2626','#d97423','#71717a'];
+  // 和色（Japanese traditional colors）
+  const CAT_COLORS={日常:'#E8735A',房租:'#4F83B5',交通:'#8EA36E',旅遊:'#4B5FA6',娛樂:'#D4618A',教育:'#3A8B4E',醫療:'#B94047',贈與:'#E8A823',長期規劃:'#7B5EA7'};
+  const colors=labels.map(l=>CAT_COLORS[l]||'#64748b');
   if(catChart) catChart.destroy();
   catChart=new Chart(document.getElementById('cat-chart'),{
     type:'doughnut',
@@ -453,7 +544,8 @@ function renderExpenses(txs) {
         return chart.data.labels.map((lbl,i)=>({
           text:`${lbl}  NT$${chart.data.datasets[0].data[i].toLocaleString()}  (${tot>0?(chart.data.datasets[0].data[i]/tot*100).toFixed(1):0}%)`,
           fillStyle:chart.data.datasets[0].backgroundColor[i],
-          strokeStyle:'transparent',lineWidth:0,hidden:false,index:i
+          strokeStyle:'transparent',lineWidth:0,hidden:false,index:i,
+          color:'#e2e8f0'
         }));
       }
     }}},cutout:'55%'}
@@ -747,8 +839,20 @@ function renderNWChart(history){
 }
 
 // ── Inline stock rendering ────────────────────────────────────
-function renderTW(){ renderStockCard('TW','tw-card',_holdings.filter(h=>h.market==='TW')); }
-function renderUS(){ renderStockCard('US','us-card',_holdings.filter(h=>h.market==='US')); }
+function renderTW(){
+  const stocks=_holdings.filter(h=>h.market==='TW');
+  const total=stocks.reduce((s,h)=>s+Math.round((prices[`TW:${h.ticker}`]||0)*h.shares),0);
+  const lbl=document.getElementById('tw-total');
+  if(lbl) lbl.textContent=total?`NT$${total.toLocaleString()}`:'';
+  renderStockCard('TW','tw-card',stocks);
+}
+function renderUS(){
+  const stocks=_holdings.filter(h=>h.market==='US');
+  const totalUSD=stocks.reduce((s,h)=>s+(prices[`US:${h.ticker}`]||0)*h.shares,0);
+  const lbl=document.getElementById('usd-rate-label');
+  if(lbl) lbl.textContent=totalUSD?`$${totalUSD.toFixed(2)}  ≈NT$${Math.round(totalUSD*usdRate).toLocaleString()}  |  1 USD=NT$${usdRate.toFixed(2)}`:`1 USD=NT$${usdRate.toFixed(2)}`;
+  renderStockCard('US','us-card',stocks);
+}
 
 function renderStockCard(market, cardId, stocks){
   const card=document.getElementById(cardId);
@@ -885,6 +989,9 @@ async function delHolding(id, market){
 
 // ── Cash inline ───────────────────────────────────────────────
 function renderCash(){
+  const total=_cash.reduce((s,c)=>s+c.balance,0);
+  const lbl=document.getElementById('cash-total');
+  if(lbl) lbl.textContent=total?`NT$${total.toLocaleString()}`:'';
   const card=document.getElementById('cash-card');
   card.innerHTML=_cash.map(c=>`
     <div class="asset-row" id="crow-${c.id}">
@@ -961,6 +1068,9 @@ async function delCash(id){
 
 // ── Liabilities inline ────────────────────────────────────────
 function renderLiabs(){
+  const total=_liabs.reduce((s,l)=>s+l.balance,0);
+  const lbl=document.getElementById('liab-total');
+  if(lbl) lbl.textContent=total?`-NT$${total.toLocaleString()}`:'';
   const card=document.getElementById('liab-card');
   card.innerHTML=_liabs.map(l=>`
     <div class="asset-row" id="lrow-${l.id}">
@@ -1061,6 +1171,145 @@ async function saveSnapshot(){
   await api('/finance/networth/snapshot',{method:'POST',body:JSON.stringify({year_month:ym,total_assets:s.totalA,total_liabilities:s.totalL})});
   toast(`${ym} 快照已儲存`);
   loadAssets();
+}
+
+// ══════════════ TAB 4: 期貨 ══════════════
+const POINT_VALUES={小台:50,台指期:200,電子期:4000,金融期:1000,其他:50};
+let _ftFilter='all', _ftTrades=[];
+
+function autoPointValue(){
+  const sym=document.getElementById('ft-symbol').value;
+  document.getElementById('ft-point-value').value=POINT_VALUES[sym]||50;
+}
+
+function ftPnL(t){
+  if(t.exit_price==null) return null;
+  const dir=t.direction==='多'?1:-1;
+  return (t.exit_price-t.entry_price)*dir*t.contracts*t.point_value - (t.fee||0);
+}
+
+async function loadFutures(){
+  if(!API) return;
+  try{
+    _ftTrades=await api('/finance/futures');
+    renderFutures();
+  }catch(e){console.error(e);}
+}
+
+function setFtFilter(f){
+  _ftFilter=f;
+  ['all','open','closed'].forEach(k=>{
+    const b=document.getElementById(`ft-filter-${k}`);
+    b.style.background=k===f?'#38bdf8':'#334155';
+    b.style.color=k===f?'#0f172a':'#e2e8f0';
+  });
+  renderFutures();
+}
+
+function renderFutures(){
+  let trades=_ftTrades;
+  if(_ftFilter==='open') trades=trades.filter(t=>t.exit_price==null);
+  if(_ftFilter==='closed') trades=trades.filter(t=>t.exit_price!=null);
+
+  const closed=_ftTrades.filter(t=>t.exit_price!=null);
+  const totalPnL=closed.reduce((s,t)=>s+ftPnL(t),0);
+  const wins=closed.filter(t=>ftPnL(t)>0).length;
+  const wr=closed.length?Math.round(wins/closed.length*100):0;
+  const pnlEl=document.getElementById('ft-pnl');
+  pnlEl.textContent=`NT$${totalPnL>=0?'+':''}${totalPnL.toLocaleString()}`;
+  pnlEl.style.color=totalPnL>=0?'#4ade80':'#f87171';
+  document.getElementById('ft-stats').textContent=`${wr}% / ${closed.length}筆`;
+
+  const ul=document.getElementById('ft-list');
+  if(!trades.length){ul.innerHTML='<div class="empty">無記錄</div>';return;}
+  ul.innerHTML=trades.map(t=>{
+    const pnl=ftPnL(t);
+    const pnlStr=pnl!=null?(pnl>=0?`+NT$${pnl.toLocaleString()}`:`-NT$${Math.abs(pnl).toLocaleString()}`):'未平倉';
+    const pnlColor=pnl==null?'#94a3b8':pnl>=0?'#4ade80':'#f87171';
+    const dirColor=t.direction==='多'?'#f87171':'#4ade80';
+    return `<div class="tx" style="flex-wrap:wrap;gap:8px">
+      <div style="background:${dirColor}22;color:${dirColor};font-weight:700;font-size:13px;padding:4px 10px;border-radius:8px;flex-shrink:0">${t.direction}</div>
+      <div class="tx-body">
+        <div class="tx-name">${t.symbol} ${t.contracts}口</div>
+        <div class="tx-meta">
+          <span>${t.entry_date} ${t.entry_price}</span>
+          ${t.exit_date?`<span>→ ${t.exit_date} ${t.exit_price}</span>`:''}
+          ${t.note?`<span style="color:#94a3b8">📝${t.note}</span>`:''}
+        </div>
+      </div>
+      <div class="tx-right">
+        <div style="font-size:15px;font-weight:700;color:${pnlColor}">${pnlStr}</div>
+        <div style="display:flex;gap:4px;margin-top:4px">
+          <button class="tx-del" style="color:#60a5fa;font-size:14px" onclick="openEditFutures(${JSON.stringify(t).replace(/"/g,'&quot;')})">✎</button>
+          <button class="tx-del" onclick="delFutures(${t.id})">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddFutures(){
+  document.getElementById('ft-id').value='';
+  document.getElementById('ft-modal-title').textContent='新增期貨交易';
+  document.getElementById('ft-symbol').value='小台';
+  document.getElementById('ft-direction').value='多';
+  document.getElementById('ft-contracts').value='1';
+  document.getElementById('ft-point-value').value='50';
+  document.getElementById('ft-entry-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('ft-entry-price').value='';
+  document.getElementById('ft-exit-date').value='';
+  document.getElementById('ft-exit-price').value='';
+  document.getElementById('ft-fee').value='0';
+  document.getElementById('ft-note').value='';
+  openOverlay('futures-overlay');
+}
+
+function openEditFutures(t){
+  document.getElementById('ft-id').value=t.id;
+  document.getElementById('ft-modal-title').textContent='編輯期貨交易';
+  document.getElementById('ft-symbol').value=t.symbol;
+  document.getElementById('ft-direction').value=t.direction;
+  document.getElementById('ft-contracts').value=t.contracts;
+  document.getElementById('ft-point-value').value=t.point_value;
+  document.getElementById('ft-entry-date').value=t.entry_date;
+  document.getElementById('ft-entry-price').value=t.entry_price;
+  document.getElementById('ft-exit-date').value=t.exit_date||'';
+  document.getElementById('ft-exit-price').value=t.exit_price||'';
+  document.getElementById('ft-fee').value=t.fee||0;
+  document.getElementById('ft-note').value=t.note||'';
+  openOverlay('futures-overlay');
+}
+
+async function submitFutures(){
+  const id=document.getElementById('ft-id').value;
+  const body={
+    symbol:document.getElementById('ft-symbol').value,
+    direction:document.getElementById('ft-direction').value,
+    contracts:parseInt(document.getElementById('ft-contracts').value)||1,
+    point_value:parseInt(document.getElementById('ft-point-value').value)||50,
+    entry_date:document.getElementById('ft-entry-date').value,
+    entry_price:parseInt(document.getElementById('ft-entry-price').value),
+    exit_date:document.getElementById('ft-exit-date').value||null,
+    exit_price:parseInt(document.getElementById('ft-exit-price').value)||null,
+    fee:parseInt(document.getElementById('ft-fee').value)||0,
+    note:document.getElementById('ft-note').value.trim(),
+  };
+  if(!body.entry_date||isNaN(body.entry_price)){toast('請填進場日期與點位');return;}
+  if(id){
+    await api(`/finance/futures/${id}`,{method:'PATCH',body:JSON.stringify(body)});
+  } else {
+    await api('/finance/futures',{method:'POST',body:JSON.stringify(body)});
+  }
+  closeOverlay('futures-overlay');
+  toast(id?'✅ 已更新':'✅ 已新增');
+  loadFutures();
+}
+
+async function delFutures(id){
+  if(!confirm('刪除此交易紀錄？'))return;
+  await api(`/finance/futures/${id}`,{method:'DELETE'});
+  toast('已刪除');
+  loadFutures();
 }
 
 // ── Config ────────────────────────────────────────────────────
