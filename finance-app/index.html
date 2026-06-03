@@ -558,7 +558,7 @@ function renderExpenses(txs) {
   // 和色（Japanese traditional colors）
   const CAT_COLORS={日常:'#E8735A',房租:'#4F83B5',交通:'#8EA36E',旅遊:'#4B5FA6',娛樂:'#D4618A',教育:'#3A8B4E',醫療:'#B94047',贈與:'#E8A823',長期規劃:'#7B5EA7'};
   const colors=labels.map(l=>CAT_COLORS[l]||'#64748b');
-  const total=vals.reduce((a,b)=>a+b,0);
+  const catTotal=vals.reduce((a,b)=>a+b,0);
   if(catChart) catChart.destroy();
   catChart=new Chart(document.getElementById('cat-chart'),{
     type:'doughnut',
@@ -572,7 +572,7 @@ function renderExpenses(txs) {
         <div style="width:12px;height:12px;border-radius:3px;background:${colors[i]};flex-shrink:0"></div>
         <span style="color:#e2e8f0;font-size:13px;font-weight:500">${lbl}</span>
       </div>
-      <span style="color:#e2e8f0;font-size:13px">NT$${vals[i].toLocaleString()} <span style="color:#94a3b8;font-size:12px">(${total>0?(vals[i]/total*100).toFixed(1):0}%)</span></span>
+      <span style="color:#e2e8f0;font-size:13px">NT$${vals[i].toLocaleString()} <span style="color:#94a3b8;font-size:12px">(${catTotal>0?(vals[i]/catTotal*100).toFixed(1):0}%)</span></span>
     </div>`).join('');
 
   const ul=document.getElementById('tx-list');
