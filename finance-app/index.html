@@ -318,6 +318,7 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
       <option value="醫療">🏥 醫療</option>
       <option value="贈與">🎁 贈與</option>
       <option value="長期規劃">💰 長期規劃</option>
+      <option value="貸款">🏦 貸款</option>
     </select>
     <div class="form-label">銀行／付款方式</div>
     <input id="at-bank" placeholder="永豐 / 國泰 / 現金...">
@@ -350,6 +351,7 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
       <option value="醫療">🏥 醫療</option>
       <option value="贈與">🎁 贈與</option>
       <option value="長期規劃">💰 長期規劃</option>
+      <option value="貸款">🏦 貸款</option>
     </select>
     <div class="form-label">銀行</div>
     <input id="et-bank" placeholder="">
@@ -541,8 +543,8 @@ function buildMonths(id) {
 }
 
 // ── Categories ────────────────────────────────────────────────
-const ICONS={日常:'🛒',房租:'🏠',交通:'🚗',旅遊:'✈️',娛樂:'🎬',教育:'📚',醫療:'🏥',贈與:'🎁',長期規劃:'💰'};
-const CATS=['日常','房租','交通','旅遊','娛樂','教育','醫療','贈與','長期規劃'];
+const ICONS={日常:'🛒',房租:'🏠',交通:'🚗',旅遊:'✈️',娛樂:'🎬',教育:'📚',醫療:'🏥',贈與:'🎁',長期規劃:'💰',貸款:'🏦'};
+const CATS=['日常','房租','交通','旅遊','娛樂','教育','醫療','贈與','長期規劃','貸款'];
 
 // ══════════════ TAB 1: 支出 ══════════════
 let catChart=null;
@@ -565,7 +567,7 @@ function renderExpenses(txs) {
   txs.forEach(t=>{catMap[t.category]=(catMap[t.category]||0)+t.amount;});
   const labels=Object.keys(catMap), vals=labels.map(c=>catMap[c]);
   // 和色（Japanese traditional colors）
-  const CAT_COLORS={日常:'#E8735A',房租:'#4F83B5',交通:'#8EA36E',旅遊:'#4B5FA6',娛樂:'#D4618A',教育:'#3A8B4E',醫療:'#B94047',贈與:'#E8A823',長期規劃:'#7B5EA7'};
+  const CAT_COLORS={日常:'#E8735A',房租:'#4F83B5',交通:'#8EA36E',旅遊:'#4B5FA6',娛樂:'#D4618A',教育:'#3A8B4E',醫療:'#B94047',贈與:'#E8A823',長期規劃:'#7B5EA7',貸款:'#475569'};
   const colors=labels.map(l=>CAT_COLORS[l]||'#64748b');
   const catTotal=vals.reduce((a,b)=>a+b,0);
   if(catChart) catChart.destroy();
