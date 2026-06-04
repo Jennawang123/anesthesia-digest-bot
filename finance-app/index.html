@@ -1369,14 +1369,18 @@ async function submitFutures(){
     note:document.getElementById('ft-note').value.trim(),
   };
   if(!body.entry_date||isNaN(body.entry_price)){toast('請填進場日期與點位');return;}
-  if(id){
-    await api(`/finance/futures/${id}`,{method:'PATCH',body:JSON.stringify(body)});
-  } else {
-    await api('/finance/futures',{method:'POST',body:JSON.stringify(body)});
+  try {
+    if(id){
+      await api(`/finance/futures/${id}`,{method:'PATCH',body:JSON.stringify(body)});
+    } else {
+      await api('/finance/futures',{method:'POST',body:JSON.stringify(body)});
+    }
+    closeOverlay('futures-overlay');
+    toast(id?'✅ 已更新':'✅ 已新增');
+    loadFutures();
+  } catch(e){
+    toast('❌ 儲存失敗：'+e.message,4000);
   }
-  closeOverlay('futures-overlay');
-  toast(id?'✅ 已更新':'✅ 已新增');
-  loadFutures();
 }
 
 async function delFutures(id){
@@ -1406,12 +1410,24 @@ document.querySelectorAll('.overlay').forEach(el=>{
 
 // ── Init ──────────────────────────────────────────────────────
 buildMonths('sel-exp'); buildMonths('sel-inc');
-// Default date to today
 const today=new Date().toISOString().slice(0,10);
 document.getElementById('at-date').value=today;
 document.getElementById('cfg-url').value=API;
 document.getElementById('cfg-key').value=KEY;
-if(API) loadExpenses(); else openOverlay('cfg-overlay');
+
+// Warm up Render on startup (free tier spins down after inactivity)
+async function warmup(){
+  if(!API) return;
+  toast('⏳ 連線中，請稍候...',8000);
+  try {
+    await fetch(API+'/',{headers:H(false)});
+    toast('✅ 已連線');
+  } catch(e){}
+}
+
+if(API){ warmup(); loadExpenses(); } else openOverlay('cfg-overlay');
+// Keepalive ping every 10 min to prevent Render sleep
+setInterval(()=>{ if(API) fetch(API+'/',{headers:H(false)}).catch(()=>{}); }, 600000);
 </script>
 </body>
 </html>
