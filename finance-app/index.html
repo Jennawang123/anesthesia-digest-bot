@@ -215,6 +215,15 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
       <div class="card" style="margin-bottom:0"><div class="label">已實現損益</div><div class="big" id="ft-pnl" style="font-size:20px">--</div></div>
       <div class="card" style="margin-bottom:0"><div class="label">勝率 / 筆數</div><div class="big" id="ft-stats" style="font-size:20px">--</div></div>
     </div>
+    <div class="card" style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="label">未實現損益 <span id="twii-label" style="font-weight:normal;color:#64748b">（點擊更新）</span></div>
+          <div class="big" id="ft-unrealized" style="font-size:20px">--</div>
+        </div>
+        <button class="btn-sm" onclick="refreshTwii()">🔄 更新現價</button>
+      </div>
+    </div>
     <div style="display:flex;gap:6px;margin-bottom:8px">
       <button class="btn-sm" id="ft-filter-all" onclick="setFtFilter('all')" style="background:#38bdf8;color:#0f172a">全部</button>
       <button class="btn-sm" id="ft-filter-open" onclick="setFtFilter('open')">未平倉</button>
@@ -1262,11 +1271,31 @@ function ftPnL(t){
   return (t.exit_price-t.entry_price)*dir*t.contracts*t.point_value - (t.fee||0);
 }
 
+function ftUnrealized(t, price){
+  if(t.exit_price!=null || price<=0) return null;
+  const dir=t.direction==='多'?1:-1;
+  return (price-t.entry_price)*dir*t.contracts*t.point_value;
+}
+
+let _twiiPrice=0;
+async function refreshTwii(){
+  document.getElementById('twii-label').textContent='（更新中...）';
+  try{
+    const r=await api('/finance/stock-price?ticker=%5ETWII&market=US');
+    _twiiPrice=r.price||0;
+    document.getElementById('twii-label').textContent=`（台指 ${Math.round(_twiiPrice).toLocaleString()} 點）`;
+    renderFutures();
+  }catch(e){
+    document.getElementById('twii-label').textContent='（無法取得）';
+  }
+}
+
 async function loadFutures(){
   if(!API) return;
   try{
     _ftTrades=await api('/finance/futures');
     renderFutures();
+    refreshTwii();
   }catch(e){console.error(e);}
 }
 
@@ -1294,12 +1323,29 @@ function renderFutures(){
   pnlEl.style.color=totalPnL>=0?'#4ade80':'#f87171';
   document.getElementById('ft-stats').textContent=`${wr}% / ${closed.length}筆`;
 
+  // Unrealized total
+  const openTrades=_ftTrades.filter(t=>t.exit_price==null);
+  const unrEl=document.getElementById('ft-unrealized');
+  if(_twiiPrice>0 && openTrades.length){
+    const unrTotal=openTrades.reduce((s,t)=>s+(ftUnrealized(t,_twiiPrice)||0),0);
+    unrEl.textContent=`NT$${unrTotal>=0?'+':''}${Math.round(unrTotal).toLocaleString()}`;
+    unrEl.style.color=unrTotal>=0?'#4ade80':'#f87171';
+  } else {
+    unrEl.textContent=openTrades.length?'--':'無開倉';
+    unrEl.style.color='#64748b';
+  }
+
   const ul=document.getElementById('ft-list');
   if(!trades.length){ul.innerHTML='<div class="empty">無記錄</div>';return;}
   ul.innerHTML=trades.map(t=>{
     const pnl=ftPnL(t);
-    const pnlStr=pnl!=null?(pnl>=0?`+NT$${pnl.toLocaleString()}`:`-NT$${Math.abs(pnl).toLocaleString()}`):'未平倉';
-    const pnlColor=pnl==null?'#94a3b8':pnl>=0?'#4ade80':'#f87171';
+    const unr=ftUnrealized(t,_twiiPrice);
+    const pnlStr=pnl!=null
+      ?(pnl>=0?`+NT$${pnl.toLocaleString()}`:`-NT$${Math.abs(pnl).toLocaleString()}`)
+      :unr!=null
+        ?(unr>=0?`未實現 +NT$${Math.round(unr).toLocaleString()}`:`未實現 -NT$${Math.round(Math.abs(unr)).toLocaleString()}`)
+        :'未平倉';
+    const pnlColor=pnl!=null?(pnl>=0?'#4ade80':'#f87171'):unr!=null?(unr>=0?'#4ade80':'#f87171'):'#94a3b8';
     const dirColor=t.direction==='多'?'#f87171':'#4ade80';
     return `<div class="tx" style="flex-wrap:wrap;gap:8px">
       <div style="background:${dirColor}22;color:${dirColor};font-weight:700;font-size:13px;padding:4px 10px;border-radius:8px;flex-shrink:0">${t.direction}</div>
