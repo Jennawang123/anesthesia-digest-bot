@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 from sqlalchemy import create_engine, text
 
-CATEGORIES = ["日常", "房租", "交通", "旅遊", "娛樂", "教育", "醫療", "贈與", "長期規劃"]
+CATEGORIES = ["日常", "房租", "交通", "旅遊", "娛樂", "教育", "醫療", "贈與", "長期規劃", "貸款"]
 
 
 def _make_engine():
@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS income (
 );
 CREATE TABLE IF NOT EXISTS holdings (
     id INTEGER PRIMARY KEY AUTOINCREMENT, market TEXT NOT NULL, ticker TEXT NOT NULL,
-    name TEXT NOT NULL, shares REAL NOT NULL, updated_at TEXT DEFAULT (datetime('now')),
+    name TEXT NOT NULL, shares REAL NOT NULL, avg_price REAL DEFAULT 0,
+    updated_at TEXT DEFAULT (datetime('now')),
     UNIQUE(market, ticker)
 );
 CREATE TABLE IF NOT EXISTS liabilities (
@@ -48,6 +49,14 @@ CREATE TABLE IF NOT EXISTS cash_accounts (
 CREATE TABLE IF NOT EXISTS net_worth_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT, year_month TEXT NOT NULL UNIQUE,
     total_assets INTEGER NOT NULL, total_liabilities INTEGER NOT NULL, net_worth INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS futures_trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL DEFAULT '小台',
+    direction TEXT NOT NULL DEFAULT '多', contracts INTEGER NOT NULL DEFAULT 1,
+    entry_date TEXT NOT NULL, entry_price INTEGER NOT NULL,
+    exit_date TEXT, exit_price INTEGER,
+    point_value INTEGER NOT NULL DEFAULT 50, fee INTEGER NOT NULL DEFAULT 0,
+    note TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now'))
 );
 """
 
@@ -65,7 +74,8 @@ CREATE TABLE IF NOT EXISTS income (
 );
 CREATE TABLE IF NOT EXISTS holdings (
     id SERIAL PRIMARY KEY, market TEXT NOT NULL, ticker TEXT NOT NULL,
-    name TEXT NOT NULL, shares REAL NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW(),
+    name TEXT NOT NULL, shares REAL NOT NULL, avg_price REAL DEFAULT 0,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(market, ticker)
 );
 CREATE TABLE IF NOT EXISTS liabilities (
@@ -81,16 +91,42 @@ CREATE TABLE IF NOT EXISTS net_worth_history (
     id SERIAL PRIMARY KEY, year_month TEXT NOT NULL UNIQUE,
     total_assets INTEGER NOT NULL, total_liabilities INTEGER NOT NULL, net_worth INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS futures_trades (
+    id SERIAL PRIMARY KEY, symbol TEXT NOT NULL DEFAULT '小台',
+    direction TEXT NOT NULL DEFAULT '多', contracts INTEGER NOT NULL DEFAULT 1,
+    entry_date TEXT NOT NULL, entry_price INTEGER NOT NULL,
+    exit_date TEXT, exit_price INTEGER,
+    point_value INTEGER NOT NULL DEFAULT 50, fee INTEGER NOT NULL DEFAULT 0,
+    note TEXT DEFAULT '', created_at TIMESTAMPTZ DEFAULT NOW()
+);
 """
 
 
 def init_db():
     schema = SCHEMA_PG if IS_PG else SCHEMA_SQLITE
-    with engine.begin() as conn:
-        for stmt in schema.split(";"):
-            stmt = stmt.strip()
-            if stmt:
+    # Each CREATE TABLE in its own transaction so one failure doesn't block others
+    for stmt in schema.split(";"):
+        stmt = stmt.strip()
+        if not stmt:
+            continue
+        try:
+            with engine.begin() as conn:
                 conn.execute(text(stmt))
+        except Exception as e:
+            logging.debug("Schema stmt skipped: %s", e)
+
+    # Migrations in separate transactions
+    migrations = [
+        "ALTER TABLE holdings ADD COLUMN avg_price REAL DEFAULT 0",
+    ]
+    for m in migrations:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(m))
+            logging.info("Migration applied: %s", m[:60])
+        except Exception:
+            pass  # already applied
+
     logging.info("DB initialized (%s)", "PostgreSQL" if IS_PG else "SQLite")
 
 
@@ -146,9 +182,25 @@ def update_note(tx_id: int, note: str):
         conn.execute(text("UPDATE transactions SET note=:n WHERE id=:id"), {"n": note, "id": tx_id})
 
 
+def update_transaction(tx_id: int, tx: dict):
+    with engine.begin() as conn:
+        conn.execute(text(
+            "UPDATE transactions SET date=:date, merchant=:merchant, amount=:amount, "
+            "category=:category, bank=:bank, note=:note, is_travel=:is_travel WHERE id=:id"
+        ), {**tx, "id": tx_id})
+
+
 def delete_transaction(tx_id: int):
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM transactions WHERE id=:id"), {"id": tx_id})
+
+
+def delete_transactions_by_month(year_month: str) -> int:
+    with engine.begin() as conn:
+        result = conn.execute(text(
+            "DELETE FROM transactions WHERE date LIKE :ym"
+        ), {"ym": f"{year_month}%"})
+        return result.rowcount
 
 
 def monthly_summary(year_month: str) -> dict:
@@ -201,12 +253,12 @@ def list_income(year_month: Optional[str] = None) -> list:
 
 # ── Holdings ──────────────────────────────────────────────────
 
-def upsert_holding(market: str, ticker: str, name: str, shares: float):
+def upsert_holding(market: str, ticker: str, name: str, shares: float, avg_price: float = 0):
     with engine.begin() as conn:
         conn.execute(text(
-            "INSERT INTO holdings (market,ticker,name,shares) VALUES (:m,:t,:n,:s) "
-            "ON CONFLICT(market,ticker) DO UPDATE SET name=EXCLUDED.name, shares=EXCLUDED.shares"
-        ), {"m": market, "t": ticker, "n": name, "s": shares})
+            "INSERT INTO holdings (market,ticker,name,shares,avg_price) VALUES (:m,:t,:n,:s,:a) "
+            "ON CONFLICT(market,ticker) DO UPDATE SET name=EXCLUDED.name, shares=EXCLUDED.shares, avg_price=EXCLUDED.avg_price"
+        ), {"m": market, "t": ticker, "n": name, "s": shares, "a": avg_price})
 
 
 def delete_holding(holding_id: int):
@@ -276,3 +328,48 @@ def save_net_worth_snapshot(year_month: str, assets: int, liabilities: int):
 def list_net_worth_history() -> list:
     with engine.connect() as conn:
         return _rows(conn.execute(text("SELECT * FROM net_worth_history ORDER BY year_month")))
+
+
+# ── Futures ───────────────────────────────────────────────────
+
+def insert_futures_trade(trade: dict) -> int:
+    with engine.begin() as conn:
+        if IS_PG:
+            result = conn.execute(text(
+                "INSERT INTO futures_trades (symbol,direction,contracts,entry_date,entry_price,exit_date,exit_price,point_value,fee,note) "
+                "VALUES (:symbol,:direction,:contracts,:entry_date,:entry_price,:exit_date,:exit_price,:point_value,:fee,:note) RETURNING id"
+            ), trade)
+            return result.fetchone()[0]
+        else:
+            result = conn.execute(text(
+                "INSERT INTO futures_trades (symbol,direction,contracts,entry_date,entry_price,exit_date,exit_price,point_value,fee,note) "
+                "VALUES (:symbol,:direction,:contracts,:entry_date,:entry_price,:exit_date,:exit_price,:point_value,:fee,:note)"
+            ), trade)
+            return result.lastrowid
+
+
+def list_futures_trades(status: Optional[str] = None) -> list:
+    with engine.connect() as conn:
+        if status == "open":
+            result = conn.execute(text(
+                "SELECT * FROM futures_trades WHERE exit_price IS NULL ORDER BY entry_date DESC"))
+        elif status == "closed":
+            result = conn.execute(text(
+                "SELECT * FROM futures_trades WHERE exit_price IS NOT NULL ORDER BY entry_date DESC"))
+        else:
+            result = conn.execute(text("SELECT * FROM futures_trades ORDER BY entry_date DESC"))
+        return _rows(result)
+
+
+def update_futures_trade(trade_id: int, trade: dict):
+    with engine.begin() as conn:
+        conn.execute(text(
+            "UPDATE futures_trades SET symbol=:symbol, direction=:direction, contracts=:contracts, "
+            "entry_date=:entry_date, entry_price=:entry_price, exit_date=:exit_date, exit_price=:exit_price, "
+            "point_value=:point_value, fee=:fee, note=:note WHERE id=:id"
+        ), {**trade, "id": trade_id})
+
+
+def delete_futures_trade(trade_id: int):
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM futures_trades WHERE id=:id"), {"id": trade_id})

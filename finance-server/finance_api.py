@@ -79,11 +79,25 @@ def patch_note(tx_id: int, body: NoteUpdate, x_api_key: Optional[str] = Header(N
     return {"ok": True}
 
 
+@router.patch("/transactions/{tx_id}")
+def patch_transaction(tx_id: int, body: TransactionIn, x_api_key: Optional[str] = Header(None)):
+    _auth(x_api_key)
+    db.update_transaction(tx_id, body.model_dump())
+    return {"ok": True}
+
+
 @router.delete("/transactions/{tx_id}")
 def delete_transaction(tx_id: int, x_api_key: Optional[str] = Header(None)):
     _auth(x_api_key)
     db.delete_transaction(tx_id)
     return {"ok": True}
+
+
+@router.delete("/transactions")
+def delete_transactions_by_month(year_month: str, x_api_key: Optional[str] = Header(None)):
+    _auth(x_api_key)
+    count = db.delete_transactions_by_month(year_month)
+    return {"ok": True, "deleted": count}
 
 
 @router.get("/summary/{year_month}")
@@ -194,6 +208,7 @@ class HoldingIn(BaseModel):
     ticker: str
     name: str
     shares: float
+    avg_price: float = 0
 
 
 @router.get("/holdings")
@@ -205,7 +220,7 @@ def get_holdings(x_api_key: Optional[str] = Header(None)):
 @router.post("/holdings")
 def post_holding(h: HoldingIn, x_api_key: Optional[str] = Header(None)):
     _auth(x_api_key)
-    db.upsert_holding(h.market, h.ticker, h.name, h.shares)
+    db.upsert_holding(h.market, h.ticker, h.name, h.shares, h.avg_price)
     return {"ok": True}
 
 
@@ -306,3 +321,44 @@ def get_stock_price(ticker: str, market: str, x_api_key: Optional[str] = Header(
 @router.get("/categories")
 def get_categories():
     return CATEGORIES
+
+
+# ── Futures ──────────────────────────────────────────────────
+
+class FuturesTradeIn(BaseModel):
+    symbol: str = "小台"
+    direction: str = "多"
+    contracts: int = 1
+    entry_date: str
+    entry_price: int
+    exit_date: Optional[str] = None
+    exit_price: Optional[int] = None
+    point_value: int = 50
+    fee: int = 0
+    note: str = ""
+
+
+@router.get("/futures")
+def get_futures(status: Optional[str] = None, x_api_key: Optional[str] = Header(None)):
+    _auth(x_api_key)
+    return db.list_futures_trades(status)
+
+
+@router.post("/futures")
+def post_futures(trade: FuturesTradeIn, x_api_key: Optional[str] = Header(None)):
+    _auth(x_api_key)
+    return {"id": db.insert_futures_trade(trade.model_dump())}
+
+
+@router.patch("/futures/{trade_id}")
+def patch_futures(trade_id: int, trade: FuturesTradeIn, x_api_key: Optional[str] = Header(None)):
+    _auth(x_api_key)
+    db.update_futures_trade(trade_id, trade.model_dump())
+    return {"ok": True}
+
+
+@router.delete("/futures/{trade_id}")
+def delete_futures(trade_id: int, x_api_key: Optional[str] = Header(None)):
+    _auth(x_api_key)
+    db.delete_futures_trade(trade_id)
+    return {"ok": True}

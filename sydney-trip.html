@@ -809,7 +809,7 @@ function calcBal(exps,cur){
     if(e.paidBy===CFG.p1)p1p+=a;else p2p+=a;
     if(e.split==='p1')p1s+=a;else if(e.split==='p2')p2s+=a;else{p1s+=a/2;p2s+=a/2;}
   });
-  return{p1p,p2p,total:p1p+p2p,settle:p1p-p1s};
+  return{p1p,p2p,p1s,p2s,total:p1p+p2p,settle:p1p-p1s};
 }
 
 function calcDaySpend(exps,dateStr){
@@ -923,7 +923,8 @@ function renderExp(exps){
     return`<div class="bc-row ${rowCls}">
       <div>
         <span class="bc-flag">${cur==='AUD'?'🇦🇺':'🇹🇼'}</span><span class="bc-tot">${sym}${b.total.toFixed(dp)}</span>
-        <div class="bc-ps">${esc(CFG.p1)} ${sym}${b.p1p.toFixed(dp)} &nbsp;·&nbsp; ${esc(CFG.p2)} ${sym}${b.p2p.toFixed(dp)}</div>
+        <div class="bc-ps">付款：${esc(CFG.p1)} ${sym}${b.p1p.toFixed(dp)} &nbsp;·&nbsp; ${esc(CFG.p2)} ${sym}${b.p2p.toFixed(dp)}</div>
+        <div class="bc-ps">花費：${esc(CFG.p1)} ${sym}${b.p1s.toFixed(dp)} &nbsp;·&nbsp; ${esc(CFG.p2)} ${sym}${b.p2s.toFixed(dp)}</div>
       </div>
       ${settleHtml}
     </div>`;

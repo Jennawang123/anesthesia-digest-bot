@@ -12,7 +12,7 @@ def get_price(ticker: str, market: str) -> float:
     yf_ticker = f"{ticker}.TW" if market == "TW" else ticker
     try:
         data = yf.Ticker(yf_ticker)
-        hist = data.history(period="2d")
+        hist = data.history(period="5d")
         if hist.empty:
             logging.warning("yfinance: no data for %s", yf_ticker)
             return 0.0

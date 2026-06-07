@@ -1,0 +1,9 @@
+playwright
+pyautogui
+pytesseract
+Pillow
+pyperclip
+anthropic
+python-dotenv
+opencv-python
+pyobjc-framework-Quartz
