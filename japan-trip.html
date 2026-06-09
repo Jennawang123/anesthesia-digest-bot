@@ -342,6 +342,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdl"></div><div class="st" id="m-act-t">新增活動</div>
     <input type="hidden" id="ma-did"><input type="hidden" id="ma-aid">
     <div class="fg"><label class="lb">類型</label><div class="ac-grid" id="acGrid"></div></div>
+    <div class="fg" id="custom-ico-row" style="display:none"><label class="lb">自訂 Emoji</label><input class="inp" id="a_custom_ico" placeholder="貼上或輸入 emoji，例：🌸" style="font-size:22px;text-align:center;letter-spacing:4px" maxlength="4"></div>
     <div class="fg"><label class="lb">活動名稱 *</label><input class="inp" id="a_name" placeholder="例：淺草寺參觀"></div>
     <div class="fg"><label class="lb">地點（自動生成 Google Maps 連結）</label><input class="inp" id="a_loc" placeholder="例：Sydney Opera House"></div>
     <div class="fg"><label class="lb">備註</label><textarea class="ta" id="a_note" placeholder="訂位資訊、注意事項…"></textarea></div>
@@ -430,6 +431,7 @@ const ACTS=[
   {id:'transport',ico:'🚌',name:'交通',bg:'#DBEAFE'},{id:'hotel',ico:'🏨',name:'住宿',bg:'#D1FAE5'},
   {id:'shopping',ico:'🛍️',name:'購物',bg:'#FCE7F3'},{id:'fun',ico:'🎭',name:'娛樂',bg:'#FEE2E2'},
   {id:'dessert',ico:'🍰',name:'甜點咖啡',bg:'#FDF2F8'},{id:'other',ico:'📌',name:'其他',bg:'#F3F4F6'},
+  {id:'custom',ico:'✏️',name:'自訂',bg:'#F0FDF4'},
 ];
 const ACTM=Object.fromEntries(ACTS.map(c=>[c.id,c]));
 const CITIES={
@@ -551,7 +553,10 @@ function weatherDesc(code){
 }
 async function fetchWeather(){
   try{
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${CFG.lat||35.68}&longitude=${CFG.lng||139.69}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=16`);
+    const tripStart=new Date(CFG.start||today());
+    const now=new Date(today());
+    const pastDays=Math.min(92,Math.max(0,Math.floor((now-tripStart)/86400000)));
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${CFG.lat||35.68}&longitude=${CFG.lng||139.69}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=16&past_days=${pastDays}`);
     const d=await r.json();
     const times=d.hourly.time,temps=d.hourly.temperature_2m,codes=d.hourly.weathercode;
     weatherByDate=new Map();
@@ -832,7 +837,7 @@ function moveAct(fromDid,aid,act,toDid){
 function renderACGrid(){
   document.getElementById('acGrid').innerHTML=ACTS.map(c=>`<div class="ac-btn ${c.id===curAC?'on':''}" id="ac-${c.id}" onclick="selAC('${c.id}')"><span class="ac-i">${c.ico}</span><span class="ac-n">${c.name}</span></div>`).join('');
 }
-function selAC(id){curAC=id;document.querySelectorAll('.ac-btn').forEach(e=>e.classList.remove('on'));document.getElementById('ac-'+id)?.classList.add('on');}
+function selAC(id){curAC=id;document.querySelectorAll('.ac-btn').forEach(e=>e.classList.remove('on'));document.getElementById('ac-'+id)?.classList.add('on');document.getElementById('custom-ico-row').style.display=id==='custom'?'':'none';}
 function selACur(c){curACur=c;document.getElementById('acur-jpy').classList.toggle('on',c==='JPY');document.getElementById('acur-twd').classList.toggle('on',c==='TWD');}
 function selAPayer(i){curAPayer=i;document.getElementById('apb1').classList.toggle('on',i===0);document.getElementById('apb2').classList.toggle('on',i===1);}
 function selASplit(m){curASplit=m;['both','p1','p2'].forEach(x=>document.getElementById('asp-'+x).classList.toggle('on',x===m));}
@@ -872,12 +877,13 @@ function renderSched(sched){
         ${!acts.length?'<div style="padding:14px 16px;color:var(--muted);font-size:14px;text-align:center">尚無活動</div>':
           acts.map(([aid,act])=>{
             const ac=ACTM[act.cat]||ACTM.other;
+            const actIco=act.cat==='custom'?(act.customIco||'✏️'):ac.ico;
             const mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(act.loc||'');
             const sym=(act.cost?.cur||'JPY')==='JPY'?'¥':'NT$';
             const dp=0;
             return `<div class="act-row" draggable="true" data-did="${did}" data-aid="${aid}">
               <div class="act-handle" data-did="${did}" data-aid="${aid}">⠿</div>
-              <div class="act-ico" style="background:${ac.bg}">${ac.ico}</div>
+              <div class="act-ico" style="background:${ac.bg}">${actIco}</div>
               <div class="act-body">
                 ${act.time?`<div class="act-time">⏰ ${act.time}</div>`:''}
                 <div class="act-name">${esc(act.name||'')}</div>
@@ -908,6 +914,7 @@ function openActM(did){
   document.getElementById('ma-did').value=did;document.getElementById('ma-aid').value='';
   document.getElementById('a_name').value='';
   document.getElementById('a_loc').value='';document.getElementById('a_note').value='';document.getElementById('a_cost').value='';
+  document.getElementById('a_custom_ico').value='';document.getElementById('custom-ico-row').style.display='none';
   curAC='sight';renderACGrid();selAPayer(0);selASplit('both');selACur('JPY');
   openM('m-act');setTimeout(()=>document.getElementById('a_name').focus(),280);
 }
@@ -920,6 +927,8 @@ function openActEdit(did,aid){
     document.getElementById('a_loc').value=a.loc||'';document.getElementById('a_note').value=a.note||'';
     document.getElementById('a_cost').value=a.cost?.amt||'';
     curAC=a.cat||'sight';renderACGrid();
+    document.getElementById('a_custom_ico').value=a.customIco||'';
+    document.getElementById('custom-ico-row').style.display=a.cat==='custom'?'':'none';
     selACur(a.cost?.cur||'JPY');selAPayer(a.cost?.paidBy===CFG.p2?1:0);selASplit(a.cost?.split||'both');
     curActOrder=a.order||0;
     openM('m-act');
@@ -935,7 +944,9 @@ function saveAct(){
     const existingActs=Object.values(dayData.acts||{});
     const maxOrder=existingActs.length?Math.max(...existingActs.map(a=>a.order||0)):0;
     const isNew=!aid;
+    const customIco=document.getElementById('a_custom_ico').value.trim();
     const obj={cat:curAC,name,
+      ...(curAC==='custom'&&customIco?{customIco}:{}),
       loc:document.getElementById('a_loc').value.trim(),note:document.getElementById('a_note').value.trim(),
       cost:hasCost?{amt:costAmt,cur:curACur,paidBy:curAPayer===0?CFG.p1:CFG.p2,split:curASplit}:null,
       order:isNew?(maxOrder+1):curActOrder};
