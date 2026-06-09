@@ -619,6 +619,13 @@ function bootApp(){
 
 // ─── Firebase ────────────────────────────────────────
 function connectFB(){
+  // Firebase SDK 尚未載入（PWA 啟動時可能發生），等待後重試
+  if(typeof firebase==='undefined'){
+    sync(false);
+    toast('⏳ 正在載入…');
+    setTimeout(connectFB,1500);
+    return;
+  }
   sync(true);
   try{
     const dbUrl=CFG.url?.trim().replace(/\/$/,'');
