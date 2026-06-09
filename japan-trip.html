@@ -621,26 +621,37 @@ function bootApp(){
 function connectFB(){
   sync(true);
   try{
-    if(!firebase.apps.length)firebase.initializeApp({databaseURL:CFG.url.trim().replace(/\/$/,'')});
+    const dbUrl=CFG.url?.trim().replace(/\/$/,'');
+    if(!dbUrl){sync(false);toast('⚠️ 請先設定 Firebase 資料庫網址');return;}
+    if(firebase.apps.length){
+      // 若 URL 已變更，刪除舊 app 再重建
+      const cur=firebase.apps[0].options.databaseURL;
+      if(cur&&cur!==dbUrl){firebase.apps[0].delete().catch(()=>{}).finally(()=>{firebase.initializeApp({databaseURL:dbUrl});DB=firebase.database();_fbListen();});}
+      else{DB=firebase.database();_fbListen();}
+      return;
+    }
+    firebase.initializeApp({databaseURL:dbUrl});
     DB=firebase.database();
-    DB.ref('/').on('value',snap=>{
-      const d=snap.val()||{};
-      const sched=d.schedule||{};
-      const keys=Object.keys(sched);
-      if(!keys.length){
-        createFullSchedule();
-      } else {
-        // Auto-fix wrong dates (handles old buggy data)
-        const expected=addDays(CFG.start,0);
-        if(sched['day1']&&sched['day1'].date!==expected) fixDates(false);
-      }
-      lastExps=d.expenses||{};
-      renderSched(sched);
-      renderExp(lastExps);
-      renderStat(lastExps);
-      sync(false);
-    },err=>{sync(false);toast('⚠️ Firebase 錯誤：'+err.message);});
-  }catch(e){sync(false);toast('⚠️ Firebase 初始化失敗');console.error(e);}
+    _fbListen();
+  }catch(e){sync(false);toast('⚠️ Firebase 初始化失敗：'+e.message);console.error(e);}
+}
+function _fbListen(){
+  DB.ref('/').on('value',snap=>{
+    const d=snap.val()||{};
+    const sched=d.schedule||{};
+    const keys=Object.keys(sched);
+    if(!keys.length){
+      createFullSchedule();
+    } else {
+      const expected=addDays(CFG.start,0);
+      if(sched['day1']&&sched['day1'].date!==expected) fixDates(false);
+    }
+    lastExps=d.expenses||{};
+    renderSched(sched);
+    renderExp(lastExps);
+    renderStat(lastExps);
+    sync(false);
+  },err=>{sync(false);toast('⚠️ Firebase 錯誤：'+err.message);});
 }
 
 function createFullSchedule(){
