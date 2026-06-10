@@ -207,6 +207,9 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 <div id="fb-retry-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#FEF3C7;padding:14px 16px;text-align:center;font-size:14px;font-weight:600;border-bottom:1px solid #F59E0B">
   ⚠️ Firebase 載入失敗，請確認網路後 <button onclick="window._fbRetryLoad()" style="background:#F59E0B;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer">重試</button>
 </div>
+<div id="fb-err-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#FEE2E2;padding:14px 16px;font-size:13px;font-weight:600;border-bottom:1px solid #EF4444">
+  ⚠️ Firebase 錯誤：<span id="fb-err-msg"></span><br><button onclick="location.reload()" style="margin-top:6px;background:#EF4444;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer">重新載入</button>
+</div>
 
 <div id="setup">
   <h1>🇯🇵 日本之旅</h1>
@@ -245,7 +248,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">日本之旅</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:10px;opacity:.5">v0611</span></div>
     </div>
   </div>
   <div class="content">
@@ -659,7 +662,7 @@ function connectFB(){
     firebase.initializeApp({databaseURL:dbUrl});
     DB=firebase.database();
     _fbListen();
-  }catch(e){sync(false);toast('⚠️ Firebase 初始化失敗：'+e.message);console.error(e);}
+  }catch(e){sync(false);const m=e?.message||String(e)||'unknown';document.getElementById('fb-err-msg').textContent=m;document.getElementById('fb-err-banner').style.display='';console.error(e);}
 }
 function _fbListen(){
   DB.ref('/').on('value',snap=>{
