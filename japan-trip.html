@@ -595,7 +595,7 @@ function doSetup(){
 }
 window.onload=()=>{
   const s=localStorage.getItem('japan_trip');
-  if(s){CFG=JSON.parse(s);bootApp();}
+  if(s){CFG=JSON.parse(s);try{CFG.url=new URL(CFG.url||'').origin;}catch{}bootApp();}
 };
 
 // ─── Boot ────────────────────────────────────────────
@@ -650,7 +650,7 @@ function loadFirebase(cb){
 function connectFB(){
   sync(true);
   try{
-    const dbUrl=CFG.url?.trim().replace(/\/$/,'');
+    const dbUrl=(()=>{try{return new URL(CFG.url?.trim()||'').origin;}catch{return '';}})();
     if(!dbUrl){sync(false);toast('⚠️ 請先設定 Firebase 資料庫網址');return;}
     if(firebase.apps.length){
       // 若 URL 已變更，刪除舊 app 再重建
