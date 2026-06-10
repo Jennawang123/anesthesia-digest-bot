@@ -13,9 +13,9 @@
 <!-- Firebase loaded dynamically in loadFirebase() -->
 <style>
 :root{
-  --blue:#0077B6;--blue2:#023E8A;--cyan:#00B4D8;
-  --orange:#F4A261;--green:#10B981;--red:#EF4444;--purple:#7C3AED;
-  --bg:#F0F4F8;--card:#fff;--text:#1A1A2E;--muted:#6B7280;--border:#E5E7EB;
+  --blue:#7B9BAA;--blue2:#4D7A8A;--cyan:#A8C5CE;
+  --orange:#C4956A;--green:#8BA888;--red:#B47B7B;--purple:#9B8BAB;
+  --bg:#F5F0EB;--card:#FDFAF7;--text:#3D3530;--muted:#9A8F89;--border:#E4DDD7;
   --tab-h:60px;--safe-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -80,7 +80,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 
 /* Schedule */
 .day-card{background:var(--card);border-radius:12px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);transition:border .15s;}
-.day-card.drop-over{border:2px dashed var(--blue);background:#EFF8FF;}
+.day-card.drop-over{border:2px dashed var(--blue);background:#EDF3F6;}
 .day-hdr{padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;}
 .day-n{width:40px;height:40px;border-radius:10px;background:var(--blue);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .day-info{flex:1;min-width:0;}
@@ -110,14 +110,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 
 .ac-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
 .ac-btn{padding:9px 3px;border-radius:10px;border:2px solid var(--border);background:#fff;cursor:pointer;text-align:center;transition:all .12s;}
-.ac-btn.on{border-color:var(--blue);background:#EFF8FF;}
+.ac-btn.on{border-color:var(--blue);background:#EDF3F6;}
 .ac-i{font-size:20px;display:block;}.ac-n{font-size:10px;margin-top:2px;color:var(--muted);font-weight:600;}
 .ac-btn.on .ac-n{color:var(--blue);}
 .cost-box{background:#F0FDF4;border-radius:10px;padding:14px;margin-bottom:14px;}
 .cost-box .lb{color:#065F46;}
 
 /* Expenses – compact balance */
-.bc-card{background:linear-gradient(135deg,var(--blue2),#0096C7);border-radius:12px;padding:14px 16px;margin-bottom:8px;color:#fff;}
+.bc-card{background:linear-gradient(135deg,var(--blue2),var(--cyan));border-radius:12px;padding:14px 16px;margin-bottom:8px;color:#fff;}
 .bc-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;}
 .bc-row+.bc-row{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.2);}
 .bc-flag{font-size:14px;font-weight:700;}
@@ -125,7 +125,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .bc-ps{font-size:11px;opacity:.75;margin-top:2px;}
 .bc-settle{font-size:12px;font-weight:700;background:rgba(255,255,255,.15);padding:3px 8px;border-radius:20px;white-space:nowrap;}
 .bc-settle.ok{background:rgba(16,185,129,.25);}
-.twd-row{background:linear-gradient(135deg,var(--purple),#A78BFA);}
+.twd-row{background:linear-gradient(135deg,var(--purple),#B8AACC);}
 
 /* Pie chart */
 .pie-card{background:var(--card);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
@@ -159,7 +159,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
 .cat-btn{padding:9px 3px;border-radius:10px;border:2px solid var(--border);background:#fff;cursor:pointer;text-align:center;transition:all .12s;}
-.cat-btn.on{border-color:var(--blue);background:#EFF8FF;}
+.cat-btn.on{border-color:var(--blue);background:#EDF3F6;}
 .cati{font-size:21px;display:block;}.catn{font-size:10px;margin-top:2px;color:var(--muted);font-weight:600;}
 .cat-btn.on .catn{color:var(--blue);}
 .pr{display:flex;gap:8px;}
@@ -198,7 +198,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .day-num{font-family:'Noto Serif TC',serif;font-size:15px;font-weight:700;color:#1A3A78;letter-spacing:.2px;}
 .day-date-badge{font-size:10px;font-weight:600;color:#6B8FC4;background:#EBF2FC;border-radius:5px;padding:2px 7px;margin-left:2px;}
 .day-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px;}
-.wchip{display:inline-flex;align-items:center;gap:2px;background:#E8F3FC;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;color:#1A5BA8;}
+.wchip{display:inline-flex;align-items:center;gap:2px;background:#D9E6EA;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;color:var(--blue2);}
 .schip{display:inline-flex;align-items:center;gap:2px;background:#EAF5EA;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;color:#1E7D32;}
 </style>
 </head>
@@ -425,19 +425,19 @@ const RECEIPT_PROMPT=`你是日本收據辨識助手。請分析這張收據圖�
 - date: 收據日期 YYYY-MM-DD（看不清填今天日期）
 只輸出 JSON 物件，不加任何說明文字。`;
 const CATS=[
-  {id:'food',ico:'🍽️',name:'餐飲',bg:'#FEF3C7'},{id:'transport',ico:'🚌',name:'交通',bg:'#DBEAFE'},
-  {id:'hotel',ico:'🏨',name:'住宿',bg:'#EDE9FE'},{id:'activity',ico:'🎡',name:'活動',bg:'#D1FAE5'},
-  {id:'shopping',ico:'🛍️',name:'購物',bg:'#FCE7F3'},{id:'ticket',ico:'🎟️',name:'門票',bg:'#FEE2E2'},
-  {id:'cafe',ico:'☕',name:'咖啡',bg:'#FEF3C7'},{id:'other',ico:'📦',name:'其他',bg:'#F3F4F6'},
+  {id:'food',ico:'🍽️',name:'餐飲',bg:'#EDE6D8'},{id:'transport',ico:'🚌',name:'交通',bg:'#D9E6EA'},
+  {id:'hotel',ico:'🏨',name:'住宿',bg:'#E2DDE8'},{id:'activity',ico:'🎡',name:'活動',bg:'#D8E7DC'},
+  {id:'shopping',ico:'🛍️',name:'購物',bg:'#EBD9E4'},{id:'ticket',ico:'🎟️',name:'門票',bg:'#EAD9D9'},
+  {id:'cafe',ico:'☕',name:'咖啡',bg:'#EDE6D8'},{id:'other',ico:'📦',name:'其他',bg:'#E8E4E0'},
 ];
 const CATM=Object.fromEntries(CATS.map(c=>[c.id,c]));
-const PCOL={food:'#F59E0B',transport:'#3B82F6',hotel:'#8B5CF6',activity:'#10B981',shopping:'#EC4899',ticket:'#EF4444',cafe:'#F97316',other:'#94A3B8'};
+const PCOL={food:'#C4956A',transport:'#7B9BAA',hotel:'#9B8BAB',activity:'#8BA888',shopping:'#B47B7B',ticket:'#C49A8A',cafe:'#C4A882',other:'#9A8F89'};
 const ACTS=[
-  {id:'sight',ico:'📍',name:'景點',bg:'#EDE9FE'},{id:'food',ico:'🍽️',name:'餐廳',bg:'#FEF3C7'},
-  {id:'transport',ico:'🚌',name:'交通',bg:'#DBEAFE'},{id:'hotel',ico:'🏨',name:'住宿',bg:'#D1FAE5'},
-  {id:'shopping',ico:'🛍️',name:'購物',bg:'#FCE7F3'},{id:'fun',ico:'🎭',name:'娛樂',bg:'#FEE2E2'},
-  {id:'dessert',ico:'🍰',name:'甜點咖啡',bg:'#FDF2F8'},{id:'other',ico:'📌',name:'其他',bg:'#F3F4F6'},
-  {id:'custom',ico:'✏️',name:'自訂',bg:'#F0FDF4'},
+  {id:'sight',ico:'📍',name:'景點',bg:'#E2DDE8'},{id:'food',ico:'🍽️',name:'餐廳',bg:'#EDE6D8'},
+  {id:'transport',ico:'🚌',name:'交通',bg:'#D9E6EA'},{id:'hotel',ico:'🏨',name:'住宿',bg:'#D8E7DC'},
+  {id:'shopping',ico:'🛍️',name:'購物',bg:'#EBD9E4'},{id:'fun',ico:'🎭',name:'娛樂',bg:'#EAD9D9'},
+  {id:'dessert',ico:'🍰',name:'甜點咖啡',bg:'#E8DDE5'},{id:'other',ico:'📌',name:'其他',bg:'#E8E4E0'},
+  {id:'custom',ico:'✏️',name:'自訂',bg:'#E4E9E8'},
 ];
 const ACTM=Object.fromEntries(ACTS.map(c=>[c.id,c]));
 const CITIES={
