@@ -10,10 +10,11 @@
 我要整理 Miller's Anesthesia 10th edition 的 Notion 筆記。
 本 session 全程只用視覺法（PyMuPDF 渲染 PNG → Read 工具讀圖），絕對不用 page.get_text()。
 
-筆記以「section（小節）」為單位，不以 PDF 頁為單位：
-- 先讀完整個 section（如「Cardiovascular System」整節，通常 5–10 頁）
-- 消化後寫一篇 Notion sub-page，橫跨該 section 所有頁面
-- 臨床重點/易考點/陷阱只在 section 結尾出現一次，不每頁重複
+筆記以章節的「大節標題」為單位，不以 PDF 頁或 subsystem 為單位：
+- 一個大節（如「Physiological Considerations」）= 一篇 Notion sub-page
+- 大節內的所有 subsystem（Cardiovascular、Pulmonary 等）整合進同一篇
+- 臨床重點/易考點/陷阱只在每篇結尾出現一次
+- 粒度參考：太細（每個 subsystem 一篇）→ 合併；太粗（整章一篇）→ 拆開
 
 每個 sub-page 格式：
 
