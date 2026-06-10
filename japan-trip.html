@@ -562,16 +562,23 @@ async function fetchWeather(){
     const tripStart=new Date(CFG.start||today());
     const now=new Date(today());
     const pastDays=Math.min(92,Math.max(0,Math.floor((now-tripStart)/86400000)));
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${CFG.lat||35.68}&longitude=${CFG.lng||139.69}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=16&past_days=${pastDays}`);
+    const forecastDays=Math.min(16,Math.max(1,(CFG.days||7)-pastDays+1));
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${CFG.lat||35.68}&longitude=${CFG.lng||139.69}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=${forecastDays}&past_days=${pastDays}`);
     const d=await r.json();
     const times=d.hourly.time,temps=d.hourly.temperature_2m,codes=d.hourly.weathercode;
-    weatherByDate=new Map();
+    // 每天收集所有小時資料，選最接近 12:00 的那筆
+    const byDate=new Map();
     times.forEach((t,i)=>{
-      if(t.endsWith('T12:00')){
-        const ds=t.split('T')[0];
-        const{icon,desc}=weatherDesc(codes[i]);
-        weatherByDate.set(ds,{temp:Math.round(temps[i]),icon,desc});
-      }
+      const [ds,ts]=t.split('T');
+      const hr=parseInt(ts)||0;
+      const prev=byDate.get(ds);
+      if(!prev||Math.abs(hr-12)<Math.abs(prev.hr-12))
+        byDate.set(ds,{hr,temp:Math.round(temps[i]),code:codes[i]});
+    });
+    weatherByDate=new Map();
+    byDate.forEach((v,ds)=>{
+      const{icon,desc}=weatherDesc(v.code);
+      weatherByDate.set(ds,{temp:v.temp,icon,desc});
     });
   }catch(e){weatherByDate=new Map();}
 }
