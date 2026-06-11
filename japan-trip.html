@@ -1417,6 +1417,51 @@ function delNote(nid){
   toast('🗑️ 已刪除');
 }
 
+// ─── Note CRUD ───────────────────────────────────────
+let curNoteImages=[];
+function onNoteImgPick(e){
+  const file=e.target.files[0];if(!file)return;
+  e.target.value='';
+  if(curNoteImages.length>=2){toast('最多 2 張圖片');return;}
+  compressImage(file).then(b64=>{curNoteImages.push(b64);renderNoteImgPreviews();});
+}
+function renderNoteImgPreviews(){
+  const el=document.getElementById('note-img-previews');if(!el)return;
+  el.innerHTML=curNoteImages.map((b,i)=>`<div class="img-preview-item"><img src="${b}"><button class="img-preview-rm" onclick="removeNoteImg(${i})">✕</button></div>`).join('');
+  const btn=document.getElementById('note-img-btn');if(btn)btn.style.display=curNoteImages.length>=2?'none':'';
+}
+function removeNoteImg(i){curNoteImages.splice(i,1);renderNoteImgPreviews();}
+function openNoteM(type){
+  if(type!=='note'){openTodoM();return;}
+  document.getElementById('m-note-t').textContent='新增記事';
+  document.getElementById('mn-id').value='';
+  document.getElementById('n_title').value='';
+  document.getElementById('n_content').value='';
+  curNoteImages=[];renderNoteImgPreviews();
+  openM('m-note');setTimeout(()=>document.getElementById('n_title').focus(),280);
+}
+function openNoteEdit(nid){
+  const n=lastNotes[nid];if(!n)return;
+  document.getElementById('m-note-t').textContent='編輯記事';
+  document.getElementById('mn-id').value=nid;
+  document.getElementById('n_title').value=n.title||'';
+  document.getElementById('n_content').value=n.content||'';
+  curNoteImages=n.images?[...n.images]:[];renderNoteImgPreviews();
+  openM('m-note');
+}
+function saveNote(){
+  const nid=document.getElementById('mn-id').value||('n'+uid());
+  const title=document.getElementById('n_title').value.trim();
+  const content=document.getElementById('n_content').value.trim();
+  const now=new Date().toISOString();
+  const existing=lastNotes[nid];
+  const obj={type:'note',title,content,
+    images:curNoteImages.length?[...curNoteImages]:null,
+    createdAt:existing?.createdAt||now,updatedAt:now};
+  DB.ref('/notes/'+nid).set(obj);
+  closeM('m-note');toast('✅ 已儲存');
+}
+
 // ─── Activity Images ─────────────────────────────────
 function onActImgPick(e){
   const file=e.target.files[0];if(!file)return;
@@ -1462,6 +1507,24 @@ function openLightbox(src){
 <!-- Lightbox -->
 <div class="ov" id="m-lb" onclick="closeM('m-lb')">
   <img id="lb-img" src="" alt="">
+</div>
+
+<!-- Note modal -->
+<div class="ov" id="m-note">
+  <div class="sheet">
+    <div class="hdl"></div>
+    <div class="st" id="m-note-t">新增記事</div>
+    <input type="hidden" id="mn-id">
+    <div class="fg"><label class="lb">標題</label><input class="inp" id="n_title" placeholder="記事標題…"></div>
+    <div class="fg"><label class="lb">內容</label><textarea class="ta" id="n_content" placeholder="記錄想法、資訊…" rows="5"></textarea></div>
+    <div class="fg">
+      <label class="lb">圖片（最多 2 張）</label>
+      <div id="note-img-previews" class="img-preview-row"></div>
+      <button type="button" class="btn btn-g" style="margin-top:6px;font-size:13px;padding:8px 12px" onclick="document.getElementById('noteImgFile').click()" id="note-img-btn">📷 新增圖片</button>
+      <input type="file" id="noteImgFile" accept="image/*" style="display:none" onchange="onNoteImgPick(event)">
+    </div>
+    <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-note')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveNote()">儲存</button></div>
+  </div>
 </div>
 </body>
 </html>
