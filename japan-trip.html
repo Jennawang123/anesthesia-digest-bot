@@ -432,30 +432,6 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
   </div>
 </div>
 
-<!-- Note -->
-<div class="ov" id="m-note">
-  <div class="sheet">
-    <div class="hdl"></div><div class="st" id="m-note-t">新增筆記</div>
-    <input type="hidden" id="mn-id">
-    <div class="fg"><label class="lb">標題</label><input class="inp" id="n_title" placeholder="筆記標題"></div>
-    <div class="fg"><label class="lb">類型</label>
-      <div class="tw"><div class="to on" id="nt-txt" onclick="selNT('text')">📝 一般筆記</div><div class="to" id="nt-chk" onclick="selNT('check')">✓ 待辦清單</div></div>
-    </div>
-    <div class="fg" id="ntg-txt"><label class="lb">內容</label><textarea class="ta" id="n_content" placeholder="輸入筆記內容…"></textarea></div>
-    <div class="fg" id="ntg-chk" style="display:none">
-      <label class="lb">待辦事項</label>
-      <div id="clItems"></div>
-      <button class="btn btn-g btn-w" style="margin-top:8px;font-size:14px" onclick="addCLI()">＋ 新增項目</button>
-    </div>
-    <div class="fg"><label class="lb">照片（選填）</label>
-      <div class="imgarea" onclick="document.getElementById('imgFile').click()">
-        <div id="imgPh">📷 點擊上傳照片</div><img id="imgPr" class="imgprev" style="display:none">
-      </div>
-      <input type="file" id="imgFile" accept="image/*" style="display:none" onchange="onImgPick(event)">
-    </div>
-    <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-note')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveNote()">儲存</button></div>
-  </div>
-</div>
 
 <script>
 const RECEIPT_PROMPT=`你是日本收據辨識助手。請分析這張收據圖片，回傳 JSON 格式，欄位如下：
@@ -1297,45 +1273,6 @@ function renderExp(exps){
       </div>`;
     }).join('')
   ).join('');
-}
-
-// ─── Notes ───────────────────────────────────────────
-function selNT(t){curNT=t;document.getElementById('nt-txt').classList.toggle('on',t==='text');document.getElementById('nt-chk').classList.toggle('on',t==='check');document.getElementById('ntg-txt').style.display=t==='text'?'block':'none';document.getElementById('ntg-chk').style.display=t==='check'?'block':'none';}
-function addCLI(txt=''){const con=document.getElementById('clItems'),div=document.createElement('div');div.className='cer';const iid='ci'+uid();div.innerHTML=`<input id="${iid}" placeholder="待辦項目" value="${esc(txt)}"><button class="ib" onclick="this.parentElement.remove()">✕</button>`;con.appendChild(div);document.getElementById(iid).focus();}
-function openNoteM(){document.getElementById('m-note-t').textContent='新增筆記';document.getElementById('mn-id').value='';document.getElementById('n_title').value='';document.getElementById('n_content').value='';document.getElementById('clItems').innerHTML='';document.getElementById('imgPr').style.display='none';document.getElementById('imgPh').style.display='block';document.getElementById('imgFile').value='';curImg=null;selNT('text');openM('m-note');setTimeout(()=>document.getElementById('n_title').focus(),280);}
-function openNoteEdit(nid){
-  DB.ref('/notes/'+nid).once('value',snap=>{
-    const n=snap.val();if(!n)return;
-    document.getElementById('m-note-t').textContent='編輯筆記';document.getElementById('mn-id').value=nid;
-    document.getElementById('n_title').value=n.title||'';document.getElementById('n_content').value=n.content||'';
-    document.getElementById('clItems').innerHTML='';(n.items||[]).forEach(i=>addCLI(i.text||''));
-    if(n.img){curImg=n.img;const p=document.getElementById('imgPr');p.src=n.img;p.style.display='block';document.getElementById('imgPh').style.display='none';}
-    else{curImg=null;document.getElementById('imgPr').style.display='none';document.getElementById('imgPh').style.display='block';}
-    selNT(n.type||'text');openM('m-note');
-  });
-}
-function onImgPick(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');const ratio=Math.min(900/img.width,1);c.width=img.width*ratio;c.height=img.height*ratio;c.getContext('2d').drawImage(img,0,0,c.width,c.height);curImg=c.toDataURL('image/jpeg',.78);const p=document.getElementById('imgPr');p.src=curImg;p.style.display='block';document.getElementById('imgPh').style.display='none';};img.src=e.target.result;};r.readAsDataURL(f);}
-function saveNote(){
-  const title=document.getElementById('n_title').value.trim();if(!title){toast('請輸入標題');return;}
-  const nid=document.getElementById('mn-id').value||('n'+uid()),isNew=!document.getElementById('mn-id').value;
-  const note={title,type:curNT,img:curImg||null,updAt:new Date().toISOString(),...(isNew&&{crAt:new Date().toISOString()})};
-  if(curNT==='text'){note.content=document.getElementById('n_content').value.trim();note.items=null;}
-  else{note.content=null;const inputs=document.querySelectorAll('#clItems .cer input');note.items=Array.from(inputs).map(i=>({text:i.value.trim(),done:false})).filter(i=>i.text);}
-  if(!isNew&&curNT==='check'){DB.ref('/notes/'+nid+'/items').once('value',snap=>{const old=snap.val()||[];note.items=note.items.map((item,i)=>({...item,done:(old[i]&&old[i].text===item.text)?(old[i].done||false):false}));DB.ref('/notes/'+nid).update(note).then(()=>{closeM('m-note');toast('✅ 已儲存');});});return;}
-  sync(true);DB.ref('/notes/'+nid).set(note).then(()=>{sync(false);closeM('m-note');toast('✅ 已儲存');}).catch(()=>{sync(false);toast('⚠️ 儲存失敗');});
-}
-function delNote(nid){if(!confirm('確定刪除？'))return;DB.ref('/notes/'+nid).remove().then(()=>toast('🗑️ 已刪除'));}
-function toggleCLI(nid,idx){const r=DB.ref('/notes/'+nid+'/items/'+idx+'/done');r.once('value',s=>r.set(!s.val()));}
-function renderNotes(notes){
-  const el=document.getElementById('notesList');
-  const entries=Object.entries(notes).sort((a,b)=>(b[1].updAt||b[1].crAt||'').localeCompare(a[1].updAt||a[1].crAt||''));
-  if(!entries.length){el.innerHTML='<div class="empty"><div class="empty-i">📝</div><div class="empty-h">尚無筆記</div><div class="empty-s">點 ＋ 新增筆記</div></div>';return;}
-  el.innerHTML=entries.map(([id,n])=>{
-    let body='';
-    if(n.type==='check'&&n.items){const dn=n.items.filter(i=>i.done).length;body=`<div style="margin-top:6px">${n.items.slice(0,5).map((item,i)=>`<div class="clr" onclick="toggleCLI('${id}',${i})"><div class="clc ${item.done?'done':''}"></div><span class="clt ${item.done?'done':''}">${esc(item.text)}</span></div>`).join('')}${n.items.length>5?`<div style="font-size:12px;color:var(--muted);margin-top:3px">還有 ${n.items.length-5} 項…</div>`:''}</div><div class="clp">${dn}/${n.items.length} 完成</div>`;}
-    else if(n.content)body=`<div class="np">${esc(n.content.slice(0,120)+(n.content.length>120?'…':''))}</div>`;
-    return`<div class="nc"><div class="nh"><div class="nt2">${esc(n.title||'')}</div><div class="na"><button class="ib" onclick="openNoteEdit('${id}')">✎</button><button class="ib" onclick="delNote('${id}')">✕</button></div></div>${body}${n.img?`<img src="${n.img}" class="nimg" loading="lazy">`:''}  <div class="nd">${n.updAt?fmtDt(n.updAt):''}</div></div>`;
-  }).join('');
 }
 
 // ─── Settings ────────────────────────────────────────
