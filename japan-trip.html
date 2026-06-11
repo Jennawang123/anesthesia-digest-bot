@@ -200,6 +200,30 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .day-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px;}
 .wchip{display:inline-flex;align-items:center;gap:2px;background:#D9E6EA;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;color:var(--blue2);}
 .schip{display:inline-flex;align-items:center;gap:2px;background:#EAF5EA;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;color:#1E7D32;}
+/* ── Acc sub-toggle ── */
+.acc-toggle{display:flex;background:var(--bg);border-radius:10px;padding:3px;gap:3px;margin-bottom:12px;}
+.acc-opt{flex:1;padding:8px 4px;text-align:center;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:all .15s;}
+.acc-opt.on{background:var(--card);color:var(--blue);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+/* ── Activity images ── */
+.act-imgs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.act-img-thumb{width:64px;height:64px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border);}
+.img-preview-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.img-preview-item{position:relative;width:72px;height:72px;}
+.img-preview-item img{width:100%;height:100%;object-fit:cover;border-radius:8px;border:1px solid var(--border);}
+.img-preview-rm{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+/* ── Note cards ── */
+.note-card{margin-bottom:10px;}
+.note-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.note-title{font-size:15px;font-weight:700;color:var(--text);}
+.note-preview{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:6px;}
+.note-thumbs{display:flex;gap:6px;flex-wrap:wrap;}
+/* ── Todo items ── */
+.todo-items{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
+.todo-item{padding:6px 2px;border-bottom:1px solid var(--border);font-size:14px;}
+.todo-item:last-child{border-bottom:none;}
+/* ── Lightbox ── */
+#m-lb{background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;}
+#m-lb img{max-width:100%;max-height:90dvh;object-fit:contain;border-radius:8px;}
 </style>
 </head>
 <body>
