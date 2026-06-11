@@ -285,15 +285,24 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 
     <div class="page" id="page-exp">
       <div class="bx">
-        <div id="balSec"></div>
-        <div id="expList"></div>
+        <div class="acc-toggle">
+          <div class="acc-opt on" id="acc-exp" onclick="switchAcc('exp')">支出清單</div>
+          <div class="acc-opt"    id="acc-stat" onclick="switchAcc('stat')">統計圖表</div>
+        </div>
+        <div id="expContent">
+          <div id="balSec"></div>
+          <div id="expList"></div>
+        </div>
+        <div id="statContent" style="display:none">
+          <div id="pieSec"></div>
+          <div id="personSec"></div>
+        </div>
       </div>
     </div>
 
-    <div class="page" id="page-stat">
-      <div class="bx">
-        <div id="pieSec"></div>
-        <div id="personSec"></div>
+    <div class="page" id="page-note">
+      <div class="bx" id="noteList">
+        <div class="empty"><div class="empty-i">📒</div><div class="empty-h">尚無記事，點 ＋ 新增</div></div>
       </div>
     </div>
 
@@ -341,15 +350,17 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 
   </div>
   <div class="fab-menu" id="fabMenu">
-    <div class="fab-item" onclick="closeFabMenu();openExpM()">✏️ 手動輸入</div>
-    <div class="fab-item" onclick="closeFabMenu();document.getElementById('receiptFile').click()">📷 掃描收據</div>
+    <div class="fab-item exp-fab" onclick="closeFabMenu();openExpM()">✏️ 手動輸入</div>
+    <div class="fab-item exp-fab" onclick="closeFabMenu();document.getElementById('receiptFile').click()">📷 掃描收據</div>
+    <div class="fab-item note-fab" style="display:none" onclick="closeFabMenu();openNoteM('note')">📝 新增記事</div>
+    <div class="fab-item note-fab" style="display:none" onclick="closeFabMenu();openNoteM('todo')">✅ 新增待辦</div>
   </div>
   <input type="file" id="receiptFile" accept="image/*" capture="environment" style="display:none" onchange="onReceiptPick(event)">
   <button class="fab" id="fab" onclick="fabTap()">＋</button>
   <div class="tabbar">
     <div class="ti on" id="t-sched" onclick="goTab('sched')"><span class="ti-i">📅</span><span class="ti-l">行程</span></div>
     <div class="ti"    id="t-exp"   onclick="goTab('exp')"  ><span class="ti-i">💴</span><span class="ti-l">記帳</span></div>
-    <div class="ti"    id="t-stat"  onclick="goTab('stat')" ><span class="ti-i">📊</span><span class="ti-l">統計</span></div>
+    <div class="ti"    id="t-note"  onclick="goTab('note')" ><span class="ti-i">📒</span><span class="ti-l">記事本</span></div>
     <div class="ti"    id="t-cfg"   onclick="goTab('cfg')"  ><span class="ti-i">⚙️</span><span class="ti-l">設定</span></div>
   </div>
 </div>
@@ -488,7 +499,7 @@ function mapActCat(actCat){
   return'activity';
 }
 
-let CFG={},DB=null,curTab='sched';
+let CFG={},DB=null,curTab='sched',curAcc='exp';
 let weatherByDate=new Map();
 let curCat='food',curPayer=0,curSplit='both',curCur='JPY';
 let curAC='sight',curACur='JPY',curAPayer=0,curASplit='both';
@@ -741,17 +752,26 @@ function goTab(t){
   document.getElementById('t-'+t).classList.add('on');
   curTab=t;
   const fab=document.getElementById('fab');
-  fab.style.display=(t==='cfg'||t==='stat')?'none':'flex';
-  fab.style.background=t==='exp'?'#F4A261':'var(--blue)';
+  fab.style.display=t==='cfg'?'none':'flex';
+  fab.style.background=t==='exp'?'var(--orange)':(t==='note'?'var(--green)':'var(--blue)');
+  document.querySelectorAll('.exp-fab').forEach(el=>el.style.display=t==='exp'?'':'none');
+  document.querySelectorAll('.note-fab').forEach(el=>el.style.display=t==='note'?'':'none');
   closeFabMenu();
+}
+function switchAcc(t){
+  curAcc=t;
+  document.getElementById('expContent').style.display=t==='exp'?'':'none';
+  document.getElementById('statContent').style.display=t==='stat'?'':'none';
+  document.getElementById('acc-exp').classList.toggle('on',t==='exp');
+  document.getElementById('acc-stat').classList.toggle('on',t==='stat');
+  if(t==='stat')renderStat(lastExps);
 }
 let fabMenuOpen=false;
 function fabTap(){
   if(curTab==='sched'){openActM('day1');return;}
-  if(curTab==='exp'){
+  if(curTab==='exp'||curTab==='note'){
     fabMenuOpen=!fabMenuOpen;
     document.getElementById('fabMenu').classList.toggle('open',fabMenuOpen);
-    return;
   }
 }
 function closeFabMenu(){fabMenuOpen=false;document.getElementById('fabMenu').classList.remove('open');}
