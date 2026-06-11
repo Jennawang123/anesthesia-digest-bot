@@ -376,6 +376,12 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="fg"><label class="lb">活動名稱 *</label><input class="inp" id="a_name" placeholder="例：淺草寺參觀"></div>
     <div class="fg"><label class="lb">地點（自動生成 Google Maps 連結）</label><input class="inp" id="a_loc" placeholder="例：Sydney Opera House"></div>
     <div class="fg"><label class="lb">備註</label><textarea class="ta" id="a_note" placeholder="訂位資訊、注意事項…"></textarea></div>
+    <div class="fg">
+      <label class="lb">圖片（最多 2 張）</label>
+      <div id="act-img-previews" class="img-preview-row"></div>
+      <button type="button" class="btn btn-g" style="margin-top:6px;font-size:13px;padding:8px 12px" onclick="document.getElementById('actImgFile').click()" id="act-img-btn">📷 新增圖片</button>
+      <input type="file" id="actImgFile" accept="image/*" style="display:none" onchange="onActImgPick(event)">
+    </div>
     <div class="cost-box">
       <label class="lb">💰 行程花費（選填，自動加入記帳）</label>
       <div class="fr">
@@ -486,7 +492,7 @@ let CFG={},DB=null,curTab='sched';
 let weatherByDate=new Map();
 let curCat='food',curPayer=0,curSplit='both',curCur='JPY';
 let curAC='sight',curACur='JPY',curAPayer=0,curASplit='both';
-let curNT='text',curImg=null,curPieCur='JPY',lastExps={},exchRate=null;
+let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},exchRate=null,curActImages=[];
 const DG={on:false,did:null,aid:null,act:null,srcEl:null,ghost:null,timer:null,sx:0,sy:0};
 let curActOrder=0;
 
@@ -986,6 +992,7 @@ function openActM(did){
   document.getElementById('a_name').value='';
   document.getElementById('a_loc').value='';document.getElementById('a_note').value='';document.getElementById('a_cost').value='';
   document.getElementById('a_custom_ico').value='';document.getElementById('custom-ico-row').style.display='none';
+  curActImages=[];renderActImgPreviews();
   curAC='sight';renderACGrid();selAPayer(0);selASplit('both');selACur('JPY');
   openM('m-act');setTimeout(()=>document.getElementById('a_name').focus(),280);
 }
@@ -1000,6 +1007,7 @@ function openActEdit(did,aid){
     curAC=a.cat||'sight';renderACGrid();
     document.getElementById('a_custom_ico').value=a.customIco||'';
     document.getElementById('custom-ico-row').style.display=a.cat==='custom'?'':'none';
+    curActImages=a.images?[...a.images]:[];renderActImgPreviews();
     selACur(a.cost?.cur||'JPY');selAPayer(a.cost?.paidBy===CFG.p2?1:0);selASplit(a.cost?.split||'both');
     curActOrder=a.order||0;
     openM('m-act');
@@ -1018,6 +1026,7 @@ function saveAct(){
     const customIco=document.getElementById('a_custom_ico').value.trim();
     const obj={cat:curAC,name,
       ...(curAC==='custom'&&customIco?{customIco}:{}),
+      images:curActImages.length?[...curActImages]:null,
       loc:document.getElementById('a_loc').value.trim(),note:document.getElementById('a_note').value.trim(),
       cost:hasCost?{amt:costAmt,cur:curACur,paidBy:curAPayer===0?CFG.p1:CFG.p2,split:curASplit}:null,
       order:isNew?(maxOrder+1):curActOrder};
@@ -1331,6 +1340,20 @@ function saveCfg(){
 }
 function changeFB(){if(!confirm('變更 Firebase 將重新載入，確定？'))return;localStorage.removeItem('japan_trip');location.reload();}
 function clearAll(){if(!confirm('⚠️ 確定清空所有資料？'))return;if(!confirm('再次確認：清空全部？'))return;DB.ref('/').set({schedule:{},expenses:{},notes:{}}).then(()=>toast('✅ 已清空'));}
+
+// ─── Activity Images ─────────────────────────────────
+function onActImgPick(e){
+  const file=e.target.files[0];if(!file)return;
+  e.target.value='';
+  if(curActImages.length>=2){toast('最多 2 張圖片');return;}
+  compressImage(file).then(b64=>{curActImages.push(b64);renderActImgPreviews();});
+}
+function renderActImgPreviews(){
+  const el=document.getElementById('act-img-previews');if(!el)return;
+  el.innerHTML=curActImages.map((b,i)=>`<div class="img-preview-item"><img src="${b}"><button class="img-preview-rm" onclick="removeActImg(${i})">✕</button></div>`).join('');
+  const btn=document.getElementById('act-img-btn');if(btn)btn.style.display=curActImages.length>=2?'none':'';
+}
+function removeActImg(i){curActImages.splice(i,1);renderActImgPreviews();}
 
 // ─── Utilities ───────────────────────────────────────
 function autolink(text){
