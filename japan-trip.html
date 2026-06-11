@@ -965,7 +965,8 @@ function renderSched(sched){
                 ${act.time?`<div class="act-time">⏰ ${act.time}</div>`:''}
                 <div class="act-name">${esc(act.name||'')}</div>
                 ${act.loc?`<div class="act-loc"><a href="${mapUrl}" target="_blank">📍 ${esc(act.loc)}</a></div>`:''}
-                ${act.note?`<div class="act-note-t">💬 ${esc(act.note)}</div>`:''}
+                ${act.note?`<div class="act-note-t">💬 ${autolink(act.note)}</div>`:''}
+                ${act.images?.length?`<div class="act-imgs">${act.images.map(b=>`<img class="act-img-thumb" src="${b}" onclick="openLightbox('${b}')">`).join('')}</div>`:''}
                 ${act.cost?.amt>0?`<div class="act-cost">💰 ${sym}${parseFloat(act.cost.amt).toFixed(dp)} ${act.cost.cur||'JPY'}</div>`:''}
               </div>
               <div class="act-btns">
@@ -1382,5 +1383,10 @@ function openLightbox(src){
   openM('m-lb');
 }
 </script>
+
+<!-- Lightbox -->
+<div class="ov" id="m-lb" onclick="closeM('m-lb')">
+  <img id="lb-img" src="" alt="">
+</div>
 </body>
 </html>
