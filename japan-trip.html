@@ -724,9 +724,11 @@ function _fbListen(){
       if(sched['day1']&&sched['day1'].date!==expected) fixDates(false);
     }
     lastExps=d.expenses||{};
+    lastNotes=d.notes||{};
     renderSched(sched);
     renderExp(lastExps);
     renderStat(lastExps);
+    renderNotes(lastNotes);
     sync(false);
   },err=>{sync(false);toast('⚠️ Firebase 錯誤：'+err.message);});
 }
@@ -1361,6 +1363,59 @@ function saveCfg(){
 }
 function changeFB(){if(!confirm('變更 Firebase 將重新載入，確定？'))return;localStorage.removeItem('japan_trip');location.reload();}
 function clearAll(){if(!confirm('⚠️ 確定清空所有資料？'))return;if(!confirm('再次確認：清空全部？'))return;DB.ref('/').set({schedule:{},expenses:{},notes:{}}).then(()=>toast('✅ 已清空'));}
+
+// ─── Notes ───────────────────────────────────────────
+function renderNotes(notes){
+  const list=Object.entries(notes||{}).sort((a,b)=>(b[1].createdAt||'').localeCompare(a[1].createdAt||''));
+  const el=document.getElementById('noteList');
+  if(!el)return;
+  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-i">📒</div><div class="empty-h">尚無記事，點 ＋ 新增</div></div>';return;}
+  el.innerHTML=list.map(([nid,n])=>renderNoteCard(nid,n)).join('');
+}
+function renderNoteCard(nid,n){
+  if(n.type==='note'){
+    const preview=esc((n.content||'').slice(0,80))+(n.content?.length>80?'…':'');
+    const thumbs=(n.images||[]).map(b=>`<img class="act-img-thumb" src="${b}" onclick="openLightbox('${b}')">`).join('');
+    return`<div class="card note-card">
+      <div class="note-hdr">
+        <div class="note-title">📝 ${esc(n.title||'（無標題）')}</div>
+        <div style="display:flex;gap:4px">
+          <button class="ib" onclick="openNoteEdit('${nid}')">✎</button>
+          <button class="ib" onclick="delNote('${nid}')">✕</button>
+        </div>
+      </div>
+      ${preview?`<div class="note-preview">${preview}</div>`:''}
+      ${thumbs?`<div class="note-thumbs">${thumbs}</div>`:''}
+    </div>`;
+  }
+  const total=n.items?.length||0,doneCount=(n.items||[]).filter(x=>x.done).length;
+  const items=(n.items||[]).map((item,i)=>`
+    <div class="todo-item">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" ${item.done?'checked':''} onchange="toggleTodoItem('${nid}',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--green)">
+        <span style="${item.done?'text-decoration:line-through;color:var(--muted)':''}">${esc(item.text||'')}</span>
+      </label>
+    </div>`).join('');
+  return`<div class="card note-card">
+    <div class="note-hdr">
+      <div class="note-title">✅ ${esc(n.title||'待辦清單')}</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:var(--muted)">${doneCount}/${total}</span>
+        <button class="ib" onclick="openTodoEdit('${nid}')">✎</button>
+        <button class="ib" onclick="delNote('${nid}')">✕</button>
+      </div>
+    </div>
+    <div class="todo-items">${items}</div>
+  </div>`;
+}
+function toggleTodoItem(nid,idx,done){
+  DB.ref('/notes/'+nid+'/items/'+idx+'/done').set(done);
+}
+function delNote(nid){
+  if(!confirm('確定刪除？'))return;
+  DB.ref('/notes/'+nid).remove();
+  toast('🗑️ 已刪除');
+}
 
 // ─── Activity Images ─────────────────────────────────
 function onActImgPick(e){
