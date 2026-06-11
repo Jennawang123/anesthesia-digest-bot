@@ -1417,6 +1417,52 @@ function delNote(nid){
   toast('🗑️ 已刪除');
 }
 
+// ─── Todo CRUD ───────────────────────────────────────
+let curTodoItems=[];
+function renderTodoItemsEdit(){
+  const el=document.getElementById('todo-items-edit');if(!el)return;
+  el.innerHTML=curTodoItems.map((item,i)=>`
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="flex:1;font-size:14px">${esc(item.text)}</span>
+      <button class="ib" onclick="removeTodoItem(${i})">✕</button>
+    </div>`).join('');
+}
+function addTodoItem(){
+  const inp=document.getElementById('t_new_item');
+  const text=inp.value.trim();if(!text)return;
+  curTodoItems.push({text,done:false});
+  inp.value='';
+  renderTodoItemsEdit();
+}
+function removeTodoItem(i){curTodoItems.splice(i,1);renderTodoItemsEdit();}
+function openTodoM(){
+  document.getElementById('m-todo-t').textContent='新增待辦清單';
+  document.getElementById('mt-id').value='';
+  document.getElementById('t_title').value='';
+  curTodoItems=[];renderTodoItemsEdit();
+  openM('m-todo');setTimeout(()=>document.getElementById('t_title').focus(),280);
+}
+function openTodoEdit(nid){
+  const n=lastNotes[nid];if(!n)return;
+  document.getElementById('m-todo-t').textContent='編輯待辦清單';
+  document.getElementById('mt-id').value=nid;
+  document.getElementById('t_title').value=n.title||'';
+  curTodoItems=n.items?n.items.map(x=>({...x})):[];
+  renderTodoItemsEdit();
+  openM('m-todo');
+}
+function saveTodo(){
+  const nid=document.getElementById('mt-id').value||('n'+uid());
+  const title=document.getElementById('t_title').value.trim();
+  if(!curTodoItems.length){toast('請新增至少一個項目');return;}
+  const now=new Date().toISOString();
+  const existing=lastNotes[nid];
+  const obj={type:'todo',title,items:[...curTodoItems],
+    createdAt:existing?.createdAt||now,updatedAt:now};
+  DB.ref('/notes/'+nid).set(obj);
+  closeM('m-todo');toast('✅ 已儲存');
+}
+
 // ─── Note CRUD ───────────────────────────────────────
 let curNoteImages=[];
 function onNoteImgPick(e){
@@ -1524,6 +1570,24 @@ function openLightbox(src){
       <input type="file" id="noteImgFile" accept="image/*" style="display:none" onchange="onNoteImgPick(event)">
     </div>
     <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-note')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveNote()">儲存</button></div>
+  </div>
+</div>
+<!-- Todo modal -->
+<div class="ov" id="m-todo">
+  <div class="sheet">
+    <div class="hdl"></div>
+    <div class="st" id="m-todo-t">新增待辦清單</div>
+    <input type="hidden" id="mt-id">
+    <div class="fg"><label class="lb">標題</label><input class="inp" id="t_title" placeholder="清單名稱…"></div>
+    <div class="fg">
+      <label class="lb">項目</label>
+      <div id="todo-items-edit"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="inp" id="t_new_item" placeholder="新增項目…" style="flex:1" onkeydown="if(event.key==='Enter'){addTodoItem();event.preventDefault();}">
+        <button class="btn btn-b" style="flex:0 0 60px;padding:0" onclick="addTodoItem()">＋</button>
+      </div>
+    </div>
+    <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-todo')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveTodo()">儲存</button></div>
   </div>
 </div>
 </body>
