@@ -552,6 +552,7 @@ async function scanReceipt(base64Image,mimeType='image/jpeg'){
 
 function onReceiptPick(ev){
   const f=ev.target.files[0];ev.target.value='';if(!f)return;
+  if(!CFG.geminiKey){toast('⚠️ 請先在設定中填寫 Gemini API Key');openExpM();return;}
   toast('🔍 辨識收據中…');
   const objUrl=URL.createObjectURL(f);
   const img=new Image();
@@ -566,10 +567,11 @@ function onReceiptPick(ev){
     const data=await scanReceipt(base64,'image/jpeg');
     if(data&&data.amount>0){
       openExpMPrefilled(data);
-    }else{
-      toast('⚠️ 辨識失敗，請手動輸入');
+    }else if(data){
+      toast('⚠️ 收據金額無法辨識，請手動填入');
       openExpM();
     }
+    // else: scanReceipt already showed a specific error toast
   };
   img.onerror=()=>{URL.revokeObjectURL(objUrl);toast('⚠️ 圖片載入失敗');openExpM();};
   img.src=objUrl;
