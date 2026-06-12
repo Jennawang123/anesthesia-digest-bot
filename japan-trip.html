@@ -524,8 +524,7 @@ async function scanReceipt(base64Image,mimeType='image/jpeg'){
         contents:[{parts:[
           {text:RECEIPT_PROMPT},
           {inline_data:{mime_type:mimeType,data:base64Image}}
-        ]}],
-        generationConfig:{responseMimeType:'application/json'}
+        ]}]
       })}
     );
     if(!res.ok){
