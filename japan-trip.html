@@ -515,30 +515,39 @@ async function fetchRate(){
 }
 
 async function scanReceipt(base64Image,mimeType='image/jpeg'){
-  if(!CFG.geminiKey)return null;
+  if(!CFG.geminiKey){toast('⚠️ 請先在設定中填寫 Gemini API Key');return null;}
   try{
     const res=await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${CFG.geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CFG.geminiKey}`,
       {method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         contents:[{parts:[
           {text:RECEIPT_PROMPT},
           {inline_data:{mime_type:mimeType,data:base64Image}}
         ]}],
-        generation_config:{response_mime_type:'application/json'}
+        generationConfig:{responseMimeType:'application/json'}
       })}
     );
-    if(!res.ok){const t=await res.text();console.error('Gemini HTTP',res.status,t);return null;}
+    if(!res.ok){
+      const t=await res.text();
+      let msg='';
+      try{const j=JSON.parse(t);msg=j.error?.message||t;}catch{msg=t;}
+      toast('⚠️ Gemini 錯誤 '+res.status+': '+msg.slice(0,60));
+      console.error('Gemini HTTP',res.status,t);
+      return null;
+    }
     const json=await res.json();
-    console.log('Gemini raw',JSON.stringify(json).slice(0,400));
     const cand=json.candidates?.[0];
-    if(!cand||cand.finishReason==='SAFETY'||!cand.content){console.warn('Gemini blocked or empty',cand?.finishReason);return null;}
+    if(!cand||cand.finishReason==='SAFETY'||!cand.content){
+      toast('⚠️ 收據辨識被封鎖（'+cand?.finishReason+'）');
+      return null;
+    }
     const raw=cand.content.parts?.[0]?.text||'';
     try{return JSON.parse(raw);}catch{
       const m=raw.match(/\{[\s\S]*\}/);
       return m?JSON.parse(m[0]):null;
     }
-  }catch(e){console.error('scanReceipt',e);return null;}
+  }catch(e){toast('⚠️ 網路錯誤：'+e.message);console.error('scanReceipt',e);return null;}
 }
 
 function onReceiptPick(ev){
