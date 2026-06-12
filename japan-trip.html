@@ -517,9 +517,13 @@ async function fetchRate(){
 async function scanReceipt(base64Image,mimeType='image/jpeg'){
   if(!CFG.geminiKey){toast('⚠️ 請先在設定中填寫 Gemini API Key');return null;}
   try{
-    const res=await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CFG.geminiKey}`,
-      {method:'POST',headers:{'Content-Type':'application/json'},
+    const isNewKey=CFG.geminiKey.startsWith('AQ.');
+    const url=isNewKey
+      ?'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+      :`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CFG.geminiKey}`;
+    const headers={'Content-Type':'application/json'};
+    if(isNewKey)headers['x-goog-api-key']=CFG.geminiKey;
+    const res=await fetch(url,{method:'POST',headers,
       body:JSON.stringify({
         contents:[{parts:[
           {text:RECEIPT_PROMPT},
