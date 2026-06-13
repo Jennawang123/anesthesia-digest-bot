@@ -519,8 +519,8 @@ async function scanReceipt(base64Image,mimeType='image/jpeg'){
   try{
     const isNewKey=CFG.geminiKey.startsWith('AQ.');
     const url=isNewKey
-      ?'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
-      :`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CFG.geminiKey}`;
+      ?'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+      :`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CFG.geminiKey}`;
     const headers={'Content-Type':'application/json'};
     if(isNewKey)headers['x-goog-api-key']=CFG.geminiKey;
     const res=await fetch(url,{method:'POST',headers,
