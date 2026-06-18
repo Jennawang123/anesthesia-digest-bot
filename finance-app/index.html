@@ -135,6 +135,39 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
 .cfg-bar-dot.off{background:#f87171}
 .cfg-bar-text{font-size:13px;color:#94a3b8;flex:1}
 .cfg-bar-edit{font-size:12px;color:#38bdf8;flex-shrink:0}
+
+/* ── New NW Hero Card ─────────────────────────── */
+.nw-card{background:#1c2537;border-radius:20px;padding:18px 16px;margin-bottom:16px}
+.nw-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px}
+.nw-card-label{font-size:11px;color:#64748b;letter-spacing:.5px;margin-bottom:4px}
+.nw-card-value{font-size:34px;font-weight:800;color:#e2e8f0;transition:filter .2s}
+.nw-card-value.hidden{filter:blur(10px);user-select:none}
+.nw-eye-btn{background:#0f172a;border:none;color:#64748b;font-size:16px;cursor:pointer;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nw-ctrl-row{display:flex;justify-content:space-between;align-items:center;margin:10px 0 4px}
+.nw-toggle-grp,.nw-filter-grp{display:flex;gap:4px}
+.nw-toggle{background:#0f172a;color:#64748b;border:none;border-radius:20px;padding:5px 11px;font-size:12px;cursor:pointer}
+.nw-toggle.on{background:#1e3a5f;color:#38bdf8}
+.nw-filter{background:#0f172a;color:#64748b;border:none;border-radius:20px;padding:5px 11px;font-size:12px;cursor:pointer}
+.nw-filter.on{background:#38bdf8;color:#0f172a;font-weight:700}
+.nw-chart-wrap{position:relative;height:155px;margin:4px 0 8px}
+.nw-sub-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:10px 0 8px;border-top:1px solid #0f172a;font-size:13px}
+.nw-sub-lbl{font-size:11px;color:#64748b}
+.nw-sub-val{font-weight:700;color:#e2e8f0}
+.nw-chg-pill{font-size:11px;background:#1e3a5f;color:#38bdf8;padding:2px 7px;border-radius:10px}
+.nw-chg-pill.pos{background:#14532d;color:#4ade80}
+.nw-chg-pill.neg{background:#450a0a;color:#f87171}
+.nw-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.nw-bar-ticker{font-size:12px;font-weight:700;color:#94a3b8;width:54px;flex-shrink:0}
+.nw-bar-track{flex:1;height:7px;background:#0f172a;border-radius:4px;overflow:hidden}
+.nw-bar-fill{height:100%;border-radius:4px;min-width:3px;transition:width .3s}
+.nw-bar-stat{font-size:11px;color:#94a3b8;min-width:110px;text-align:right;white-space:nowrap}
+.nw-alloc-bar{display:flex;height:5px;border-radius:3px;overflow:hidden;margin:8px 0 5px}
+.nw-alloc-legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11px;color:#94a3b8}
+.nw-bottom{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #0f172a;padding-top:12px;margin-top:6px;gap:0}
+.nw-stat{text-align:center;padding:0 4px}
+.nw-stat:not(:last-child){border-right:1px solid #0f172a}
+.nw-stat-lbl{font-size:11px;color:#64748b;margin-bottom:3px}
+.nw-stat-val{font-size:16px;font-weight:700;color:#e2e8f0}
 </style>
 </head>
 <body>
@@ -235,9 +268,67 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
 
 <!-- ══════════════ TAB 4: 資產 ══════════════ -->
 <div id="page-assets" class="page">
-  <div class="nw-hero">
-    <div class="nw-label">淨資產</div>
-    <div class="nw-val" id="nw-val">--</div>
+
+  <!-- ── 淨資產大卡片 ── -->
+  <div class="nw-card">
+    <div class="nw-card-top">
+      <div>
+        <div class="nw-card-label">淨資產 (NETWORTH)</div>
+        <div class="nw-card-value" id="nw-val">--</div>
+      </div>
+      <button class="nw-eye-btn" id="nw-eye-btn" onclick="toggleNWVis()">👁</button>
+    </div>
+
+    <!-- 絕對值 / % 切換 + 時間篩選 -->
+    <div class="nw-ctrl-row">
+      <div class="nw-toggle-grp">
+        <button class="nw-toggle on" id="nwm-abs" onclick="setNWMode('abs')">淨資產</button>
+        <button class="nw-toggle"    id="nwm-pct" onclick="setNWMode('pct')">⇌ %</button>
+      </div>
+      <div class="nw-filter-grp">
+        <button class="nw-filter"    id="nwr-month" onclick="setNWRange('month')">近月</button>
+        <button class="nw-filter on" id="nwr-year"  onclick="setNWRange('year')">今年</button>
+        <button class="nw-filter"    id="nwr-all"   onclick="setNWRange('all')">全部</button>
+      </div>
+    </div>
+
+    <!-- 走勢圖 -->
+    <div class="nw-chart-wrap"><canvas id="nw-chart"></canvas></div>
+
+    <!-- 排除現金曝險 + 未實現損益 -->
+    <div class="nw-sub-row">
+      <span class="nw-sub-lbl">排除現金曝險</span>
+      <span class="nw-sub-val" id="nw-noncash">--</span>
+      <span style="flex:1"></span>
+      <span class="nw-sub-lbl">未實現損益</span>
+      <span class="nw-sub-val" id="nw-unrealized" style="margin-left:2px">--</span>
+      <span class="nw-chg-pill" id="nw-unrealized-pct">--</span>
+    </div>
+
+    <!-- 個別持股水平 bar -->
+    <div id="nw-stock-bars"></div>
+
+    <!-- 投組配比彩色條 -->
+    <div id="nw-alloc-wrap" style="display:none">
+      <div class="nw-alloc-bar" id="nw-alloc-bar"></div>
+      <div class="nw-alloc-legend" id="nw-alloc-legend"></div>
+    </div>
+
+    <!-- 底部三欄 -->
+    <div class="nw-bottom">
+      <div class="nw-stat">
+        <div class="nw-stat-lbl">總資產</div>
+        <div class="nw-stat-val" id="nw-total-a">--</div>
+      </div>
+      <div class="nw-stat">
+        <div class="nw-stat-lbl">槓桿率</div>
+        <div class="nw-stat-val" id="nw-leverage">--</div>
+      </div>
+      <div class="nw-stat">
+        <div class="nw-stat-lbl">總負債</div>
+        <div class="nw-stat-val" id="nw-total-l" style="color:#4ade80">--</div>
+      </div>
+    </div>
   </div>
 
   <!-- 投資摘要 -->
@@ -282,12 +373,6 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
       <span id="liab-total" style="font-size:13px;color:#f87171;flex:1;text-align:right"></span>
     </div>
     <div class="asset-card" id="liab-card"><div class="empty">無負債</div></div>
-  </div>
-
-  <!-- 走勢圖 -->
-  <div class="card">
-    <div class="label">淨資產走勢</div>
-    <div class="chart-wrap"><canvas id="nw-chart"></canvas></div>
   </div>
 
   <div style="margin-top:4px">
@@ -896,31 +981,189 @@ async function refreshPrices(market){
 }
 
 function calcNetWorth(){
-  const twVal=_holdings.filter(h=>h.market==='TW').reduce((s,h)=>s+(prices[`TW:${h.ticker}`]||0)*h.shares,0);
-  const usValUSD=_holdings.filter(h=>h.market==='US').reduce((s,h)=>s+(prices[`US:${h.ticker}`]||0)*h.shares,0);
+  const twStocks=_holdings.filter(h=>h.market==='TW');
+  const usStocks=_holdings.filter(h=>h.market==='US');
+  const twVal=twStocks.reduce((s,h)=>s+Math.round((prices[`TW:${h.ticker}`]||0)*h.shares),0);
+  const usValUSD=usStocks.reduce((s,h)=>s+(prices[`US:${h.ticker}`]||0)*h.shares,0);
+  const usValTWD=Math.round(usValUSD*usdRate);
   const cashVal=_cash.reduce((s,c)=>s+c.balance,0);
-  const totalA=Math.round(twVal+usValUSD*usdRate+cashVal);
+  const totalA=Math.round(twVal+usValTWD+cashVal);
   const totalL=_liabs.reduce((s,l)=>s+l.balance,0);
   const nw=totalA-totalL;
-  window._snap={totalA,totalL};
+  window._snap={totalA,totalL,nw,twVal,usValTWD,cashVal};
+
+  // Unrealized gain (cost basis comparison)
+  const twCost=twStocks.reduce((s,h)=>s+(h.avg_price||0)*h.shares,0);
+  const usCostTWD=Math.round(usStocks.reduce((s,h)=>s+(h.avg_price||0)*h.shares,0)*usdRate);
+  const totalCost=Math.round(twCost+usCostTWD);
+  const totalInvest=twVal+usValTWD;
+  const unrealized=Math.round(totalInvest-totalCost);
+  const unrealizedPct=totalCost>0?((unrealized/totalCost)*100):0;
+
+  // Update hero value
   const el=document.getElementById('nw-val');
-  if(el){el.textContent=`NT$${nw.toLocaleString()}`;el.className=`nw-val ${nw>=0?'pos':'neg'}`; }
+  if(el) el.textContent=`NT$${nw.toLocaleString()}`;
+
+  // Non-cash exposure
+  const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  setEl('nw-noncash',`NT$${Math.round(twVal+usValTWD).toLocaleString()}`);
+
+  // Unrealized PnL
+  const uEl=document.getElementById('nw-unrealized');
+  const uPEl=document.getElementById('nw-unrealized-pct');
+  if(uEl){
+    const sign=unrealized>=0?'+':'';
+    uEl.textContent=`${sign}NT$${unrealized.toLocaleString()}`;
+    uEl.style.color=unrealized>=0?'#4ade80':'#f87171';
+  }
+  if(uPEl){
+    const sign=unrealizedPct>=0?'+':'';
+    uPEl.textContent=`${sign}${unrealizedPct.toFixed(2)}%`;
+    uPEl.className=`nw-chg-pill ${unrealized>=0?'pos':'neg'}`;
+  }
+
+  // Bottom stats
+  const fmt=v=>{const m=Math.abs(v)/10000; return m>=1000?`${(m/100).toFixed(1)}億`:`${m.toFixed(0)}萬`;};
+  setEl('nw-total-a', fmt(totalA));
+  setEl('nw-total-l', fmt(totalL));
+  const leverage=nw>0?(totalA/nw).toFixed(2):'--';
+  setEl('nw-leverage', nw>0?`${leverage}x`:'--');
+  const lEl=document.getElementById('nw-total-l');
+  if(lEl) lEl.style.color=totalL>0?'#f87171':'#4ade80';
+
+  // Portfolio allocation bar + stock bars
+  renderStockBars([...twStocks,...usStocks]);
+  renderAllocBar([...twStocks,...usStocks]);
+}
+
+// NW chart state
+let _nwHistory=[], _nwMode='abs', _nwRange='year';
+
+function setNWMode(m){
+  _nwMode=m;
+  document.querySelectorAll('.nw-toggle').forEach(b=>b.classList.remove('on'));
+  document.getElementById(`nwm-${m}`).classList.add('on');
+  renderNWChart(_nwHistory);
+}
+function setNWRange(r){
+  _nwRange=r;
+  document.querySelectorAll('.nw-filter').forEach(b=>b.classList.remove('on'));
+  document.getElementById(`nwr-${r}`).classList.add('on');
+  renderNWChart(_nwHistory);
+}
+function toggleNWVis(){
+  const el=document.getElementById('nw-val');
+  const btn=document.getElementById('nw-eye-btn');
+  if(el.classList.toggle('hidden')) btn.textContent='🙈';
+  else btn.textContent='👁';
+}
+
+function filterHistory(history){
+  if(!history.length) return history;
+  const now=new Date();
+  const thisYear=now.getFullYear();
+  if(_nwRange==='month'){
+    const cutoff=new Date(now.getFullYear(),now.getMonth()-1,1);
+    const ym=`${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}`;
+    return history.filter(h=>h.year_month>=ym);
+  }
+  if(_nwRange==='year') return history.filter(h=>h.year_month.startsWith(String(thisYear)));
+  return history;
 }
 
 function renderNWChart(history){
+  _nwHistory=history;
   if(nwChart) nwChart.destroy();
-  if(!history.length){
-    const wrap=document.getElementById('nw-chart').parentElement;
-    wrap.innerHTML='<div class="empty" style="height:185px;line-height:185px">點「儲存快照」記錄每月淨資產</div>';
+  const filtered=filterHistory(history);
+  const canvas=document.getElementById('nw-chart');
+  if(!canvas) return;
+  if(!filtered.length){
+    canvas.parentElement.innerHTML='<div class="empty" style="height:155px;line-height:155px">尚無快照資料</div>';
     return;
   }
-  nwChart=new Chart(document.getElementById('nw-chart'),{
+  const raw=filtered.map(h=>h.net_worth);
+  let data, yFmt;
+  if(_nwMode==='pct' && raw.length>1){
+    const base=raw[0];
+    data=raw.map(v=>base>0?((v-base)/base*100):0);
+    yFmt=v=>`${v>=0?'+':''}${v.toFixed(1)}%`;
+  } else {
+    data=raw;
+    yFmt=v=>{const m=Math.abs(v)/10000;return m>=1000?`${(m/100).toFixed(1)}億`:`${m.toFixed(0)}萬`;};
+  }
+  const labels=filtered.map(h=>h.year_month.slice(5));
+  const ctx=canvas.getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,0,155);
+  grad.addColorStop(0,'rgba(96,165,250,0.45)');
+  grad.addColorStop(1,'rgba(96,165,250,0.02)');
+  nwChart=new Chart(canvas,{
     type:'line',
-    data:{labels:history.map(h=>h.year_month.slice(5)),
-          datasets:[{label:'淨資產',data:history.map(h=>h.net_worth),borderColor:'#4ade80',backgroundColor:'rgba(74,222,128,.1)',fill:true,tension:.3,pointRadius:3}]},
-    options:{plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
-             scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',font:{size:10},callback:v=>`${(v/10000).toFixed(0)}萬`}}}}
+    data:{labels,datasets:[{label:'淨資產',data,borderColor:'#60a5fa',backgroundColor:grad,fill:true,tension:.35,pointRadius:filtered.length<=12?4:2,pointBackgroundColor:'#60a5fa',borderWidth:2}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const v=ctx.parsed.y;return _nwMode==='pct'?`${v>=0?'+':''}${v.toFixed(2)}%`:`NT$${Math.round(v).toLocaleString()}`;},labelColor:()=>({backgroundColor:'#60a5fa',borderColor:'#60a5fa'})}}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748b',font:{size:10},maxTicksLimit:6}},
+        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748b',font:{size:10},callback:yFmt,maxTicksLimit:6}}
+      }
+    }
   });
+}
+
+const ALLOC_COLORS=['#60a5fa','#4ade80','#fb923c','#a78bfa','#f472b6','#34d399','#fbbf24','#38bdf8','#f87171','#c084fc'];
+
+function renderStockBars(stocks){
+  const container=document.getElementById('nw-stock-bars');
+  if(!container) return;
+  const rows=stocks.filter(s=>{
+    const p=prices[`${s.market}:${s.ticker}`]||0;
+    return p>0 && s.avg_price>0;
+  }).map(s=>{
+    const p=prices[`${s.market}:${s.ticker}`]||0;
+    const cost=(s.avg_price||0)*s.shares;
+    const valRaw=p*s.shares;
+    const gainPct=cost>0?((valRaw-cost)/cost*100):0;
+    const gainAmt=s.market==='TW'?Math.round(valRaw-cost):Math.round((valRaw-cost)*usdRate);
+    const currency=s.market==='TW'?'NT$':'$';
+    return {ticker:s.ticker, gainPct, gainAmt, currency};
+  }).sort((a,b)=>Math.abs(b.gainPct)-Math.abs(a.gainPct)).slice(0,5);
+
+  if(!rows.length){container.innerHTML='';return;}
+  const maxAbs=Math.max(...rows.map(r=>Math.abs(r.gainPct)),1);
+  container.innerHTML=rows.map(r=>{
+    const pct=Math.min(Math.abs(r.gainPct)/maxAbs*100,100);
+    const col=r.gainPct>=0?'#4ade80':'#f87171';
+    const sign=r.gainPct>=0?'+':'';
+    const amtSign=r.gainAmt>=0?'+':'';
+    return `<div class="nw-bar-row">
+      <div class="nw-bar-ticker">${r.ticker}</div>
+      <div class="nw-bar-track"><div class="nw-bar-fill" style="width:${pct}%;background:${col}"></div></div>
+      <div class="nw-bar-stat" style="color:${col}">${sign}${r.gainPct.toFixed(2)}% ${amtSign}${r.gainAmt.toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAllocBar(stocks){
+  const wrap=document.getElementById('nw-alloc-wrap');
+  const bar=document.getElementById('nw-alloc-bar');
+  const legend=document.getElementById('nw-alloc-legend');
+  if(!wrap||!bar||!legend) return;
+  const items=stocks.map(s=>{
+    const p=prices[`${s.market}:${s.ticker}`]||0;
+    const val=s.market==='TW'?Math.round(p*s.shares):Math.round(p*s.shares*usdRate);
+    return {ticker:s.ticker,val};
+  }).filter(i=>i.val>0).sort((a,b)=>b.val-a.val);
+  if(!items.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  const total=items.reduce((s,i)=>s+i.val,0);
+  bar.innerHTML=items.map((it,idx)=>{
+    const pct=(it.val/total*100).toFixed(1);
+    return `<div style="flex:${pct};background:${ALLOC_COLORS[idx%ALLOC_COLORS.length]}"></div>`;
+  }).join('');
+  legend.innerHTML=items.map((it,idx)=>{
+    const pct=(it.val/total*100).toFixed(0);
+    return `<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${ALLOC_COLORS[idx%ALLOC_COLORS.length]};margin-right:3px"></span>${it.ticker} ${pct}%</span>`;
+  }).join('');
 }
 
 // ── Inline stock rendering ────────────────────────────────────
