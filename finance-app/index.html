@@ -211,8 +211,26 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
     <div id="income-list"><div class="empty">尚無收入記錄</div></div>
   </div>
   <div class="card">
-    <div class="label">近12個月收入</div>
+    <div class="label">近12個月收支</div>
     <div class="chart-wrap"><canvas id="inc-chart"></canvas></div>
+  </div>
+
+  <!-- 本月結餘 -->
+  <div class="card" id="balance-card">
+    <div class="label">本月結餘</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 6px">
+      <span style="font-size:13px;color:#64748b">收入</span>
+      <span style="font-size:15px;font-weight:700;color:#4ade80" id="bal-income">--</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="font-size:13px;color:#64748b">支出</span>
+      <span style="font-size:15px;font-weight:700;color:#f87171" id="bal-expense">--</span>
+    </div>
+    <div style="border-top:1px solid #334155;margin:8px 0"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:14px;font-weight:600">結餘</span>
+      <span style="font-size:22px;font-weight:800" id="bal-net">--</span>
+    </div>
   </div>
 </div>
 
@@ -833,6 +851,13 @@ async function loadIncome(){
   try{
     const [summary,allIncome]=await Promise.all([api(`/finance/summary/${ym}`),api('/finance/income')]);
     document.getElementById('inc-total').textContent=`NT$${summary.total_income.toLocaleString()}`;
+    // 結餘卡片
+    const bal=summary.balance;
+    document.getElementById('bal-income').textContent=`+NT$${summary.total_income.toLocaleString()}`;
+    document.getElementById('bal-expense').textContent=`-NT$${summary.total_expense.toLocaleString()}`;
+    const balEl=document.getElementById('bal-net');
+    balEl.textContent=`${bal>=0?'+':''}NT$${bal.toLocaleString()}`;
+    balEl.style.color=bal>=0?'#4ade80':'#f87171';
     const mine=allIncome.filter(i=>i.year_month===ym);
     document.getElementById('income-list').innerHTML=mine.length
       ?mine.map(i=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #0f172a">
