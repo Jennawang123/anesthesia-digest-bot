@@ -58,6 +58,10 @@ CREATE TABLE IF NOT EXISTS futures_trades (
     point_value INTEGER NOT NULL DEFAULT 50, fee INTEGER NOT NULL DEFAULT 0,
     note TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS net_worth_daily (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL UNIQUE,
+    total_assets INTEGER NOT NULL, total_liabilities INTEGER NOT NULL, net_worth INTEGER NOT NULL
+);
 """
 
 SCHEMA_PG = """
@@ -98,6 +102,10 @@ CREATE TABLE IF NOT EXISTS futures_trades (
     exit_date TEXT, exit_price INTEGER,
     point_value INTEGER NOT NULL DEFAULT 50, fee INTEGER NOT NULL DEFAULT 0,
     note TEXT DEFAULT '', created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS net_worth_daily (
+    id SERIAL PRIMARY KEY, date TEXT NOT NULL UNIQUE,
+    total_assets INTEGER NOT NULL, total_liabilities INTEGER NOT NULL, net_worth INTEGER NOT NULL
 );
 """
 
@@ -328,6 +336,22 @@ def save_net_worth_snapshot(year_month: str, assets: int, liabilities: int):
 def list_net_worth_history() -> list:
     with engine.connect() as conn:
         return _rows(conn.execute(text("SELECT * FROM net_worth_history ORDER BY year_month")))
+
+
+def save_net_worth_daily(date: str, assets: int, liabilities: int):
+    net = assets - liabilities
+    with engine.begin() as conn:
+        conn.execute(text(
+            "INSERT INTO net_worth_daily (date,total_assets,total_liabilities,net_worth) "
+            "VALUES (:d,:a,:l,:n) ON CONFLICT(date) DO UPDATE SET "
+            "total_assets=EXCLUDED.total_assets, total_liabilities=EXCLUDED.total_liabilities, "
+            "net_worth=EXCLUDED.net_worth"
+        ), {"d": date, "a": assets, "l": liabilities, "n": net})
+
+
+def list_net_worth_daily() -> list:
+    with engine.connect() as conn:
+        return _rows(conn.execute(text("SELECT * FROM net_worth_daily ORDER BY date")))
 
 
 # ── Futures ───────────────────────────────────────────────────

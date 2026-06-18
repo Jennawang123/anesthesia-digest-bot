@@ -295,6 +295,12 @@ class NetWorthSnapshotIn(BaseModel):
     total_liabilities: int
 
 
+class NetWorthDailyIn(BaseModel):
+    date: str          # YYYY-MM-DD
+    total_assets: int
+    total_liabilities: int
+
+
 @router.get("/networth/history")
 def get_networth_history(x_api_key: Optional[str] = Header(None)):
     _auth(x_api_key)
@@ -305,6 +311,19 @@ def get_networth_history(x_api_key: Optional[str] = Header(None)):
 def post_networth_snapshot(s: NetWorthSnapshotIn, x_api_key: Optional[str] = Header(None)):
     _auth(x_api_key)
     db.save_net_worth_snapshot(s.year_month, s.total_assets, s.total_liabilities)
+    return {"ok": True}
+
+
+@router.get("/networth/daily")
+def get_networth_daily(x_api_key: Optional[str] = Header(None)):
+    _auth(x_api_key)
+    return db.list_net_worth_daily()
+
+
+@router.post("/networth/daily-snapshot")
+def post_networth_daily(s: NetWorthDailyIn, x_api_key: Optional[str] = Header(None)):
+    _auth(x_api_key)
+    db.save_net_worth_daily(s.date, s.total_assets, s.total_liabilities)
     return {"ok": True}
 
 

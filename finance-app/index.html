@@ -907,7 +907,7 @@ async function loadAssets(){
   if(!API) return;
   try{
     [_holdings,_liabs,_cash]=await Promise.all([api('/finance/holdings'),api('/finance/liabilities'),api('/finance/cash')]);
-    const [history,ftTrades]=await Promise.all([api('/finance/networth/history'),api('/finance/futures')]);
+    const [history,ftTrades]=await Promise.all([api('/finance/networth/daily'),api('/finance/futures')]);
     await Promise.all([fetchAllPrices(_holdings), fetchUsdRate()]);
 
     // TW stocks summary
@@ -954,11 +954,10 @@ async function loadAssets(){
     renderCash(); renderLiabs();
     calcNetWorth();
     renderNWChart(history);
-    // Auto-save this month's snapshot whenever assets tab is loaded
-    const _now=new Date();
-    const _ym=`${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}`;
+    // Auto-save daily snapshot
+    const _today=new Date().toISOString().slice(0,10);
     const _s=window._snap||{totalA:0,totalL:0};
-    api('/finance/networth/snapshot',{method:'POST',body:JSON.stringify({year_month:_ym,total_assets:_s.totalA,total_liabilities:_s.totalL})}).catch(()=>{});
+    if(_s.totalA>0) api('/finance/networth/daily-snapshot',{method:'POST',body:JSON.stringify({date:_today,total_assets:_s.totalA,total_liabilities:_s.totalL})}).catch(()=>{});
   }catch(e){console.error(e);}
 }
 
@@ -1060,13 +1059,16 @@ function toggleNWVis(){
 function filterHistory(history){
   if(!history.length) return history;
   const now=new Date();
-  const thisYear=now.getFullYear();
+  const todayStr=now.toISOString().slice(0,10);
   if(_nwRange==='month'){
-    const cutoff=new Date(now.getFullYear(),now.getMonth()-1,1);
-    const ym=`${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}`;
-    return history.filter(h=>h.year_month>=ym);
+    const d=new Date(now); d.setDate(d.getDate()-30);
+    const cutoff=d.toISOString().slice(0,10);
+    return history.filter(h=>(h.date||h.year_month)>=cutoff);
   }
-  if(_nwRange==='year') return history.filter(h=>h.year_month.startsWith(String(thisYear)));
+  if(_nwRange==='year'){
+    const yr=String(now.getFullYear());
+    return history.filter(h=>(h.date||h.year_month).startsWith(yr));
+  }
   return history;
 }
 
@@ -1090,7 +1092,7 @@ function renderNWChart(history){
     data=raw;
     yFmt=v=>{const m=Math.abs(v)/10000;return m>=1000?`${(m/100).toFixed(1)}億`:`${m.toFixed(0)}萬`;};
   }
-  const labels=filtered.map(h=>h.year_month.slice(5));
+  const labels=filtered.map(h=>{const k=h.date||h.year_month; return k.slice(5);});
   const ctx=canvas.getContext('2d');
   const grad=ctx.createLinearGradient(0,0,0,155);
   grad.addColorStop(0,'rgba(96,165,250,0.45)');
