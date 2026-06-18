@@ -318,6 +318,14 @@ def get_stock_price(ticker: str, market: str, x_api_key: Optional[str] = Header(
     return {"ticker": ticker, "market": market, "price": price}
 
 
+@router.get("/usd-rate")
+def get_usd_rate(x_api_key: Optional[str] = Header(None)):
+    _auth(x_api_key)
+    from stock_prices import get_usd_twd_rate
+    rate = get_usd_twd_rate()
+    return {"usd_twd": rate}
+
+
 @router.get("/categories")
 def get_categories():
     return CATEGORIES

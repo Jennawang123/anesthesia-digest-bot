@@ -885,9 +885,8 @@ let _holdings=[], _liabs=[], _cash=[];
 let usdRate=30;
 async function fetchUsdRate(){
   try{
-    const r=await fetch('https://tw.rter.info/capi.php');
-    const d=await r.json();
-    usdRate=d['USDTWD']?.Exrate||30;
+    const d=await api('/finance/usd-rate');
+    if(d?.usd_twd) usdRate=d.usd_twd;
     const lbl=document.getElementById('usd-rate-label');
     if(lbl) lbl.textContent=`1 USD = NT$${usdRate.toFixed(2)}`;
   }catch(e){console.warn('USD rate unavailable, using default',usdRate);}

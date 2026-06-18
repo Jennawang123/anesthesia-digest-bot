@@ -10,13 +10,31 @@ def get_price(ticker: str, market: str) -> float:
     Returns 0.0 on failure.
     """
     yf_ticker = f"{ticker}.TW" if market == "TW" else ticker
+    for period in ("5d", "1mo", "3mo"):
+        try:
+            hist = yf.Ticker(yf_ticker).history(period=period)
+            if not hist.empty:
+                return float(hist["Close"].iloc[-1])
+            logging.warning("yfinance: empty for %s period=%s", yf_ticker, period)
+        except Exception as e:
+            logging.error("yfinance error for %s period=%s: %s", yf_ticker, period, e)
+    # Last resort: use .info regularMarketPrice
     try:
-        data = yf.Ticker(yf_ticker)
-        hist = data.history(period="5d")
-        if hist.empty:
-            logging.warning("yfinance: no data for %s", yf_ticker)
-            return 0.0
-        return float(hist["Close"].iloc[-1])
+        info = yf.Ticker(yf_ticker).info
+        price = info.get("regularMarketPrice") or info.get("currentPrice") or 0.0
+        if price:
+            return float(price)
     except Exception as e:
-        logging.error("yfinance error for %s: %s", yf_ticker, e)
-        return 0.0
+        logging.error("yfinance .info error for %s: %s", yf_ticker, e)
+    return 0.0
+
+
+def get_usd_twd_rate() -> float:
+    """Fetch real-time USD/TWD from Yahoo Finance (TWD=X). Falls back to 31.0."""
+    try:
+        hist = yf.Ticker("TWD=X").history(period="2d")
+        if not hist.empty:
+            return float(hist["Close"].iloc[-1])
+    except Exception as e:
+        logging.error("USD/TWD fetch error: %s", e)
+    return 31.0
