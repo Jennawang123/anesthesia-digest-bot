@@ -1046,7 +1046,7 @@ function calcNetWorth(){
   }
 
   // Bottom stats
-  const fmt=v=>{const m=Math.abs(v)/10000; return m>=1000?`${(m/100).toFixed(1)}億`:`${m.toFixed(0)}萬`;};
+  const fmt=v=>{const m=Math.abs(v)/10000; return m>=1000?`${(m/10000).toFixed(1)}億`:`${m.toFixed(0)}萬`;};
   setEl('nw-total-a', fmt(totalA));
   setEl('nw-total-l', fmt(totalL));
   const leverage=nw>0?(totalA/nw).toFixed(2):'--';
@@ -1115,7 +1115,7 @@ function renderNWChart(history){
     yFmt=v=>`${v>=0?'+':''}${v.toFixed(1)}%`;
   } else {
     data=raw;
-    yFmt=v=>{const m=Math.abs(v)/10000;return m>=1000?`${(m/100).toFixed(1)}億`:`${m.toFixed(0)}萬`;};
+    yFmt=v=>{const m=Math.abs(v)/10000;return m>=1000?`${(m/10000).toFixed(1)}億`:`${m.toFixed(0)}萬`;};
   }
   const labels=filtered.map(h=>{const k=h.date||h.year_month; return k.slice(5);});
   const ctx=canvas.getContext('2d');
