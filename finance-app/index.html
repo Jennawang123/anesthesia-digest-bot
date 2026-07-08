@@ -645,6 +645,17 @@ function buildMonths(id) {
   return sel.value;
 }
 
+function buildYears(id) {
+  const sel=document.getElementById(id);
+  if(sel.options.length) return sel.value;
+  const nowYear=new Date().getFullYear();
+  for(let i=0;i<5;i++){
+    const y=String(nowYear-i);
+    sel.add(new Option(y,y));
+  }
+  return sel.value;
+}
+
 // ── Categories ────────────────────────────────────────────────
 const ICONS={日常:'🛒',房租:'🏠',交通:'🚗',旅遊:'✈️',娛樂:'🎬',教育:'📚',醫療:'🏥',贈與:'🎁',長期規劃:'💰',貸款:'🏦'};
 const CATS=['日常','房租','交通','旅遊','娛樂','教育','醫療','贈與','長期規劃','貸款'];
