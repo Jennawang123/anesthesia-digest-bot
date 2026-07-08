@@ -196,6 +196,15 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
     <div class="chart-wrap" style="height:200px"><canvas id="cat-chart"></canvas></div>
     <div id="cat-legend" style="margin-top:12px"></div>
   </div>
+  <div class="card">
+    <div class="month-row" style="margin-bottom:8px">
+      <select id="sel-exp-year" onchange="loadYearlyExpense()"></select>
+    </div>
+    <div class="label">年度支出</div>
+    <div class="big red" id="exp-year-total">--</div>
+    <div class="chart-wrap" style="height:200px;margin-top:8px"><canvas id="cat-chart-year"></canvas></div>
+    <div id="cat-legend-year" style="margin-top:12px"></div>
+  </div>
   <div id="tx-list"><div class="empty">尚無交易記錄</div></div>
 </div>
 
@@ -626,7 +635,7 @@ function go(tab) {
   document.getElementById('page-'+tab).classList.add('on');
   cur=tab;
   if(!API){openOverlay('cfg-overlay');return;}
-  if(tab==='expenses') loadExpenses();
+  if(tab==='expenses'){ loadExpenses(); loadYearlyExpense(); }
   else if(tab==='income') loadIncome();
   else if(tab==='investment') loadInvestment();
   else loadAssets();
@@ -691,6 +700,18 @@ async function loadExpenses() {
   try {
     const txs=await api(`/finance/transactions?year_month=${ym}`);
     renderExpenses(txs);
+  } catch(e){console.error(e);}
+}
+
+let catChartYearRef={get chart(){return catChartYear;},set chart(v){catChartYear=v;}};
+
+async function loadYearlyExpense() {
+  if(!API) return;
+  const year=buildYears('sel-exp-year');
+  try {
+    const s=await api(`/finance/summary/year/${year}`);
+    document.getElementById('exp-year-total').textContent=`NT$${s.total_expense.toLocaleString()}`;
+    renderCategoryChart('cat-chart-year','cat-legend-year',catChartYearRef,s.by_category);
   } catch(e){console.error(e);}
 }
 
