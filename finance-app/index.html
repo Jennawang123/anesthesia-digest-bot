@@ -651,6 +651,28 @@ const CATS=['日常','房租','交通','旅遊','娛樂','教育','醫療','贈�
 
 // ══════════════ TAB 1: 支出 ══════════════
 let catChart=null;
+let catChartYear=null;
+const CAT_COLORS={日常:'#E8735A',房租:'#4F83B5',交通:'#8EA36E',旅遊:'#4B5FA6',娛樂:'#D4618A',教育:'#3A8B4E',醫療:'#B94047',贈與:'#E8A823',長期規劃:'#7B5EA7',貸款:'#475569'};
+
+function renderCategoryChart(canvasId, legendId, chartVar, catMap) {
+  const labels=Object.keys(catMap), vals=labels.map(c=>catMap[c]);
+  const colors=labels.map(l=>CAT_COLORS[l]||'#64748b');
+  const catTotal=vals.reduce((a,b)=>a+b,0);
+  if(chartVar.chart) chartVar.chart.destroy();
+  chartVar.chart=new Chart(document.getElementById(canvasId),{
+    type:'doughnut',
+    data:{labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:0}]},
+    options:{plugins:{legend:{display:false}},cutout:'62%'}
+  });
+  document.getElementById(legendId).innerHTML=labels.map((lbl,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #0f172a">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:12px;height:12px;border-radius:3px;background:${colors[i]};flex-shrink:0"></div>
+        <span style="color:#e2e8f0;font-size:13px;font-weight:500">${lbl}</span>
+      </div>
+      <span style="color:#e2e8f0;font-size:13px">NT$${vals[i].toLocaleString()} <span style="color:#94a3b8;font-size:12px">(${catTotal>0?(vals[i]/catTotal*100).toFixed(1):0}%)</span></span>
+    </div>`).join('');
+}
 
 async function loadExpenses() {
   if(!API) return;
@@ -668,26 +690,8 @@ function renderExpenses(txs) {
 
   const catMap={};
   txs.forEach(t=>{catMap[t.category]=(catMap[t.category]||0)+t.amount;});
-  const labels=Object.keys(catMap), vals=labels.map(c=>catMap[c]);
-  // 和色（Japanese traditional colors）
-  const CAT_COLORS={日常:'#E8735A',房租:'#4F83B5',交通:'#8EA36E',旅遊:'#4B5FA6',娛樂:'#D4618A',教育:'#3A8B4E',醫療:'#B94047',贈與:'#E8A823',長期規劃:'#7B5EA7',貸款:'#475569'};
-  const colors=labels.map(l=>CAT_COLORS[l]||'#64748b');
-  const catTotal=vals.reduce((a,b)=>a+b,0);
-  if(catChart) catChart.destroy();
-  catChart=new Chart(document.getElementById('cat-chart'),{
-    type:'doughnut',
-    data:{labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:0}]},
-    options:{plugins:{legend:{display:false}},cutout:'62%'}
-  });
-  // Custom HTML legend — Chart.js canvas text color unreliable; use HTML instead
-  document.getElementById('cat-legend').innerHTML=labels.map((lbl,i)=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #0f172a">
-      <div style="display:flex;align-items:center;gap:8px">
-        <div style="width:12px;height:12px;border-radius:3px;background:${colors[i]};flex-shrink:0"></div>
-        <span style="color:#e2e8f0;font-size:13px;font-weight:500">${lbl}</span>
-      </div>
-      <span style="color:#e2e8f0;font-size:13px">NT$${vals[i].toLocaleString()} <span style="color:#94a3b8;font-size:12px">(${catTotal>0?(vals[i]/catTotal*100).toFixed(1):0}%)</span></span>
-    </div>`).join('');
+  const catChartRef={get chart(){return catChart;},set chart(v){catChart=v;}};
+  renderCategoryChart('cat-chart','cat-legend',catChartRef,catMap);
 
   const ul=document.getElementById('tx-list');
   if(!txs.length){ul.innerHTML='<div class="empty">本月無記錄</div>';return;}
