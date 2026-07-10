@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="旅遊足跡">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Travel Atlas</title>
+<script>
+(function(){
+  const S=512,c=document.createElement('canvas');c.width=c.height=S;
+  const x=c.getContext('2d');
+  const bg=x.createLinearGradient(0,0,S,S);
+  bg.addColorStop(0,'#0B1220');bg.addColorStop(1,'#132038');
+  x.fillStyle=bg;x.beginPath();x.roundRect(0,0,S,S,96);x.fill();
+  x.strokeStyle='#4ADE80';x.lineWidth=10;
+  x.beginPath();x.arc(S/2,S/2,150,0,Math.PI*2);x.stroke();
+  x.fillStyle='#F4C95D';
+  [[180,180],[340,210],[260,320],[190,360]].forEach(([px,py])=>{x.beginPath();x.arc(px,py,14,0,Math.PI*2);x.fill();});
+  ['icon','apple-touch-icon'].forEach(r=>{const l=document.createElement('link');l.rel=r;l.href=c.toDataURL('image/png');document.head.appendChild(l);});
+})();
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<style>
+:root{
+  --bg:#0B1220;--bg2:#0E1830;--card:rgba(255,255,255,.06);--card-solid:#152238;
+  --text:#EAF0FB;--muted:#8CA0C4;--border:rgba(255,255,255,.10);
+  --teal:#4ADE80;--teal2:#22C55E;--gold:#F4C95D;--red:#F87171;
+  --tab-h:60px;--safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* Setup */
+#setup{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:28px 20px;background:linear-gradient(160deg,#0B1220,#132038 60%,#0E2A28);}
+#setup h1{font-family:'Noto Serif TC',serif;font-size:30px;font-weight:700;color:#fff;margin-bottom:6px;text-align:center;}
+#setup p{font-size:14px;color:var(--muted);margin-bottom:26px;text-align:center;}
+.scard{background:var(--card-solid);border:1px solid var(--border);border-radius:20px;padding:22px;width:100%;max-width:420px;}
+.hint{font-size:11px;color:var(--muted);margin-top:10px;text-align:center;line-height:1.6;}
+
+/* App */
+#app{display:none;flex-direction:column;height:100dvh;}
+.hdr{position:relative;height:64px;flex-shrink:0;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);background:var(--bg2);}
+.hdr-t{font-family:'Noto Serif TC',serif;font-size:19px;font-weight:700;color:#fff;}
+.hdr-s{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-left:10px;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--teal);}
+.dot.busy{background:var(--gold);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--tab-h) + var(--safe-b) + 8px);}
+.tabbar{position:fixed;bottom:0;left:0;right:0;height:calc(var(--tab-h) + var(--safe-b));padding-bottom:var(--safe-b);background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:100;}
+.ti{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--muted);user-select:none;transition:color .15s;}
+.ti.on{color:var(--teal);}.ti-i{font-size:22px;line-height:1;}.ti-l{font-size:10px;font-weight:600;}
+.page{display:none;}.page.on{display:block;}
+.fab{position:fixed;bottom:calc(var(--tab-h) + var(--safe-b) + 14px);right:16px;width:54px;height:54px;border-radius:50%;border:none;cursor:pointer;background:var(--teal);color:#0B1220;font-size:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(74,222,128,.35);z-index:99;transition:transform .12s;}
+.fab:active{transform:scale(.9);}
+
+/* Shared */
+.bx{padding:12px 16px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;backdrop-filter:blur(6px);}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 18px;border-radius:10px;border:none;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s;font-family:inherit;}
+.btn:active{opacity:.8;transform:scale(.97);}
+.btn-b{background:var(--teal);color:#0B1220;}.btn-g{background:rgba(255,255,255,.08);color:var(--text);}.btn-r{background:var(--red);color:#fff;}.btn-w{width:100%;}
+.ib{width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,.08);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--muted);}
+.fg{margin-bottom:14px;}
+.lb{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.inp,.ta{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;background:rgba(255,255,255,.04);color:var(--text);outline:none;transition:border-color .2s;}
+.inp::placeholder,.ta::placeholder{color:var(--muted);}
+.inp:focus,.ta:focus{border-color:var(--teal);}
+.ta{resize:none;min-height:72px;}
+.fr{display:flex;gap:10px;}.fr .fg{flex:1;}
+.tw{display:flex;background:rgba(255,255,255,.06);border-radius:10px;padding:3px;gap:3px;}
+.to{flex:1;padding:8px 4px;text-align:center;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:all .15s;}
+.to.on{background:var(--teal);color:#0B1220;}
+.empty{text-align:center;padding:52px 20px;color:var(--muted);}
+.empty-i{font-size:46px;margin-bottom:12px;}.empty-h{font-size:16px;font-weight:600;color:var(--text);}.empty-s{font-size:14px;margin-top:4px;}
+.toast{position:fixed;bottom:calc(var(--tab-h) + var(--safe-b) + 70px);left:50%;transform:translateX(-50%);background:rgba(20,30,50,.92);border:1px solid var(--border);color:#fff;padding:9px 20px;border-radius:20px;font-size:14px;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:flex-end;}
+.ov.open{display:flex;}
+.sheet{background:var(--card-solid);border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-height:93dvh;overflow-y:auto;padding:16px 20px calc(20px + var(--safe-b));animation:up .22s ease;}
+@keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.hdl{width:38px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;}
+.st{font-size:18px;font-weight:700;margin-bottom:18px;}
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <h1>🌍 Travel Atlas</h1>
+  <p>輸入 Firebase Realtime Database 網址與 Storage bucket 開始</p>
+  <div class="scard">
+    <div class="fg"><label class="lb">Firebase 資料庫網址</label><input class="inp" id="s_url" type="url" placeholder="https://xxx-default-rtdb.firebaseio.com"></div>
+    <div class="fg"><label class="lb">Storage Bucket</label><input class="inp" id="s_bucket" placeholder="例：xxx.appspot.com"></div>
+    <button class="btn btn-b btn-w" onclick="doSetup()">開始使用 →</button>
+    <p class="hint">Firebase Console → Realtime Database（測試模式）→ 複製網址；Storage → 啟用 → 複製 bucket 名稱</p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="hdr">
+    <div class="hdr-t">🌍 Travel Atlas</div>
+    <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span></div>
+  </div>
+  <div class="content">
+    <div class="page on" id="page-atlas"><div class="bx" id="atlasBox"><div class="empty"><div class="empty-i">🌍</div><div class="empty-h">載入中…</div></div></div></div>
+    <div class="page" id="page-trips"><div class="bx" id="tripsBox"><div class="empty"><div class="empty-i">🧳</div><div class="empty-h">載入中…</div></div></div></div>
+    <div class="page" id="page-detail"><div class="bx" id="detailBox"></div></div>
+    <div class="page" id="page-cfg">
+      <div class="bx">
+        <div class="card">
+          <div class="fg"><label class="lb">資料庫網址</label><input class="inp" id="c_url" type="url"></div>
+          <div class="fg"><label class="lb">Storage Bucket</label><input class="inp" id="c_bucket"></div>
+          <button class="btn btn-g btn-w" onclick="changeFB()">變更 Firebase 連線</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <button class="fab" id="fab" onclick="fabTap()">＋</button>
+  <div class="tabbar">
+    <div class="ti on" id="t-atlas" onclick="goTab('atlas')"><span class="ti-i">🌍</span><span class="ti-l">Atlas</span></div>
+    <div class="ti"    id="t-trips" onclick="goTab('trips')"><span class="ti-i">🧳</span><span class="ti-l">旅程</span></div>
+    <div class="ti"    id="t-cfg"   onclick="goTab('cfg')"  ><span class="ti-i">⚙️</span><span class="ti-l">設定</span></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let CFG={},DB=null,STORAGE=null,curTab='atlas',curDetailTripId=null;
+
+// ─── Utils ───────────────────────────────────────────
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+function sync(on){document.getElementById('syncDot').className='dot'+(on?' busy':'');document.getElementById('syncTxt').textContent=on?'同步中…':'已同步';}
+function openM(id){document.getElementById(id).classList.add('open');}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('.ov').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+});
+
+// ─── Setup / Boot ────────────────────────────────────
+function doSetup(){
+  const url=document.getElementById('s_url').value.trim();
+  const bucket=document.getElementById('s_bucket').value.trim();
+  if(!url){alert('請輸入 Firebase 資料庫網址');return;}
+  if(!bucket){alert('請輸入 Storage bucket');return;}
+  CFG={url,bucket};
+  localStorage.setItem('travel_atlas_cfg',JSON.stringify(CFG));
+  bootApp();
+}
+window.onload=()=>{
+  const s=localStorage.getItem('travel_atlas_cfg');
+  if(s){CFG=JSON.parse(s);bootApp();}
+};
+function bootApp(){
+  document.getElementById('setup').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('c_url').value=CFG.url;
+  document.getElementById('c_bucket').value=CFG.bucket;
+  connectFB();
+}
+function changeFB(){
+  const url=document.getElementById('c_url').value.trim();
+  const bucket=document.getElementById('c_bucket').value.trim();
+  if(!url||!bucket){toast('⚠️ 網址與 bucket 都要填');return;}
+  CFG={url,bucket};
+  localStorage.setItem('travel_atlas_cfg',JSON.stringify(CFG));
+  location.reload();
+}
+
+// ─── Firebase ────────────────────────────────────────
+function connectFB(){
+  sync(true);
+  try{
+    if(!firebase.apps.length)firebase.initializeApp({databaseURL:CFG.url.trim().replace(/\/$/,''),storageBucket:CFG.bucket.trim()});
+    DB=firebase.database();
+    STORAGE=firebase.storage();
+    DB.ref('/trips').on('value',snap=>{
+      const trips=snap.val()||{};
+      onTripsUpdate(trips);
+      sync(false);
+    },err=>{sync(false);toast('⚠️ Firebase 錯誤：'+err.message);});
+  }catch(e){sync(false);toast('⚠️ Firebase 初始化失敗');console.error(e);}
+}
+// Filled in by later tasks — receives the live /trips object on every change.
+function onTripsUpdate(trips){window.__TRIPS__=trips;}
+
+// ─── Tabs ────────────────────────────────────────────
+function goTab(t){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ti').forEach(x=>x.classList.remove('on'));
+  document.getElementById('page-'+t)?.classList.add('on');
+  document.getElementById('t-'+t)?.classList.add('on');
+  curTab=t;
+  const fab=document.getElementById('fab');
+  fab.style.display=(t==='cfg'||t==='detail')?'none':'flex';
+}
+function fabTap(){ /* wired to openAddEntrySheet() in Task 9 */ }
+</script>
+</body>
+</html>
