@@ -614,7 +614,7 @@ function goTab(t){
   document.getElementById('t-'+t)?.classList.add('on');
   curTab=t;
   const fab=document.getElementById('fab');
-  fab.style.display=(t==='cfg'||t==='detail')?'none':'flex';
+  fab.style.display=(t==='cfg')?'none':'flex';
 }
 function fabTap(){
   if(curTab==='detail')openAddEntrySheet();
