@@ -17,13 +17,15 @@
 ## 架構
 
 - **前端**：純 HTML/CSS/JS 單檔 PWA，Tab 架構（Atlas 首頁 / 旅程列表 / 統計），FAB 新增日記，可加到手機主畫面
-- **後端/儲存**：Firebase（Firestore 存文字資料、Storage 存照片），與現有 app 共用同一個 Firebase 專案
+- **後端/儲存**：沿用 `trip-template.html`／`japan-trip.html` 的模式——Firebase **Realtime Database**（`DB.ref(...)`）存文字資料，setup 畫面貼資料庫網址，不寫死特定 Firebase 專案。另外加上 Firebase **Storage**（既有 app 沒用到，這次日記需要永久保存多張照片，base64 塞進 RTDB 不合適），setup 畫面同時貼 Storage bucket 設定
 - **地圖**：2D 世界地圖 + 發光城市光點（走過的城市），可點擊 marker 跳到對應旅程；不用即時定位或路線規劃
-- **離線處理**：新增日記先寫入 localStorage，偵測到網路後同步至 Firestore，避免旅行中收訊差時遺失資料
+- **離線處理**：新增日記先寫入 localStorage，偵測到網路後同步至 Realtime Database，避免旅行中收訊差時遺失資料
 
 ## 資料模型
 
-### Trip（Firestore `trips` collection）
+Realtime Database 為巢狀 JSON，路徑設計如下（比照 `japan-trip.html` 用 `DB.ref('/schedule/...')` 的方式）：
+
+### `/trips/{tripId}`
 
 | 欄位 | 說明 |
 |------|------|
@@ -31,22 +33,22 @@
 | `destination` | 目的地文字 |
 | `region` | 地區分類（東亞/東南亞/歐洲/美洲/南亞/大洋洲…），用於圓餅圖與篩選 |
 | `startDate` / `endDate` | 旅程起訖日期 |
-| `tags[]` | 標籤 |
-| `coverPhotoUrl` | 封面照（Storage URL） |
+| `tags` | 標籤陣列 |
+| `coverPhotoUrl` | 封面照（Storage 下載網址） |
 | `status` | 固定為 `visited`（已成行） |
-| `countryCode[]` | 國家代碼陣列，用於地圖標記與國家計數 |
+| `countryCode` | 國家代碼陣列，用於地圖標記與國家計數 |
 
-### Entry（`trips/{tripId}/entries` subcollection）
+### `/trips/{tripId}/entries/{entryId}`
 
 | 欄位 | 說明 |
 |------|------|
 | `date` | 日記日期 |
 | `location` | 地名 + 經緯度（可選） |
 | `text` | 日記內文 |
-| `photos[]` | 照片 Storage URL 陣列 |
+| `photos` | 照片 Storage 下載網址陣列 |
 | `category` | 分類（美食/景點/住宿/交通…） |
 
-統計數字（旅行趟數、國家數、起始年份、地區分佈、年度足跡長條圖）皆從 Trip 文件即時計算，不另外存欄位。
+統計數字（旅行趟數、國家數、起始年份、地區分佈、年度足跡長條圖）皆從 `/trips` 讀出後在前端即時計算，不另外存欄位。
 
 ## 視覺風格
 
@@ -72,11 +74,11 @@
 
 1. **Notion**：抓取「瑜的旅遊計畫」下已成行的旅程頁面（沖繩、東京櫻花、墨爾本、多羅米蒂、東京熱海、京都楓葉、長野雪地健行、芬蘭極光等），萃取 `destination`、大略日期、標籤等 Trip 層級背景資訊，作為初始 Trip 文件的基礎。未成行/純研究性質頁面（阿里山、機票教學、滑雪等）不納入。
 2. **Apple 備忘錄**：真正的日記/心得/照片來源，無 MCP 可讀，需使用者手動提供文字內容（複製貼上）與照片（直接傳送或放入可讀取的資料夾）。
-3. 兩邊資料合併整理成統一格式，寫入 Firestore 作為初始資料。完成後 Notion／備忘錄的旅遊紀錄職責收掉，後續一律用新 app 記錄。
+3. 兩邊資料合併整理成統一格式，寫入 Realtime Database 作為初始資料。完成後 Notion／備忘錄的旅遊紀錄職責收掉，後續一律用新 app 記錄。
 
 ## 錯誤處理
 
-僅處理會實際發生的情境：照片上傳失敗、Firestore 寫入失敗時提示使用者重試。不做其他防禦性設計。
+僅處理會實際發生的情境：照片上傳失敗、Realtime Database 寫入失敗時提示使用者重試。不做其他防禦性設計。
 
 ## 測試
 
