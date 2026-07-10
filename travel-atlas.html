@@ -103,10 +103,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .filter-pill.on{background:var(--teal);color:#0B1220;border-color:var(--teal);}
 .trip-row{display:flex;align-items:center;gap:12px;padding:13px 14px;margin-bottom:8px;cursor:pointer;}
 .trip-flag{font-size:22px;flex-shrink:0;}
+.trip-thumb{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;}
 .trip-info{flex:1;min-width:0;}
 .trip-title{font-weight:700;font-size:15px;}
 .trip-meta{font-size:12px;color:var(--muted);margin-top:2px;}
-.detail-cover{height:180px;border-radius:16px;background:linear-gradient(150deg,var(--bg2),#0E2A3A);background-size:cover;background-position:center;margin-bottom:12px;display:flex;align-items:flex-end;padding:16px;border:1px solid var(--border);}
+.detail-cover{position:relative;height:180px;border-radius:16px;background:linear-gradient(150deg,var(--bg2),#0E2A3A);background-size:cover;background-position:center;margin-bottom:12px;display:flex;align-items:flex-end;padding:16px;border:1px solid var(--border);}
 .detail-title{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6);}
 .detail-meta{font-size:12px;color:var(--muted);margin-bottom:14px;}
 .tag-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(74,222,128,.15);color:var(--teal);margin:0 6px 6px 0;}
@@ -162,7 +163,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 
 <div class="ov" id="m-trip">
   <div class="sheet">
-    <div class="hdl"></div><div class="st">新增旅程</div>
+    <div class="hdl"></div><div class="st" id="m-trip-t">新增旅程</div>
+    <input type="hidden" id="mt_id">
+    <div class="fg"><label class="lb">封面照</label>
+      <div class="photo-grid" id="mtCoverPreview"></div>
+      <button class="btn btn-g btn-w" style="margin-top:8px" onclick="document.getElementById('mtCoverFile').click()">🖼️ 選擇封面照</button>
+      <input type="file" id="mtCoverFile" accept="image/*" style="display:none" onchange="onTripCoverPick(event)">
+    </div>
     <div class="fg"><label class="lb">標題</label><input class="inp" id="mt_title" placeholder="例：2026/07 京都"></div>
     <div class="fg"><label class="lb">目的地</label><input class="inp" id="mt_dest" placeholder="例：京都"></div>
     <div class="fg"><label class="lb">地區</label><div class="tw" id="mt_region"></div></div>
@@ -175,7 +182,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
       <div class="fg"><label class="lb">經度</label><input class="inp" id="mt_lng" type="number" step="0.01" placeholder="例：127.68"></div>
     </div>
     <div class="fg"><label class="lb">標籤（逗號分隔）</label><input class="inp" id="mt_tags" placeholder="海島, 潛水"></div>
-    <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-trip')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveTrip()">建立</button></div>
+    <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-trip')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveTrip()" id="mt-save-btn">建立</button></div>
   </div>
 </div>
 
@@ -424,7 +431,7 @@ function renderTripsList(trips){
   box.innerHTML=`<div class="filter-row">${pills.join('')}</div>`+
     sorted.map(t=>`
       <div class="card trip-row" onclick="openTripDetail('${t.id}')">
-        <div class="trip-flag">${countryFlags(t.countryCode)}</div>
+        ${t.coverPhotoUrl?`<img class="trip-thumb" src="${t.coverPhotoUrl}">`:`<div class="trip-flag">${countryFlags(t.countryCode)}</div>`}
         <div class="trip-info">
           <div class="trip-title">${esc(t.title)}</div>
           <div class="trip-meta">${(t.startDate||'').slice(0,7).replace('-','.')} · ${REGIONM[t.region]?.name||''}</div>
@@ -450,6 +457,7 @@ function renderTripDetail(tripId,entries){
   box.innerHTML=`
     <div class="detail-cover" style="${trip.coverPhotoUrl?`background-image:url('${trip.coverPhotoUrl}')`:''}">
       <div><div class="detail-title">${esc(trip.title)}</div></div>
+      <button class="ib" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,.45);color:#fff" onclick="openEditTripSheet('${tripId}')">✏️</button>
     </div>
     <div class="detail-meta">${(trip.startDate||'').replace(/-/g,'.')} – ${(trip.endDate||'').replace(/-/g,'.')} · ${REGIONM[trip.region]?.name||''}</div>
     <div>${(trip.tags||[]).map(tag=>`<span class="tag-pill">${esc(tag)}</span>`).join('')}</div>
@@ -482,13 +490,46 @@ function openEntryView(tripId,entryId){
   });
 }
 
-// ─── Add Trip ────────────────────────────────────────
+// ─── Add / Edit Trip ─────────────────────────────────
 let selTripRegion='east-asia';
-function openAddTripSheet(){
+let pendingCoverFile=null;
+let editingTripId=null;
+
+function renderTripRegionPicker(){
   document.getElementById('mt_region').innerHTML=REGIONS.map(r=>
     `<div class="to ${r.id===selTripRegion?'on':''}" onclick="selTripRegionPick('${r.id}')">${r.name}</div>`
   ).join('');
+}
+function openAddTripSheet(){
+  editingTripId=null;
+  pendingCoverFile=null;
+  document.getElementById('m-trip-t').textContent='新增旅程';
+  document.getElementById('mt-save-btn').textContent='建立';
+  document.getElementById('mt_id').value='';
+  selTripRegion='east-asia';
+  renderTripRegionPicker();
   ['mt_title','mt_dest','mt_start','mt_end','mt_lat','mt_lng','mt_tags'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mtCoverPreview').innerHTML='';
+  openM('m-trip');
+}
+function openEditTripSheet(tripId){
+  const trip=(window.__STATS__.trips||[]).find(t=>t.id===tripId);
+  if(!trip)return;
+  editingTripId=tripId;
+  pendingCoverFile=null;
+  document.getElementById('m-trip-t').textContent='編輯旅程';
+  document.getElementById('mt-save-btn').textContent='儲存';
+  document.getElementById('mt_id').value=tripId;
+  selTripRegion=trip.region||'east-asia';
+  renderTripRegionPicker();
+  document.getElementById('mt_title').value=trip.title||'';
+  document.getElementById('mt_dest').value=trip.destination||'';
+  document.getElementById('mt_start').value=trip.startDate||'';
+  document.getElementById('mt_end').value=trip.endDate||'';
+  document.getElementById('mt_lat').value=trip.lat??'';
+  document.getElementById('mt_lng').value=trip.lng??'';
+  document.getElementById('mt_tags').value=(trip.tags||[]).join(', ');
+  document.getElementById('mtCoverPreview').innerHTML=trip.coverPhotoUrl?`<img src="${trip.coverPhotoUrl}">`:'';
   openM('m-trip');
 }
 function selTripRegionPick(id){
@@ -496,11 +537,27 @@ function selTripRegionPick(id){
   document.querySelectorAll('#mt_region .to').forEach(el=>el.classList.remove('on'));
   event.target.classList.add('on');
 }
-function saveTrip(){
+function onTripCoverPick(ev){
+  pendingCoverFile=ev.target.files&&ev.target.files[0]||null;
+  const prev=document.getElementById('mtCoverPreview');
+  prev.innerHTML='';
+  if(pendingCoverFile){
+    const img=document.createElement('img');
+    img.src=URL.createObjectURL(pendingCoverFile);
+    prev.appendChild(img);
+  }
+}
+async function uploadTripCover(tripId,file){
+  const path=`trips/${tripId}/cover/${uid()}-${file.name}`;
+  const ref=STORAGE.ref().child(path);
+  await ref.put(file);
+  return await ref.getDownloadURL();
+}
+async function saveTrip(){
   const title=document.getElementById('mt_title').value.trim();
   const start=document.getElementById('mt_start').value;
   if(!title||!start){toast('⚠️ 標題與出發日期必填');return;}
-  const id=createTrip({
+  const fields={
     title,
     destination:document.getElementById('mt_dest').value.trim(),
     region:selTripRegion,
@@ -509,11 +566,23 @@ function saveTrip(){
     lat:parseFloat(document.getElementById('mt_lat').value)||null,
     lng:parseFloat(document.getElementById('mt_lng').value)||null,
     tags:document.getElementById('mt_tags').value.split(',').map(s=>s.trim()).filter(Boolean),
-    status:'visited',
-    countryCode:[],
-  });
+  };
+  let id=editingTripId;
+  if(id){
+    updateTrip(id,fields);
+  }else{
+    id=createTrip({...fields,status:'visited',countryCode:[]});
+  }
   closeM('m-trip');
-  toast('✅ 已建立旅程');
+  toast(editingTripId?'✅ 已更新旅程':'✅ 已建立旅程');
+  if(pendingCoverFile){
+    toast('📤 上傳封面照中…');
+    try{
+      const url=await uploadTripCover(id,pendingCoverFile);
+      updateTrip(id,{coverPhotoUrl:url});
+      toast('✅ 封面照已上傳');
+    }catch(e){toast('⚠️ 封面照上傳失敗，可稍後重試');console.error(e);}
+  }
   openTripDetail(id);
 }
 
