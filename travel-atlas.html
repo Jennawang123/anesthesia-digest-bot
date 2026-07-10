@@ -188,7 +188,53 @@ function connectFB(){
   }catch(e){sync(false);toast('⚠️ Firebase 初始化失敗');console.error(e);}
 }
 // Filled in by later tasks — receives the live /trips object on every change.
-function onTripsUpdate(trips){window.__TRIPS__=trips;}
+function onTripsUpdate(trips){window.__STATS__=computeStats(trips);}
+
+// ─── Data layer ──────────────────────────────────────
+const REGIONS=[
+  {id:'east-asia',name:'東亞',color:'#4ADE80'},
+  {id:'se-asia',name:'東南亞',color:'#38BDF8'},
+  {id:'south-asia',name:'南亞',color:'#F472B6'},
+  {id:'europe',name:'歐洲',color:'#F4C95D'},
+  {id:'americas',name:'美洲',color:'#FB923C'},
+  {id:'oceania',name:'大洋洲',color:'#A78BFA'},
+];
+const REGIONM=Object.fromEntries(REGIONS.map(r=>[r.id,r]));
+
+function tripsRef(){return DB.ref('/trips');}
+function entriesRef(tripId){return DB.ref('/trips/'+tripId+'/entries');}
+
+function createTrip(trip){
+  const id=uid();
+  tripsRef().child(id).set(trip);
+  return id;
+}
+function updateTrip(tripId,patch){tripsRef().child(tripId).update(patch);}
+function deleteTrip(tripId){tripsRef().child(tripId).remove();}
+
+function createEntry(tripId,entry){
+  const id=uid();
+  entriesRef(tripId).child(id).set(entry);
+  return id;
+}
+function updateEntry(tripId,entryId,patch){entriesRef(tripId).child(entryId).update(patch);}
+function deleteEntry(tripId,entryId){entriesRef(tripId).child(entryId).remove();}
+
+// Derived stats from the live /trips snapshot object
+function computeStats(trips){
+  const list=Object.entries(trips||{}).map(([id,t])=>({id,...t}));
+  const countries=new Set();
+  list.forEach(t=>(t.countryCode||[]).forEach(c=>countries.add(c)));
+  const years=list.map(t=>(t.startDate||'').slice(0,4)).filter(Boolean).map(Number);
+  const startYear=years.length?Math.min(...years):new Date().getFullYear();
+  const regionCounts=REGIONS.map(r=>({...r,value:list.filter(t=>t.region===r.id).length})).filter(r=>r.value>0);
+  const yearCounts=[];
+  const curYear=new Date().getFullYear();
+  for(let y=startYear;y<=curYear;y++){
+    yearCounts.push({year:y,count:list.filter(t=>Number((t.startDate||'').slice(0,4))===y).length,highlight:y===curYear});
+  }
+  return{trips:list,tripCount:list.length,countryCount:countries.size,startYear,regionCounts,yearCounts};
+}
 
 // ─── Tabs ────────────────────────────────────────────
 function goTab(t){
