@@ -160,6 +160,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
   </div>
 </div>
 
+<div class="ov" id="m-trip">
+  <div class="sheet">
+    <div class="hdl"></div><div class="st">新增旅程</div>
+    <div class="fg"><label class="lb">標題</label><input class="inp" id="mt_title" placeholder="例：2026/07 京都"></div>
+    <div class="fg"><label class="lb">目的地</label><input class="inp" id="mt_dest" placeholder="例：京都"></div>
+    <div class="fg"><label class="lb">地區</label><div class="tw" id="mt_region"></div></div>
+    <div class="fr">
+      <div class="fg"><label class="lb">出發日期</label><input class="inp" id="mt_start" type="date"></div>
+      <div class="fg"><label class="lb">結束日期</label><input class="inp" id="mt_end" type="date"></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label class="lb">緯度</label><input class="inp" id="mt_lat" type="number" step="0.01" placeholder="例：26.21"></div>
+      <div class="fg"><label class="lb">經度</label><input class="inp" id="mt_lng" type="number" step="0.01" placeholder="例：127.68"></div>
+    </div>
+    <div class="fg"><label class="lb">標籤（逗號分隔）</label><input class="inp" id="mt_tags" placeholder="海島, 潛水"></div>
+    <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-trip')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveTrip()">建立</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -443,6 +462,41 @@ function openEntryView(tripId,entryId){
         </div>
       </div>`);
   });
+}
+
+// ─── Add Trip ────────────────────────────────────────
+let selTripRegion='east-asia';
+function openAddTripSheet(){
+  document.getElementById('mt_region').innerHTML=REGIONS.map(r=>
+    `<div class="to ${r.id===selTripRegion?'on':''}" onclick="selTripRegionPick('${r.id}')">${r.name}</div>`
+  ).join('');
+  ['mt_title','mt_dest','mt_start','mt_end','mt_lat','mt_lng','mt_tags'].forEach(id=>document.getElementById(id).value='');
+  openM('m-trip');
+}
+function selTripRegionPick(id){
+  selTripRegion=id;
+  document.querySelectorAll('#mt_region .to').forEach(el=>el.classList.remove('on'));
+  event.target.classList.add('on');
+}
+function saveTrip(){
+  const title=document.getElementById('mt_title').value.trim();
+  const start=document.getElementById('mt_start').value;
+  if(!title||!start){toast('⚠️ 標題與出發日期必填');return;}
+  const id=createTrip({
+    title,
+    destination:document.getElementById('mt_dest').value.trim(),
+    region:selTripRegion,
+    startDate:start,
+    endDate:document.getElementById('mt_end').value||start,
+    lat:parseFloat(document.getElementById('mt_lat').value)||null,
+    lng:parseFloat(document.getElementById('mt_lng').value)||null,
+    tags:document.getElementById('mt_tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    status:'visited',
+    countryCode:[],
+  });
+  closeM('m-trip');
+  toast('✅ 已建立旅程');
+  openTripDetail(id);
 }
 
 // ─── Tabs ────────────────────────────────────────────
