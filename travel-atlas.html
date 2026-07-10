@@ -249,6 +249,7 @@ function connectFB(){
     if(!firebase.apps.length)firebase.initializeApp({databaseURL:CFG.url.trim().replace(/\/$/,''),storageBucket:CFG.bucket.trim()});
     DB=firebase.database();
     STORAGE=firebase.storage();
+    outboxFlush();
     DB.ref('/trips').on('value',snap=>{
       const trips=snap.val()||{};
       onTripsUpdate(trips);
@@ -516,6 +517,23 @@ function saveTrip(){
   openTripDetail(id);
 }
 
+// ─── Offline outbox ──────────────────────────────────
+function outboxRead(){return JSON.parse(localStorage.getItem('travel_atlas_outbox')||'[]');}
+function outboxWrite(items){localStorage.setItem('travel_atlas_outbox',JSON.stringify(items));}
+function outboxAdd(item){const items=outboxRead();items.push(item);outboxWrite(items);}
+async function outboxFlush(){
+  if(!navigator.onLine||!DB)return;
+  const items=outboxRead();
+  if(!items.length)return;
+  toast('🔄 同步離線紀錄中…');
+  for(const item of items){
+    createEntry(item.tripId,item.entry);
+  }
+  outboxWrite([]);
+  toast('✅ 離線紀錄已同步');
+}
+window.addEventListener('online',outboxFlush);
+
 // ─── Add Entry ───────────────────────────────────────
 const ENTRY_CATS=[{id:'food',name:'美食'},{id:'sight',name:'景點'},{id:'hotel',name:'住宿'},{id:'transport',name:'交通'}];
 let selEntryCat='sight',pendingPhotoFiles=[];
@@ -562,13 +580,20 @@ async function saveEntry(){
   const tripId=document.getElementById('me_tripid').value;
   const date=document.getElementById('me_date').value;
   if(!date){toast('⚠️ 日期必填');return;}
-  const entryId=createEntry(tripId,{
+  const entry={
     date,
     location:document.getElementById('me_loc').value.trim(),
     text:document.getElementById('me_text').value.trim(),
     category:selEntryCat,
     photos:[],
-  });
+  };
+  if(!navigator.onLine){
+    outboxAdd({tripId,entry});
+    closeM('m-entry');
+    toast('📴 離線中，已暫存，連網後自動同步（照片需連網後重新上傳）');
+    return;
+  }
+  const entryId=createEntry(tripId,entry);
   closeM('m-entry');
   toast('✅ 已儲存日記');
   if(pendingPhotoFiles.length){
