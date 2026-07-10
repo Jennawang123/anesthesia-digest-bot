@@ -85,6 +85,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 @keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .hdl{width:38px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;}
 .st{font-size:18px;font-weight:700;margin-bottom:18px;}
+.stat-row{display:flex;gap:10px;margin-bottom:12px;}
+.stat{flex:1;text-align:center;}
+.stat-n{font-size:24px;font-weight:800;color:var(--text);}
+.stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+.map-wrap{position:relative;border-radius:16px;overflow:hidden;margin-bottom:12px;border:1px solid var(--border);background:radial-gradient(ellipse at center,#0E2A3A,#081120);}
+.map-wrap canvas{display:block;width:100%;}
+.map-tip{position:absolute;background:rgba(10,20,35,.92);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:#fff;pointer-events:none;transform:translate(-50%,-120%);white-space:nowrap;display:none;}
+.chart-row{display:flex;gap:10px;}
+.chart-card{flex:1;}
+.chart-card canvas{width:100%;display:block;}
+.chart-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.legend-row{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-top:4px;}
+.legend-dot{width:8px;height:8px;border-radius:3px;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -188,7 +201,11 @@ function connectFB(){
   }catch(e){sync(false);toast('⚠️ Firebase 初始化失敗');console.error(e);}
 }
 // Filled in by later tasks — receives the live /trips object on every change.
-function onTripsUpdate(trips){window.__STATS__=computeStats(trips);}
+function onTripsUpdate(trips){
+  window.__STATS__=computeStats(trips);
+  renderAtlas(window.__STATS__);
+  renderTripsList(window.__STATS__.trips);
+}
 
 // ─── Data layer ──────────────────────────────────────
 const REGIONS=[
@@ -234,6 +251,102 @@ function computeStats(trips){
     yearCounts.push({year:y,count:list.filter(t=>Number((t.startDate||'').slice(0,4))===y).length,highlight:y===curYear});
   }
   return{trips:list,tripCount:list.length,countryCount:countries.size,startYear,regionCounts,yearCounts};
+}
+
+// ─── Atlas home ──────────────────────────────────────
+function renderAtlas(stats){
+  const box=document.getElementById('atlasBox');
+  if(!stats.tripCount){
+    box.innerHTML='<div class="empty"><div class="empty-i">🌍</div><div class="empty-h">還沒有旅程</div><div class="empty-s">點右下角 ＋ 新增第一趟旅程</div></div>';
+    return;
+  }
+  box.innerHTML=`
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">${stats.tripCount}</div><div class="stat-l">趟旅行</div></div>
+      <div class="stat"><div class="stat-n">${stats.countryCount}</div><div class="stat-l">個國家</div></div>
+      <div class="stat"><div class="stat-n">${new Date().getFullYear()-stats.startYear+1}</div><div class="stat-l">年來</div></div>
+    </div>
+    <div class="map-wrap"><canvas id="mapCanvas" width="400" height="260"></canvas><div class="map-tip" id="mapTip"></div></div>
+    <div class="chart-row">
+      <div class="card chart-card"><div class="chart-title">地區分佈</div><canvas id="donutCanvas" width="140" height="140"></canvas>
+        <div id="donutLegend"></div>
+      </div>
+      <div class="card chart-card"><div class="chart-title">年度足跡</div><canvas id="barCanvas" width="140" height="140"></canvas></div>
+    </div>`;
+  drawMap(stats.trips);
+  drawDonut(document.getElementById('donutCanvas'),stats.regionCounts);
+  document.getElementById('donutLegend').innerHTML=stats.regionCounts.map(r=>
+    `<div class="legend-row"><span class="legend-dot" style="background:${r.color}"></span>${r.name} · ${r.value}</div>`
+  ).join('');
+  drawYearlyBars(document.getElementById('barCanvas'),stats.yearCounts);
+}
+
+// Equirectangular lat/lng → canvas x/y
+function project(lat,lng,w,h){return{x:(lng+180)/360*w,y:(90-lat)/180*h};}
+
+function drawMap(trips){
+  const canvas=document.getElementById('mapCanvas');
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width,h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  // Procedural dot-grid background (not a literal coastline — a stylized atlas texture)
+  ctx.fillStyle='rgba(255,255,255,.05)';
+  for(let y=8;y<h;y+=14){for(let x=8;x<w;x+=14){ctx.beginPath();ctx.arc(x,y,1,0,Math.PI*2);ctx.fill();}}
+  const pins=[];
+  trips.forEach(t=>{
+    if(t.lat==null||t.lng==null)return;
+    const{x,y}=project(t.lat,t.lng,w,h);
+    pins.push({x,y,title:t.title,id:t.id});
+    const grad=ctx.createRadialGradient(x,y,0,x,y,10);
+    grad.addColorStop(0,'rgba(74,222,128,.9)');grad.addColorStop(1,'rgba(74,222,128,0)');
+    ctx.fillStyle=grad;ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#DFFFE8';ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);ctx.fill();
+  });
+  canvas.onclick=e=>{
+    const r=canvas.getBoundingClientRect();
+    const scale=canvas.width/r.width;
+    const mx=(e.clientX-r.left)*scale,my=(e.clientY-r.top)*scale;
+    const hit=pins.find(p=>Math.hypot(p.x-mx,p.y-my)<10);
+    const tip=document.getElementById('mapTip');
+    if(hit){
+      tip.style.display='block';tip.textContent=hit.title;
+      tip.style.left=(hit.x/canvas.width*100)+'%';tip.style.top=(hit.y/canvas.height*100)+'%';
+      tip.onclick=()=>openTripDetail(hit.id);
+    }else{tip.style.display='none';}
+  };
+}
+
+function drawDonut(canvas,data){
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width,h=canvas.height,cx=w/2,cy=h/2,r=Math.min(w,h)/2-10,rw=16;
+  ctx.clearRect(0,0,w,h);
+  const total=data.reduce((s,d)=>s+d.value,0)||1;
+  let start=-Math.PI/2;
+  data.forEach(d=>{
+    const angle=(d.value/total)*Math.PI*2;
+    ctx.beginPath();ctx.arc(cx,cy,r,start,start+angle);
+    ctx.strokeStyle=d.color;ctx.lineWidth=rw;ctx.stroke();
+    start+=angle;
+  });
+  ctx.fillStyle='#EAF0FB';ctx.font='bold 18px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(String(total),cx,cy);
+}
+
+function drawYearlyBars(canvas,yearCounts){
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width,h=canvas.height,pad=6;
+  ctx.clearRect(0,0,w,h);
+  if(!yearCounts.length)return;
+  const max=Math.max(1,...yearCounts.map(y=>y.count));
+  const bw=(w-pad*2)/yearCounts.length;
+  yearCounts.forEach((y,i)=>{
+    const bh=(y.count/max)*(h-20);
+    const x=pad+i*bw+bw*0.2;
+    ctx.fillStyle=y.highlight?'#F4C95D':'rgba(255,255,255,.35)';
+    ctx.beginPath();ctx.roundRect(x,h-bh-16,bw*0.6,bh,3);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='8px sans-serif';ctx.textAlign='center';
+    ctx.fillText(String(y.year).slice(2),x+bw*0.3,h-4);
+  });
 }
 
 // ─── Tabs ────────────────────────────────────────────
