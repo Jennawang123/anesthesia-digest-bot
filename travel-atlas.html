@@ -98,6 +98,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .chart-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
 .legend-row{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-top:4px;}
 .legend-dot{width:8px;height:8px;border-radius:3px;flex-shrink:0;}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.filter-pill{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer;}
+.filter-pill.on{background:var(--teal);color:#0B1220;border-color:var(--teal);}
+.trip-row{display:flex;align-items:center;gap:12px;padding:13px 14px;margin-bottom:8px;cursor:pointer;}
+.trip-flag{font-size:22px;flex-shrink:0;}
+.trip-info{flex:1;min-width:0;}
+.trip-title{font-weight:700;font-size:15px;}
+.trip-meta{font-size:12px;color:var(--muted);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -348,6 +356,36 @@ function drawYearlyBars(canvas,yearCounts){
     ctx.fillText(String(y.year).slice(2),x+bw*0.3,h-4);
   });
 }
+
+// ─── Trip list ───────────────────────────────────────
+let curRegionFilter='all';
+
+function renderTripsList(trips){
+  const box=document.getElementById('tripsBox');
+  if(!trips.length){
+    box.innerHTML='<div class="empty"><div class="empty-i">🧳</div><div class="empty-h">還沒有旅程</div></div>';
+    return;
+  }
+  const pills=['<div class="filter-pill '+(curRegionFilter==='all'?'on':'')+'" onclick="setRegionFilter(\'all\')">全部</div>']
+    .concat(REGIONS.filter(r=>trips.some(t=>t.region===r.id)).map(r=>
+      `<div class="filter-pill ${curRegionFilter===r.id?'on':''}" onclick="setRegionFilter('${r.id}')">${r.name}</div>`
+    ));
+  const filtered=curRegionFilter==='all'?trips:trips.filter(t=>t.region===curRegionFilter);
+  const sorted=[...filtered].sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
+  box.innerHTML=`<div class="filter-row">${pills.join('')}</div>`+
+    sorted.map(t=>`
+      <div class="card trip-row" onclick="openTripDetail('${t.id}')">
+        <div class="trip-flag">${countryFlags(t.countryCode)}</div>
+        <div class="trip-info">
+          <div class="trip-title">${esc(t.title)}</div>
+          <div class="trip-meta">${(t.startDate||'').slice(0,7).replace('-','.')} · ${REGIONM[t.region]?.name||''}</div>
+        </div>
+      </div>`).join('');
+}
+function setRegionFilter(r){curRegionFilter=r;renderTripsList(window.__STATS__.trips);}
+
+const COUNTRY_FLAG={JP:'🇯🇵',AU:'🇦🇺',IT:'🇮🇹',FI:'🇫🇮',TW:'🇹🇼',KR:'🇰🇷',TH:'🇹🇭',IS:'🇮🇸',NZ:'🇳🇿',HR:'🇭🇷',CA:'🇨🇦'};
+function countryFlags(codes){return(codes||[]).map(c=>COUNTRY_FLAG[c]||'🏳️').join('')||'🏳️';}
 
 // ─── Tabs ────────────────────────────────────────────
 function goTab(t){
