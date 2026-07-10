@@ -179,6 +179,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
   </div>
 </div>
 
+<div class="ov" id="m-entry">
+  <div class="sheet">
+    <div class="hdl"></div><div class="st">新增日記</div>
+    <input type="hidden" id="me_tripid">
+    <div class="fg"><label class="lb">日期</label><input class="inp" id="me_date" type="date"></div>
+    <div class="fg"><label class="lb">地點</label><input class="inp" id="me_loc" placeholder="例：那霸市場"></div>
+    <div class="fg"><label class="lb">分類</label><div class="tw" id="me_cat"></div></div>
+    <div class="fg"><label class="lb">內文</label><textarea class="ta" id="me_text" placeholder="今天做了什麼、有什麼感受…"></textarea></div>
+    <div class="fg"><label class="lb">照片</label>
+      <div class="photo-grid" id="mePhotoPreview"></div>
+      <button class="btn btn-g btn-w" style="margin-top:8px" onclick="document.getElementById('mePhotoFile').click()">📷 選擇照片</button>
+      <input type="file" id="mePhotoFile" accept="image/*" multiple style="display:none" onchange="onEntryPhotosPick(event)">
+    </div>
+    <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-entry')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveEntry()">儲存</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -499,6 +516,71 @@ function saveTrip(){
   openTripDetail(id);
 }
 
+// ─── Add Entry ───────────────────────────────────────
+const ENTRY_CATS=[{id:'food',name:'美食'},{id:'sight',name:'景點'},{id:'hotel',name:'住宿'},{id:'transport',name:'交通'}];
+let selEntryCat='sight',pendingPhotoFiles=[];
+
+function openAddEntrySheet(){
+  if(!curDetailTripId){toast('⚠️ 請先進入一趟旅程再新增日記');return;}
+  document.getElementById('me_tripid').value=curDetailTripId;
+  document.getElementById('me_date').value=new Date().toLocaleDateString('en-CA');
+  document.getElementById('me_loc').value='';
+  document.getElementById('me_text').value='';
+  pendingPhotoFiles=[];
+  document.getElementById('mePhotoPreview').innerHTML='';
+  document.getElementById('me_cat').innerHTML=ENTRY_CATS.map(c=>
+    `<div class="to ${c.id===selEntryCat?'on':''}" onclick="selEntryCatPick('${c.id}')">${c.name}</div>`
+  ).join('');
+  openM('m-entry');
+}
+function selEntryCatPick(id){
+  selEntryCat=id;
+  document.querySelectorAll('#me_cat .to').forEach(el=>el.classList.remove('on'));
+  event.target.classList.add('on');
+}
+function onEntryPhotosPick(ev){
+  pendingPhotoFiles=Array.from(ev.target.files||[]);
+  const prev=document.getElementById('mePhotoPreview');
+  prev.innerHTML='';
+  pendingPhotoFiles.forEach(f=>{
+    const img=document.createElement('img');
+    img.src=URL.createObjectURL(f);
+    prev.appendChild(img);
+  });
+}
+async function uploadEntryPhotos(tripId,entryId,files){
+  const urls=[];
+  for(const file of files){
+    const path=`trips/${tripId}/entries/${entryId}/${uid()}-${file.name}`;
+    const ref=STORAGE.ref().child(path);
+    await ref.put(file);
+    urls.push(await ref.getDownloadURL());
+  }
+  return urls;
+}
+async function saveEntry(){
+  const tripId=document.getElementById('me_tripid').value;
+  const date=document.getElementById('me_date').value;
+  if(!date){toast('⚠️ 日期必填');return;}
+  const entryId=createEntry(tripId,{
+    date,
+    location:document.getElementById('me_loc').value.trim(),
+    text:document.getElementById('me_text').value.trim(),
+    category:selEntryCat,
+    photos:[],
+  });
+  closeM('m-entry');
+  toast('✅ 已儲存日記');
+  if(pendingPhotoFiles.length){
+    toast('📤 上傳照片中…');
+    try{
+      const urls=await uploadEntryPhotos(tripId,entryId,pendingPhotoFiles);
+      updateEntry(tripId,entryId,{photos:urls});
+      toast('✅ 照片已上傳');
+    }catch(e){toast('⚠️ 照片上傳失敗，可稍後重試');console.error(e);}
+  }
+}
+
 // ─── Tabs ────────────────────────────────────────────
 function goTab(t){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
@@ -509,7 +591,11 @@ function goTab(t){
   const fab=document.getElementById('fab');
   fab.style.display=(t==='cfg'||t==='detail')?'none':'flex';
 }
-function fabTap(){ /* wired to openAddEntrySheet() in Task 9 */ }
+function fabTap(){
+  if(curTab==='detail')openAddEntrySheet();
+  else if(curTab==='trips')toast('請先點進一趟旅程再新增日記');
+  else openAddTripSheet();
+}
 </script>
 </body>
 </html>
