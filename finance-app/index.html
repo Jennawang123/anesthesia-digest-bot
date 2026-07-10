@@ -261,6 +261,9 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
       <span style="font-size:14px;font-weight:600">年度結餘</span>
       <span style="font-size:22px;font-weight:800" id="bal-year-net">--</span>
     </div>
+    <div style="text-align:right;margin-top:4px">
+      <span style="font-size:12px;color:#64748b" id="bal-year-rate">--</span>
+    </div>
   </div>
 </div>
 
@@ -962,6 +965,15 @@ async function loadYearlyBalance() {
     const netEl=document.getElementById('bal-year-net');
     netEl.textContent=`NT$${s.balance.toLocaleString()}`;
     netEl.style.color=s.balance>=0?'#4ade80':'#f87171';
+    const rateEl=document.getElementById('bal-year-rate');
+    if(s.total_income>0){
+      const rate=(s.balance/s.total_income*100);
+      rateEl.textContent=`儲蓄率 ${rate>=0?'+':''}${rate.toFixed(1)}%`;
+      rateEl.style.color=rate>=0?'#4ade80':'#f87171';
+    } else {
+      rateEl.textContent='儲蓄率 --';
+      rateEl.style.color='#64748b';
+    }
   } catch(e){console.error(e);}
 }
 async function submitIncome(){
