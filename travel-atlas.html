@@ -78,7 +78,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .stat-n{font-size:24px;font-weight:800;color:var(--text);}
 .stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
 .map-wrap{position:relative;border-radius:16px;overflow:hidden;margin-bottom:12px;border:1px solid var(--border);background:radial-gradient(ellipse at center,#0E2A3A,#081120);}
-.map-wrap canvas{display:block;width:100%;aspect-ratio:400/260;}
+.map-wrap canvas{display:block;width:100%;aspect-ratio:1;touch-action:none;}
 .map-tip{position:absolute;background:rgba(10,20,35,.92);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:#fff;cursor:pointer;transform:translate(-50%,-120%);white-space:nowrap;display:none;}
 .map-zoom-ctl{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;align-items:center;gap:4px;background:rgba(10,20,35,.7);border:1px solid var(--border);border-radius:10px;padding:6px;}
 .map-zoom-ctl .ib{background:rgba(255,255,255,.1);color:#fff;}
@@ -108,6 +108,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .entry-loc{font-size:12px;color:var(--teal);font-weight:700;}
 .entry-date{font-size:11px;color:var(--muted);}
 .entry-text{font-size:13px;color:var(--text);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.day-header{font-size:13px;font-weight:700;color:var(--gold);margin:18px 0 8px;padding:0 2px;}
+.day-header:first-child{margin-top:0;}
+.entry-full{display:none;position:fixed;inset:0;background:var(--bg);z-index:400;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.entry-full.open{display:block;}
+.ef-hdr{position:sticky;top:0;background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;z-index:1;}
+.ef-body{padding:16px;}
+.ef-date{font-size:12px;color:var(--muted);}
+.ef-loc{font-size:22px;font-weight:700;color:var(--text);margin-top:4px;font-family:'Noto Serif TC',serif;}
 .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
 .photo-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;}
 </style>
@@ -193,6 +201,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
     </div>
     <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-entry')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveEntry()" id="me-save-btn">儲存</button></div>
   </div>
+</div>
+
+<div class="entry-full" id="entryFull">
+  <div class="ef-hdr"><button class="ib" onclick="closeEntryFull()">← 返回</button></div>
+  <div class="ef-body" id="entryFullBody"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -326,7 +339,7 @@ function renderAtlas(stats){
       <div class="stat"><div class="stat-n">${new Date().getFullYear()-stats.startYear+1}</div><div class="stat-l">年來</div></div>
     </div>
     <div class="map-wrap">
-      <canvas id="mapCanvas" width="400" height="260"></canvas>
+      <canvas id="mapCanvas" width="360" height="360"></canvas>
       <div class="map-tip" id="mapTip"></div>
       <div class="map-zoom-ctl">
         <button class="ib" onclick="mapZoom(1.5)">＋</button>
@@ -351,9 +364,6 @@ function renderAtlas(stats){
   drawYearlyBars(document.getElementById('barCanvas'),stats.yearCounts);
 }
 
-// Equirectangular lat/lng → canvas x/y
-function project(lat,lng,w,h){return{x:(lng+180)/360*w,y:(90-lat)/180*h};}
-
 // Simplified world landmass outlines, decimated (Douglas-Peucker) from
 // Natural Earth "ne_50m_land" (public domain, naturalearthdata.com/about/terms-of-use).
 // Format: [lng, lat] pairs per polygon ring.
@@ -365,115 +375,130 @@ const CONTINENTS=[
   [[-57.02,-63.37],[-61.7,-64.99],[-62.29,-65.92],[-61.03,-66.34],[-65.5,-67.38],[-65.16,-68.62],[-62.93,-68.44],[-63.75,-68.7],[-60.96,-71.24],[-62.26,-72.02],[-59.96,-73.03],[-62.01,-73.15],[-61.01,-74.48],[-70.21,-76.67],[-77.19,-76.63],[-72.88,-77.69],[-81.58,-77.85],[-77.87,-78.75],[-83.78,-77.98],[-80.89,-79.5],[-76.22,-79.39],[-79.66,-80.0],[-75.08,-80.86],[-62.35,-81.58],[-66.13,-81.95],[-60.53,-82.2],[-62.74,-82.53],[-61.43,-83.4],[-23.57,-79.96],[-36.18,-78.47],[-28.93,-76.37],[-18.3,-75.43],[-14.57,-73.94],[-16.44,-73.43],[-11.5,-72.41],[-11.01,-71.76],[-12.35,-71.39],[-10.27,-70.94],[-0.54,-71.71],[13.07,-70.05],[26.5,-71.02],[32.62,-70.0],[33.47,-68.67],[38.89,-70.17],[40.22,-68.8],[46.56,-67.27],[48.37,-67.99],[49.22,-67.23],[48.47,-67.04],[53.67,-65.86],[57.0,-66.47],[56.15,-67.26],[69.56,-67.76],[69.08,-69.87],[67.27,-70.27],[69.25,-70.43],[66.5,-73.13],[67.32,-73.3],[73.32,-69.85],[84.49,-67.11],[102.67,-65.87],[109.46,-66.91],[113.1,-65.8],[115.64,-66.77],[114.03,-67.44],[119.13,-67.37],[135.35,-66.13],[143.73,-66.88],[144.62,-67.14],[143.98,-67.86],[147.09,-68.37],[153.91,-68.32],[162.19,-71.04],[162.67,-70.3],[170.44,-71.42],[170.21,-72.57],[168.43,-72.38],[169.55,-73.05],[166.45,-72.94],[167.71,-73.39],[164.81,-73.4],[165.41,-74.56],[160.91,-75.33],[162.82,-75.85],[162.45,-76.96],[163.98,-78.22],[167.05,-78.69],[161.67,-78.54],[158.57,-80.42],[163.6,-82.12],[161.28,-82.49],[180,-84.35],[180,-90.0],[-180,-90.0],[-180,-84.35],[-156.46,-85.19],[-174.24,-82.79],[-159.44,-83.54],[-153.01,-82.45],[-156.53,-81.16],[-148.12,-80.9],[-150.58,-80.35],[-148.18,-79.78],[-156.11,-78.74],[-154.29,-78.26],[-158.29,-77.95],[-158.0,-77.09],[-149.72,-77.8],[-145.52,-77.2],[-149.65,-76.37],[-143.57,-75.56],[-114.62,-73.9],[-113.33,-74.45],[-114.11,-74.98],[-111.18,-74.19],[-110.23,-74.54],[-111.36,-75.22],[-98.75,-75.32],[-102.86,-73.78],[-98.9,-73.61],[-103.11,-72.72],[-88.78,-72.68],[-82.18,-73.86],[-80.44,-72.94],[-77.05,-73.84],[-69.28,-73.17],[-66.83,-72.09],[-68.71,-69.43],[-66.97,-69.16],[-67.49,-67.11],[-63.76,-65.03],[-57.02,-63.37]], // Antarctica
 ];
 
-// ─── Map zoom/pan ────────────────────────────────────
-let mapView={scale:1,ox:0,oy:0};
-let mapPins=[];
+// ─── 3D globe ────────────────────────────────────────
+let globeView={rotLon:20,tilt:18,zoom:1};
+let globePins=[];
+let globeAnimId=null;
+let globeDragging=false;
 
-function drawMap(trips){
-  mapPins=[];
-  const canvas=document.getElementById('mapCanvas');
-  const w=canvas.width,h=canvas.height;
-  trips.forEach(t=>{
-    if(t.lat==null||t.lng==null)return;
-    const{x,y}=project(t.lat,t.lng,w,h);
-    mapPins.push({x,y,title:t.title,id:t.id});
-  });
-  mapView={scale:1,ox:0,oy:0};
-  renderMapCanvas();
-  attachMapInteractions();
+function sphereXYZ(lat,lng){
+  const la=lat*Math.PI/180,lo=lng*Math.PI/180;
+  return[Math.cos(la)*Math.sin(lo),Math.sin(la),Math.cos(la)*Math.cos(lo)];
+}
+function rotY([x,y,z],deg){const r=deg*Math.PI/180,c=Math.cos(r),s=Math.sin(r);return[x*c+z*s,y,-x*s+z*c];}
+function rotX([x,y,z],deg){const r=deg*Math.PI/180,c=Math.cos(r),s=Math.sin(r);return[x,y*c-z*s,y*s+z*c];}
+function projectGlobe(lat,lng,R,cx,cy){
+  let p=sphereXYZ(lat,lng);
+  p=rotY(p,globeView.rotLon);
+  p=rotX(p,globeView.tilt);
+  const[x,y,z]=p;
+  return{sx:cx+x*R,sy:cy-y*R,z};
 }
 
-function renderMapCanvas(){
+function drawMap(trips){
+  globePins=trips.filter(t=>t.lat!=null&&t.lng!=null).map(t=>({lat:t.lat,lng:t.lng,title:t.title,id:t.id}));
+  if(globeAnimId)cancelAnimationFrame(globeAnimId);
+  attachGlobeInteractions();
+  const loop=()=>{
+    if(!document.getElementById('mapCanvas')){globeAnimId=null;return;}
+    if(!globeDragging)globeView.rotLon=(globeView.rotLon+0.12)%360;
+    renderGlobeCanvas();
+    globeAnimId=requestAnimationFrame(loop);
+  };
+  loop();
+}
+
+function renderGlobeCanvas(){
   const canvas=document.getElementById('mapCanvas');
   if(!canvas)return;
   const ctx=canvas.getContext('2d');
   const w=canvas.width,h=canvas.height;
-  ctx.setTransform(1,0,0,1,0,0);
+  const cx=w/2,cy=h/2,R=Math.min(w,h)/2*0.82*globeView.zoom;
   ctx.clearRect(0,0,w,h);
-  ctx.save();
-  ctx.translate(mapView.ox,mapView.oy);
-  ctx.scale(mapView.scale,mapView.scale);
-  ctx.fillStyle='rgba(74,222,128,.10)';
-  ctx.strokeStyle='rgba(74,222,128,.35)';
-  ctx.lineWidth=1/mapView.scale;
+  // Sphere body
+  const bg=ctx.createRadialGradient(cx-R*0.35,cy-R*0.35,R*0.1,cx,cy,R);
+  bg.addColorStop(0,'#123448');bg.addColorStop(1,'#081420');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+  // Continents: draw only front-facing (z>0) sub-paths
+  ctx.fillStyle='rgba(74,222,128,.28)';
+  ctx.strokeStyle='rgba(74,222,128,.55)';
+  ctx.lineWidth=1;
   CONTINENTS.forEach(ring=>{
-    ctx.beginPath();
-    ring.forEach(([lng,lat],i)=>{
-      const{x,y}=project(lat,lng,w,h);
-      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    let path=[];
+    const flush=()=>{
+      if(path.length>2){
+        ctx.beginPath();
+        path.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+        ctx.closePath();ctx.fill();ctx.stroke();
+      }
+      path=[];
+    };
+    ring.forEach(([lng,lat])=>{
+      const p=projectGlobe(lat,lng,R,cx,cy);
+      if(p.z>0.02)path.push([p.sx,p.sy]);else flush();
     });
-    ctx.closePath();ctx.fill();ctx.stroke();
+    flush();
   });
-  mapPins.forEach(p=>{
-    const r=10/mapView.scale;
-    const grad=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
-    grad.addColorStop(0,'rgba(74,222,128,.9)');grad.addColorStop(1,'rgba(74,222,128,0)');
-    ctx.fillStyle=grad;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#DFFFE8';ctx.beginPath();ctx.arc(p.x,p.y,2.5/mapView.scale,0,Math.PI*2);ctx.fill();
+  // Rim highlight
+  ctx.strokeStyle='rgba(74,222,128,.4)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+  // Pins (front hemisphere only)
+  globePins.forEach(pin=>{
+    const p=projectGlobe(pin.lat,pin.lng,R,cx,cy);
+    pin._sx=p.sx;pin._sy=p.sy;pin._visible=p.z>0.02;
+    if(!pin._visible)return;
+    const glowR=9*Math.max(0.4,p.z);
+    const grad=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,glowR);
+    grad.addColorStop(0,'rgba(244,201,93,.95)');grad.addColorStop(1,'rgba(244,201,93,0)');
+    ctx.fillStyle=grad;ctx.beginPath();ctx.arc(p.sx,p.sy,glowR,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#FFF6DD';ctx.beginPath();ctx.arc(p.sx,p.sy,2.2,0,Math.PI*2);ctx.fill();
   });
-  ctx.restore();
-  document.getElementById('mapZoomLabel')&&(document.getElementById('mapZoomLabel').textContent=Math.round(mapView.scale*100)+'%');
 }
 
 function mapZoom(factor){
-  const canvas=document.getElementById('mapCanvas');
-  const cx=canvas.width/2,cy=canvas.height/2;
-  const newScale=Math.max(1,Math.min(8,mapView.scale*factor));
-  const ratio=newScale/mapView.scale;
-  mapView.ox=cx-(cx-mapView.ox)*ratio;
-  mapView.oy=cy-(cy-mapView.oy)*ratio;
-  mapView.scale=newScale;
-  if(mapView.scale===1){mapView.ox=0;mapView.oy=0;}
-  renderMapCanvas();
+  globeView.zoom=Math.max(0.6,Math.min(2.5,globeView.zoom*factor));
+  const lbl=document.getElementById('mapZoomLabel');
+  if(lbl)lbl.textContent=Math.round(globeView.zoom*100)+'%';
 }
 
-function attachMapInteractions(){
+function attachGlobeInteractions(){
   const canvas=document.getElementById('mapCanvas');
+  if(!canvas||canvas._globeBound)return;
+  canvas._globeBound=true;
   const tip=document.getElementById('mapTip');
-  let dragging=false,moved=false,lastX=0,lastY=0;
-
-  function toCanvasCoords(clientX,clientY){
-    const r=canvas.getBoundingClientRect();
-    const scale=canvas.width/r.width;
-    return{x:(clientX-r.left)*scale,y:(clientY-r.top)*scale};
-  }
-  function showTipOrHide(cx,cy){
-    const modelX=(cx-mapView.ox)/mapView.scale,modelY=(cy-mapView.oy)/mapView.scale;
-    const hit=mapPins.find(p=>Math.hypot(p.x-modelX,p.y-modelY)<12/mapView.scale);
-    if(hit){
-      const sx=hit.x*mapView.scale+mapView.ox,sy=hit.y*mapView.scale+mapView.oy;
-      tip.style.display='block';tip.textContent=hit.title;
-      tip.style.left=(sx/canvas.width*100)+'%';tip.style.top=(sy/canvas.height*100)+'%';
-      tip.onclick=()=>openTripDetail(hit.id);
-    }else{tip.style.display='none';}
-  }
+  let lastX=0,lastY=0,moved=false;
 
   canvas.addEventListener('pointerdown',e=>{
-    dragging=true;moved=false;lastX=e.clientX;lastY=e.clientY;
+    globeDragging=true;moved=false;lastX=e.clientX;lastY=e.clientY;
     canvas.setPointerCapture(e.pointerId);
   });
   canvas.addEventListener('pointermove',e=>{
-    if(!dragging)return;
+    if(!globeDragging)return;
     const dx=e.clientX-lastX,dy=e.clientY-lastY;
     if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
     if(moved){
-      const r=canvas.getBoundingClientRect();
-      const scale=canvas.width/r.width;
-      mapView.ox+=dx*scale;mapView.oy+=dy*scale;
+      globeView.rotLon+=dx*0.4;
+      globeView.tilt=Math.max(-80,Math.min(80,globeView.tilt-dy*0.4));
       lastX=e.clientX;lastY=e.clientY;
-      renderMapCanvas();
     }
   });
   canvas.addEventListener('pointerup',e=>{
-    dragging=false;
+    globeDragging=false;
     if(!moved){
-      const{x,y}=toCanvasCoords(e.clientX,e.clientY);
-      showTipOrHide(x,y);
+      const r=canvas.getBoundingClientRect();
+      const scale=canvas.width/r.width;
+      const mx=(e.clientX-r.left)*scale,my=(e.clientY-r.top)*scale;
+      const hit=globePins.find(p=>p._visible&&Math.hypot(p._sx-mx,p._sy-my)<10);
+      if(hit){
+        tip.style.display='block';tip.textContent=hit.title;
+        tip.style.left=(hit._sx/canvas.width*100)+'%';tip.style.top=(hit._sy/canvas.height*100)+'%';
+        tip.onclick=()=>openTripDetail(hit.id);
+      }else{tip.style.display='none';}
     }
   });
   canvas.addEventListener('wheel',e=>{
     e.preventDefault();
-    mapZoom(e.deltaY<0?1.2:1/1.2);
+    mapZoom(e.deltaY<0?1.1:1/1.1);
   },{passive:false});
 }
 
@@ -560,11 +585,24 @@ function openTripDetail(tripId){
   goTab('detail');
   entriesRef(tripId).on('value',snap=>renderTripDetail(tripId,snap.val()||{}));
 }
+const WEEKDAYS=['日','一','二','三','四','五','六'];
+function fmtDayHeader(dateStr){
+  if(!dateStr)return'';
+  const d=new Date(dateStr+'T12:00:00');
+  return`${d.getMonth()+1}/${d.getDate()} ${WEEKDAYS[d.getDay()]}`;
+}
+function groupEntriesByDate(list){
+  const map={};
+  list.forEach(e=>{(map[e.date]=map[e.date]||[]).push(e);});
+  return Object.entries(map).sort((a,b)=>a[0].localeCompare(b[0]));
+}
 function renderTripDetail(tripId,entries){
   const trip=(window.__STATS__.trips||[]).find(t=>t.id===tripId);
   if(!trip)return;
   const box=document.getElementById('detailBox');
-  const list=Object.entries(entries).map(([id,e])=>({id,...e})).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const list=Object.entries(entries).map(([id,e])=>({id,...e}));
+  const groups=groupEntriesByDate(list);
+  const flag=countryFlags(trip.countryCode);
   box.innerHTML=`
     <div class="detail-cover" style="${trip.coverPhotoUrl?`background-image:url('${trip.coverPhotoUrl}')`:''}">
       <div><div class="detail-title">${esc(trip.title)}</div></div>
@@ -573,41 +611,41 @@ function renderTripDetail(tripId,entries){
     <div class="detail-meta">${(trip.startDate||'').replace(/-/g,'.')} – ${(trip.endDate||'').replace(/-/g,'.')} · ${REGIONM[trip.region]?.name||''}</div>
     <div>${(trip.tags||[]).map(tag=>`<span class="tag-pill">${esc(tag)}</span>`).join('')}</div>
     <div style="margin-top:14px">
-      ${list.length?list.map(e=>`
-        <div class="card entry-row" onclick="openEntryView('${tripId}','${e.id}')">
-          ${e.photos&&e.photos[0]?`<img class="entry-thumb" src="${e.photos[0]}">`:'<div class="entry-thumb"></div>'}
-          <div class="entry-info">
-            <div class="entry-loc">${esc(e.location||'')}</div>
-            <div class="entry-date">${(e.date||'').replace(/-/g,'.')}</div>
-            <div class="entry-text">${esc(e.text||'')}</div>
-          </div>
-        </div>`).join(''):'<div class="empty"><div class="empty-i">📔</div><div class="empty-h">還沒有日記</div></div>'}
+      ${groups.length?groups.map(([date,items])=>`
+        <div class="day-header">${fmtDayHeader(date)} · ${flag} ${esc(items[0].location||'')}</div>
+        ${items.map(e=>`
+          <div class="card entry-row" onclick="openEntryFull('${tripId}','${e.id}')">
+            ${e.photos&&e.photos[0]?`<img class="entry-thumb" src="${e.photos[0]}">`:'<div class="entry-thumb"></div>'}
+            <div class="entry-info">
+              <div class="entry-loc">${esc(e.location||'')}</div>
+              <div class="entry-text">${esc(e.text||'')}</div>
+            </div>
+          </div>`).join('')}
+      `).join(''):'<div class="empty"><div class="empty-i">📔</div><div class="empty-h">還沒有日記</div></div>'}
     </div>
     <button class="btn btn-g btn-w" style="margin-top:8px" onclick="goTab('trips')">← 回旅程列表</button>`;
 }
-function openEntryView(tripId,entryId){
+function openEntryFull(tripId,entryId){
   entriesRef(tripId).child(entryId).once('value',snap=>{
     const e=snap.val();if(!e)return;
     const photos=(e.photos||[]).map(p=>`<img src="${p}">`).join('');
-    document.getElementById('detailBox').insertAdjacentHTML('beforeend',`
-      <div class="ov open" id="entry-view-ov" onclick="if(event.target===this)this.remove()">
-        <div class="sheet">
-          <div class="hdl"></div>
-          <div class="st">${(e.date||'').replace(/-/g,'.')} · ${esc(e.location||'')}</div>
-          <p style="font-size:14px;line-height:1.7;white-space:pre-wrap">${esc(e.text||'')}</p>
-          ${photos?`<div class="photo-grid">${photos}</div>`:''}
-          <div class="fr" style="margin-top:14px">
-            <button class="btn btn-g" style="flex:1" onclick="document.getElementById('entry-view-ov').remove();openEditEntrySheet('${tripId}','${entryId}')">✏️ 編輯</button>
-            <button class="btn btn-r" style="flex:1" onclick="deleteEntryConfirm('${tripId}','${entryId}')">🗑️ 刪除</button>
-          </div>
-        </div>
-      </div>`);
+    document.getElementById('entryFullBody').innerHTML=`
+      <div class="ef-date">${(e.date||'').replace(/-/g,'.')}</div>
+      <div class="ef-loc">${esc(e.location||'')}</div>
+      <p style="font-size:15px;line-height:1.8;white-space:pre-wrap;margin-top:10px">${esc(e.text||'')}</p>
+      ${photos?`<div class="photo-grid" style="margin-top:14px">${photos}</div>`:''}
+      <div class="fr" style="margin-top:20px">
+        <button class="btn btn-g" style="flex:1" onclick="closeEntryFull();openEditEntrySheet('${tripId}','${entryId}')">✏️ 編輯</button>
+        <button class="btn btn-r" style="flex:1" onclick="deleteEntryConfirm('${tripId}','${entryId}')">🗑️ 刪除</button>
+      </div>`;
+    document.getElementById('entryFull').classList.add('open');
   });
 }
+function closeEntryFull(){document.getElementById('entryFull').classList.remove('open');}
 function deleteEntryConfirm(tripId,entryId){
   if(!confirm('確定刪除這則日記？'))return;
   deleteEntry(tripId,entryId);
-  document.getElementById('entry-view-ov')?.remove();
+  closeEntryFull();
   toast('🗑️ 已刪除日記');
 }
 
