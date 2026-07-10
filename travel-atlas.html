@@ -106,6 +106,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .trip-info{flex:1;min-width:0;}
 .trip-title{font-weight:700;font-size:15px;}
 .trip-meta{font-size:12px;color:var(--muted);margin-top:2px;}
+.detail-cover{height:180px;border-radius:16px;background:linear-gradient(150deg,var(--bg2),#0E2A3A);background-size:cover;background-position:center;margin-bottom:12px;display:flex;align-items:flex-end;padding:16px;border:1px solid var(--border);}
+.detail-title{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6);}
+.detail-meta{font-size:12px;color:var(--muted);margin-bottom:14px;}
+.tag-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(74,222,128,.15);color:var(--teal);margin:0 6px 6px 0;}
+.entry-row{display:flex;gap:12px;padding:13px 14px;margin-bottom:8px;cursor:pointer;}
+.entry-thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.06);}
+.entry-info{flex:1;min-width:0;}
+.entry-loc{font-size:12px;color:var(--teal);font-weight:700;}
+.entry-date{font-size:11px;color:var(--muted);}
+.entry-text{font-size:13px;color:var(--text);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
+.photo-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;}
 </style>
 </head>
 <body>
@@ -386,6 +398,52 @@ function setRegionFilter(r){curRegionFilter=r;renderTripsList(window.__STATS__.t
 
 const COUNTRY_FLAG={JP:'🇯🇵',AU:'🇦🇺',IT:'🇮🇹',FI:'🇫🇮',TW:'🇹🇼',KR:'🇰🇷',TH:'🇹🇭',IS:'🇮🇸',NZ:'🇳🇿',HR:'🇭🇷',CA:'🇨🇦'};
 function countryFlags(codes){return(codes||[]).map(c=>COUNTRY_FLAG[c]||'🏳️').join('')||'🏳️';}
+
+// ─── Trip detail ─────────────────────────────────────
+function openTripDetail(tripId){
+  curDetailTripId=tripId;
+  goTab('detail');
+  entriesRef(tripId).on('value',snap=>renderTripDetail(tripId,snap.val()||{}));
+}
+function renderTripDetail(tripId,entries){
+  const trip=(window.__STATS__.trips||[]).find(t=>t.id===tripId);
+  if(!trip)return;
+  const box=document.getElementById('detailBox');
+  const list=Object.entries(entries).map(([id,e])=>({id,...e})).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  box.innerHTML=`
+    <div class="detail-cover" style="${trip.coverPhotoUrl?`background-image:url('${trip.coverPhotoUrl}')`:''}">
+      <div><div class="detail-title">${esc(trip.title)}</div></div>
+    </div>
+    <div class="detail-meta">${(trip.startDate||'').replace(/-/g,'.')} – ${(trip.endDate||'').replace(/-/g,'.')} · ${REGIONM[trip.region]?.name||''}</div>
+    <div>${(trip.tags||[]).map(tag=>`<span class="tag-pill">${esc(tag)}</span>`).join('')}</div>
+    <div style="margin-top:14px">
+      ${list.length?list.map(e=>`
+        <div class="card entry-row" onclick="openEntryView('${tripId}','${e.id}')">
+          ${e.photos&&e.photos[0]?`<img class="entry-thumb" src="${e.photos[0]}">`:'<div class="entry-thumb"></div>'}
+          <div class="entry-info">
+            <div class="entry-loc">${esc(e.location||'')}</div>
+            <div class="entry-date">${(e.date||'').replace(/-/g,'.')}</div>
+            <div class="entry-text">${esc(e.text||'')}</div>
+          </div>
+        </div>`).join(''):'<div class="empty"><div class="empty-i">📔</div><div class="empty-h">還沒有日記</div></div>'}
+    </div>
+    <button class="btn btn-g btn-w" style="margin-top:8px" onclick="goTab('trips')">← 回旅程列表</button>`;
+}
+function openEntryView(tripId,entryId){
+  entriesRef(tripId).child(entryId).once('value',snap=>{
+    const e=snap.val();if(!e)return;
+    const photos=(e.photos||[]).map(p=>`<img src="${p}">`).join('');
+    document.getElementById('detailBox').insertAdjacentHTML('beforeend',`
+      <div class="ov open" onclick="if(event.target===this)this.remove()">
+        <div class="sheet">
+          <div class="hdl"></div>
+          <div class="st">${(e.date||'').replace(/-/g,'.')} · ${esc(e.location||'')}</div>
+          <p style="font-size:14px;line-height:1.7;white-space:pre-wrap">${esc(e.text||'')}</p>
+          ${photos?`<div class="photo-grid">${photos}</div>`:''}
+        </div>
+      </div>`);
+  });
+}
 
 // ─── Tabs ────────────────────────────────────────────
 function goTab(t){
