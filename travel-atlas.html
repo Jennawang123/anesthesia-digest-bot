@@ -102,21 +102,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .detail-title{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6);}
 .detail-meta{font-size:12px;color:var(--muted);margin-bottom:14px;}
 .tag-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(74,222,128,.15);color:var(--teal);margin:0 6px 6px 0;}
-.entry-row{display:flex;gap:12px;padding:13px 14px;margin-bottom:8px;cursor:pointer;}
 .entry-thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.06);}
 .entry-info{flex:1;min-width:0;}
 .entry-loc{font-size:12px;color:var(--teal);font-weight:700;}
-.entry-date{font-size:11px;color:var(--muted);}
 .entry-text{font-size:13px;color:var(--text);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.day-header{font-size:13px;font-weight:700;color:var(--gold);margin:18px 0 8px;padding:0 2px;}
-.day-header:first-child{margin-top:0;}
-.entry-full{display:none;position:fixed;inset:0;background:var(--bg);z-index:400;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-.entry-full.open{display:block;}
-.ef-hdr{position:sticky;top:0;background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;z-index:1;}
-.ef-body{padding:16px;}
-.ef-date{font-size:12px;color:var(--muted);}
-.ef-loc{font-size:22px;font-weight:700;color:var(--text);margin-top:4px;font-family:'Noto Serif TC',serif;}
+.day-card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;}
+.day-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;}
+.day-card-title{font-size:13px;font-weight:700;color:var(--text);}
+.day-loc{font-size:11px;color:var(--gold);font-weight:600;margin-top:3px;cursor:pointer;}
+.day-card-actions{display:flex;align-items:center;gap:6px;}
+.day-chev{color:var(--muted);font-size:16px;}
+.day-card-body{border-top:1px solid var(--border);padding:8px 10px;}
+.entry-row2{display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid var(--border);transition:opacity .15s;}
+.entry-row2:last-child{border-bottom:none;}
+.entry-row2.dragging{opacity:.3;}
+.entry-row-main{flex:1;min-width:0;display:flex;gap:12px;cursor:pointer;touch-action:pan-y;}
+.entry-del-x{width:24px;height:24px;border-radius:50%;border:none;background:rgba(248,113,113,.15);color:var(--red);font-size:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.entry-ghost{position:fixed;background:var(--card-solid);border:1px solid var(--teal);border-radius:10px;padding:9px 4px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:.95;}
+.day-card-body.drop-over{background:rgba(74,222,128,.08);}
 .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
+.cover-thumb{position:relative;cursor:pointer;}
+.cover-thumb img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;border:2px solid transparent;}
+.cover-thumb.on img{border-color:var(--teal);}
+.cover-thumb-badge{position:absolute;top:3px;right:3px;background:var(--teal);color:#0B1220;font-size:9px;font-weight:700;border-radius:6px;padding:1px 5px;}
 .photo-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;}
 </style>
 </head>
@@ -164,10 +172,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
   <div class="sheet">
     <div class="hdl"></div><div class="st" id="m-trip-t">新增旅程</div>
     <input type="hidden" id="mt_id">
-    <div class="fg"><label class="lb">封面照</label>
+    <div class="fg"><label class="lb">照片（點縮圖可設為封面）</label>
       <div class="photo-grid" id="mtCoverPreview"></div>
-      <button class="btn btn-g btn-w" style="margin-top:8px" onclick="document.getElementById('mtCoverFile').click()">🖼️ 選擇封面照</button>
-      <input type="file" id="mtCoverFile" accept="image/*" style="display:none" onchange="onTripCoverPick(event)">
+      <button class="btn btn-g btn-w" style="margin-top:8px" onclick="document.getElementById('mtCoverFile').click()">🖼️ 新增照片</button>
+      <input type="file" id="mtCoverFile" accept="image/*" multiple style="display:none" onchange="onTripCoverPick(event)">
     </div>
     <div class="fg"><label class="lb">標題</label><input class="inp" id="mt_title" placeholder="例：2026/07 京都"></div>
     <div class="fg"><label class="lb">目的地</label><input class="inp" id="mt_dest" placeholder="例：京都"></div>
@@ -201,11 +209,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
     </div>
     <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-entry')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveEntry()" id="me-save-btn">儲存</button></div>
   </div>
-</div>
-
-<div class="entry-full" id="entryFull">
-  <div class="ef-hdr"><button class="ib" onclick="closeEntryFull()">← 返回</button></div>
-  <div class="ef-body" id="entryFullBody"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -373,6 +376,11 @@ const CONTINENTS=[
   [[143.18,-11.95],[143.76,-14.35],[144.47,-14.23],[145.29,-14.94],[145.43,-16.41],[145.91,-16.91],[146.38,-18.98],[148.76,-20.29],[149.7,-22.44],[149.97,-22.55],[150.02,-22.17],[150.62,-22.37],[150.84,-23.46],[151.83,-24.12],[153.16,-25.96],[153.12,-27.19],[153.62,-28.67],[152.94,-31.43],[152.47,-32.44],[151.29,-33.58],[150.2,-35.83],[149.93,-37.53],[147.88,-37.93],[146.22,-38.73],[146.4,-39.15],[145.4,-38.54],[145.48,-38.24],[144.72,-38.34],[145.12,-38.09],[144.89,-37.9],[143.54,-38.82],[141.42,-38.36],[139.78,-37.25],[139.73,-36.37],[138.97,-35.58],[139.28,-35.38],[138.18,-35.61],[138.51,-35.02],[138.09,-34.17],[137.69,-35.14],[136.88,-35.24],[137.39,-34.91],[137.93,-33.58],[137.78,-32.58],[137.24,-33.63],[136.43,-34.03],[135.97,-34.98],[135.65,-34.94],[135.12,-34.59],[135.45,-34.58],[135.22,-33.96],[134.3,-33.17],[134.23,-32.55],[131.14,-31.5],[125.92,-32.3],[124.24,-33.02],[123.51,-33.92],[119.85,-33.97],[117.86,-35.05],[116.52,-34.99],[115.01,-34.26],[114.99,-33.52],[115.36,-33.64],[115.68,-33.19],[115.7,-31.69],[115.08,-30.56],[114.86,-29.14],[113.18,-26.18],[113.84,-26.5],[113.45,-25.6],[114.22,-26.29],[113.42,-24.44],[114.02,-21.88],[114.14,-22.48],[116.71,-20.65],[117.41,-20.72],[121.0,-19.6],[122.35,-18.11],[122.26,-17.14],[122.97,-16.44],[123.56,-17.52],[123.87,-16.92],[123.61,-16.22],[124.77,-16.4],[124.4,-16.3],[124.44,-15.49],[125.06,-15.44],[124.84,-15.16],[125.36,-15.12],[125.18,-14.71],[125.63,-14.26],[126.02,-14.49],[126.05,-13.98],[126.57,-14.16],[126.9,-13.74],[127.46,-14.03],[128.2,-14.75],[128.07,-15.33],[128.58,-14.77],[129.63,-15.14],[129.85,-14.83],[129.38,-14.39],[130.62,-12.43],[130.87,-12.56],[131.29,-12.07],[132.71,-12.12],[132.67,-11.65],[131.96,-11.18],[135.03,-12.19],[135.92,-11.83],[135.7,-12.21],[136.08,-12.42],[136.54,-11.96],[136.95,-12.35],[136.46,-13.23],[135.93,-13.3],[135.45,-14.92],[139.01,-16.9],[139.25,-17.33],[140.51,-17.62],[141.41,-16.07],[141.47,-13.8],[142.17,-10.95],[142.61,-10.75],[143.18,-11.95]], // Australia
   [[-29.95,83.56],[-25.8,83.26],[-32.03,82.98],[-21.69,82.68],[-29.89,82.05],[-21.34,82.07],[-23.12,80.78],[-19.63,81.64],[-11.43,81.46],[-20.15,80.01],[-18.99,79.18],[-21.13,78.66],[-21.73,77.71],[-19.49,77.72],[-20.46,77.45],[-18.34,76.92],[-22.61,76.68],[-19.86,76.12],[-19.53,75.18],[-22.23,75.12],[-19.27,74.34],[-21.98,74.57],[-22.34,74.06],[-20.37,73.85],[-20.64,73.46],[-25.52,73.85],[-24.79,73.51],[-27.56,73.14],[-22.04,72.92],[-22.29,72.12],[-24.63,73.04],[-26.66,72.72],[-24.81,72.9],[-25.12,72.35],[-21.96,71.74],[-22.48,71.38],[-21.75,71.48],[-21.52,70.53],[-27.09,71.63],[-25.74,71.18],[-29.07,70.44],[-22.29,70.03],[-26.48,68.68],[-32.33,68.44],[-34.63,66.43],[-37.75,65.59],[-37.28,66.3],[-38.16,66.39],[-38.2,65.71],[-40.17,65.56],[-39.65,65.29],[-41.09,65.04],[-40.18,64.48],[-41.58,64.3],[-40.55,63.73],[-42.94,62.72],[-42.15,62.57],[-42.11,61.86],[-43.04,60.52],[-43.92,60.6],[-43.12,60.06],[-43.91,59.82],[-45.38,60.2],[-44.76,60.66],[-46.05,60.62],[-45.87,61.22],[-48.18,60.77],[-49.29,61.59],[-48.83,62.08],[-50.32,62.47],[-49.79,63.04],[-50.39,62.82],[-51.55,64.01],[-50.26,64.21],[-51.71,64.21],[-50.12,64.7],[-50.96,65.2],[-50.72,64.8],[-51.92,64.22],[-52.54,65.33],[-51.09,65.78],[-52.55,65.46],[-53.39,66.05],[-51.23,66.88],[-53.61,66.15],[-52.39,66.88],[-53.8,67.42],[-50.61,67.53],[-53.74,67.55],[-53.15,68.21],[-51.21,68.33],[-53.04,68.61],[-50.3,69.17],[-51.08,69.21],[-50.32,70.03],[-54.53,70.7],[-50.68,70.4],[-51.77,71.01],[-51.02,71.0],[-53.01,71.18],[-51.78,71.68],[-53.44,71.58],[-53.65,72.36],[-53.96,71.46],[-55.59,71.55],[-54.84,72.36],[-55.6,72.45],[-54.74,72.87],[-55.67,73.01],[-55.29,73.33],[-56.23,74.13],[-57.23,74.13],[-56.26,74.53],[-58.52,75.69],[-63.29,76.35],[-68.32,76.09],[-69.48,76.4],[-68.11,76.65],[-71.15,77.07],[-66.31,77.56],[-72.82,78.19],[-65.83,79.17],[-64.18,80.1],[-67.0,80.41],[-61.44,81.13],[-60.43,81.92],[-56.62,81.36],[-59.26,82.01],[-54.55,82.35],[-53.56,81.65],[-53.02,82.32],[-49.54,81.92],[-50.94,82.38],[-50.04,82.47],[-44.73,81.78],[-44.33,82.47],[-45.56,82.75],[-41.37,82.75],[-46.17,83.06],[-29.95,83.56]], // Greenland
   [[-57.02,-63.37],[-61.7,-64.99],[-62.29,-65.92],[-61.03,-66.34],[-65.5,-67.38],[-65.16,-68.62],[-62.93,-68.44],[-63.75,-68.7],[-60.96,-71.24],[-62.26,-72.02],[-59.96,-73.03],[-62.01,-73.15],[-61.01,-74.48],[-70.21,-76.67],[-77.19,-76.63],[-72.88,-77.69],[-81.58,-77.85],[-77.87,-78.75],[-83.78,-77.98],[-80.89,-79.5],[-76.22,-79.39],[-79.66,-80.0],[-75.08,-80.86],[-62.35,-81.58],[-66.13,-81.95],[-60.53,-82.2],[-62.74,-82.53],[-61.43,-83.4],[-23.57,-79.96],[-36.18,-78.47],[-28.93,-76.37],[-18.3,-75.43],[-14.57,-73.94],[-16.44,-73.43],[-11.5,-72.41],[-11.01,-71.76],[-12.35,-71.39],[-10.27,-70.94],[-0.54,-71.71],[13.07,-70.05],[26.5,-71.02],[32.62,-70.0],[33.47,-68.67],[38.89,-70.17],[40.22,-68.8],[46.56,-67.27],[48.37,-67.99],[49.22,-67.23],[48.47,-67.04],[53.67,-65.86],[57.0,-66.47],[56.15,-67.26],[69.56,-67.76],[69.08,-69.87],[67.27,-70.27],[69.25,-70.43],[66.5,-73.13],[67.32,-73.3],[73.32,-69.85],[84.49,-67.11],[102.67,-65.87],[109.46,-66.91],[113.1,-65.8],[115.64,-66.77],[114.03,-67.44],[119.13,-67.37],[135.35,-66.13],[143.73,-66.88],[144.62,-67.14],[143.98,-67.86],[147.09,-68.37],[153.91,-68.32],[162.19,-71.04],[162.67,-70.3],[170.44,-71.42],[170.21,-72.57],[168.43,-72.38],[169.55,-73.05],[166.45,-72.94],[167.71,-73.39],[164.81,-73.4],[165.41,-74.56],[160.91,-75.33],[162.82,-75.85],[162.45,-76.96],[163.98,-78.22],[167.05,-78.69],[161.67,-78.54],[158.57,-80.42],[163.6,-82.12],[161.28,-82.49],[180,-84.35],[180,-90.0],[-180,-90.0],[-180,-84.35],[-156.46,-85.19],[-174.24,-82.79],[-159.44,-83.54],[-153.01,-82.45],[-156.53,-81.16],[-148.12,-80.9],[-150.58,-80.35],[-148.18,-79.78],[-156.11,-78.74],[-154.29,-78.26],[-158.29,-77.95],[-158.0,-77.09],[-149.72,-77.8],[-145.52,-77.2],[-149.65,-76.37],[-143.57,-75.56],[-114.62,-73.9],[-113.33,-74.45],[-114.11,-74.98],[-111.18,-74.19],[-110.23,-74.54],[-111.36,-75.22],[-98.75,-75.32],[-102.86,-73.78],[-98.9,-73.61],[-103.11,-72.72],[-88.78,-72.68],[-82.18,-73.86],[-80.44,-72.94],[-77.05,-73.84],[-69.28,-73.17],[-66.83,-72.09],[-68.71,-69.43],[-66.97,-69.16],[-67.49,-67.11],[-63.76,-65.03],[-57.02,-63.37]], // Antarctica
+  [[141.23,41.37],[141.46,41.4],[141.43,40.72],[141.8,40.29],[141.98,39.43],[141.47,38.4],[141.11,38.34],[140.96,38.15],[141.0,37.11],[140.57,36.23],[140.87,35.72],[140.46,35.51],[140.35,35.18],[139.84,34.91],[139.83,35.3],[140.1,35.59],[139.83,35.66],[139.65,35.41],[139.68,35.15],[139.25,35.28],[139.09,34.84],[138.84,34.62],[138.9,35.03],[138.72,35.12],[138.19,34.6],[137.06,34.58],[137.28,34.77],[136.87,34.73],[136.8,35.05],[136.53,34.68],[136.88,34.43],[136.85,34.32],[136.33,34.18],[135.92,33.56],[135.7,33.49],[135.45,33.55],[135.13,34.01],[135.1,34.29],[135.42,34.62],[134.74,34.77],[133.14,34.3],[132.31,34.32],[132.15,33.84],[131.74,34.05],[130.92,33.98],[131.0,34.39],[131.35,34.41],[132.92,35.51],[133.98,35.51],[135.17,35.75],[135.33,35.53],[135.9,35.61],[136.1,35.77],[136.07,36.12],[136.7,36.74],[136.84,37.38],[137.32,37.52],[136.9,37.12],[137.02,36.84],[137.25,36.75],[138.32,37.22],[138.89,37.84],[139.36,38.1],[139.8,38.88],[140.06,39.62],[139.99,39.86],[139.74,39.92],[140.01,40.26],[139.97,40.67],[140.28,40.85],[140.39,41.23],[140.63,41.2],[140.75,40.83],[141.12,40.88],[141.24,41.21],[140.8,41.14],[140.8,41.25],[140.94,41.51],[141.23,41.37]], // Japan
+  [[-15.54,66.23],[-14.6,66.38],[-15.12,66.1],[-13.62,65.52],[-13.6,65.04],[-18.65,63.41],[-22.65,63.83],[-21.59,64.63],[-24.03,64.86],[-21.89,65.05],[-22.51,65.2],[-21.84,65.45],[-24.48,65.53],[-23.29,65.75],[-23.83,65.85],[-23.45,66.18],[-22.44,65.91],[-22.89,66.44],[-21.41,66.03],[-21.66,65.72],[-21.13,65.27],[-20.21,66.1],[-19.49,65.77],[-18.85,66.18],[-18.14,65.73],[-18.3,66.16],[-17.55,65.96],[-16.25,66.52],[-15.54,66.23]], // Iceland
+  [[173.12,-41.28],[174.3,-41.02],[174.04,-41.24],[174.37,-41.1],[174.07,-41.43],[174.28,-41.74],[172.62,-43.27],[172.53,-43.46],[173.07,-43.87],[172.04,-43.7],[172.18,-43.9],[171.24,-44.26],[170.78,-45.87],[169.1,-46.63],[166.49,-45.96],[167.0,-45.71],[166.73,-45.54],[167.16,-45.41],[167.03,-45.12],[168.37,-44.08],[171.04,-42.86],[172.27,-40.76],[172.94,-40.52],[172.7,-40.67],[173.12,-41.28]], // NZ_South
+  [[173.27,-34.93],[174.32,-35.25],[174.72,-36.84],[175.54,-37.2],[175.46,-36.48],[176.11,-37.65],[177.27,-37.99],[178.01,-37.55],[178.54,-37.69],[177.91,-39.24],[177.08,-39.22],[176.84,-40.16],[175.31,-41.61],[174.64,-41.29],[175.16,-40.11],[173.76,-39.32],[174.6,-38.79],[174.93,-37.8],[174.59,-37.1],[174.93,-37.08],[173.41,-35.54],[173.63,-35.32],[173.38,-35.5],[173.12,-35.21],[172.71,-34.46],[173.04,-34.43],[173.27,-34.93]], // NZ_North
+  [[-3.11,58.52],[-4.13,57.58],[-1.78,57.47],[-3.31,56.36],[-2.67,56.25],[-3.79,56.1],[-1.66,55.57],[-0.08,54.12],[0.12,53.61],[-0.66,53.72],[0.27,53.34],[0.05,52.91],[1.66,52.75],[0.42,51.47],[1.4,51.18],[-5.62,50.05],[-2.43,51.74],[-5.17,51.74],[-3.98,52.54],[-4.68,52.81],[-4.27,53.14],[-2.75,53.31],[-2.85,54.14],[-3.59,54.56],[-3.04,54.95],[-5.03,54.76],[-4.58,55.94],[-5.08,56.2],[-5.73,55.33],[-5.19,56.76],[-6.13,56.71],[-5.02,58.57],[-3.11,58.52]], // UK
 ];
 
 // ─── 3D globe ────────────────────────────────────────
@@ -580,10 +588,14 @@ function flagEmoji(code){
 function countryFlags(codes){return(codes||[]).map(flagEmoji).join('')||'🏳️';}
 
 // ─── Trip detail ─────────────────────────────────────
+let curTripEntries={},curTripDays={};
+let collapsedDays=new Set();
+
 function openTripDetail(tripId){
   curDetailTripId=tripId;
   goTab('detail');
-  entriesRef(tripId).on('value',snap=>renderTripDetail(tripId,snap.val()||{}));
+  entriesRef(tripId).on('value',snap=>{curTripEntries=snap.val()||{};renderTripDetail(tripId);});
+  DB.ref('/trips/'+tripId+'/days').on('value',snap=>{curTripDays=snap.val()||{};renderTripDetail(tripId);});
 }
 const WEEKDAYS=['日','一','二','三','四','五','六'];
 function fmtDayHeader(dateStr){
@@ -594,13 +606,36 @@ function fmtDayHeader(dateStr){
 function groupEntriesByDate(list){
   const map={};
   list.forEach(e=>{(map[e.date]=map[e.date]||[]).push(e);});
+  Object.values(map).forEach(items=>items.sort((a,b)=>(a.order||0)-(b.order||0)));
   return Object.entries(map).sort((a,b)=>a[0].localeCompare(b[0]));
 }
-function renderTripDetail(tripId,entries){
+function dayLocation(tripId,trip,date){
+  return(curTripDays[date]&&curTripDays[date].location)??trip.destination??'';
+}
+function toggleDayCard(date){
+  if(collapsedDays.has(date))collapsedDays.delete(date);else collapsedDays.add(date);
+  renderTripDetail(curDetailTripId);
+}
+function editDayLocation(tripId,date){
+  const trip=(window.__STATS__.trips||[]).find(t=>t.id===tripId);
+  const cur=dayLocation(tripId,trip,date);
+  const v=prompt('這天的地點',cur);
+  if(v==null)return;
+  DB.ref('/trips/'+tripId+'/days/'+date).update({location:v.trim()});
+}
+function deleteDayConfirm(tripId,date){
+  if(!confirm(fmtDayHeader(date)+' 這一整天的行程都要刪除嗎？'))return;
+  const updates={};
+  Object.entries(curTripEntries).forEach(([id,e])=>{if(e.date===date)updates[id]=null;});
+  entriesRef(tripId).update(updates);
+  DB.ref('/trips/'+tripId+'/days/'+date).remove();
+  toast('🗑️ 已刪除整天行程');
+}
+function renderTripDetail(tripId){
   const trip=(window.__STATS__.trips||[]).find(t=>t.id===tripId);
   if(!trip)return;
   const box=document.getElementById('detailBox');
-  const list=Object.entries(entries).map(([id,e])=>({id,...e}));
+  const list=Object.entries(curTripEntries).map(([id,e])=>({id,...e}));
   const groups=groupEntriesByDate(list);
   const flag=countryFlags(trip.countryCode);
   box.innerHTML=`
@@ -611,71 +646,188 @@ function renderTripDetail(tripId,entries){
     <div class="detail-meta">${(trip.startDate||'').replace(/-/g,'.')} – ${(trip.endDate||'').replace(/-/g,'.')} · ${REGIONM[trip.region]?.name||''}</div>
     <div>${(trip.tags||[]).map(tag=>`<span class="tag-pill">${esc(tag)}</span>`).join('')}</div>
     <div style="margin-top:14px">
-      ${groups.length?groups.map(([date,items])=>`
-        <div class="day-header">${fmtDayHeader(date)} · ${flag} ${esc(trip.destination||'')}</div>
-        ${items.map(e=>`
-          <div class="card entry-row" onclick="openEntryFull('${tripId}','${e.id}')">
-            ${e.photos&&e.photos[0]?`<img class="entry-thumb" src="${e.photos[0]}">`:'<div class="entry-thumb"></div>'}
-            <div class="entry-info">
-              <div class="entry-loc">${esc(e.location||'')}</div>
-              <div class="entry-text">${esc(e.text||'')}</div>
+      ${groups.length?groups.map(([date,items])=>{
+        const loc=dayLocation(tripId,trip,date);
+        const collapsed=collapsedDays.has(date);
+        return`
+        <div class="day-card">
+          <div class="day-card-hdr" onclick="toggleDayCard('${date}')">
+            <div class="day-card-title">
+              <div>${fmtDayHeader(date)}</div>
+              <div class="day-loc" onclick="event.stopPropagation();editDayLocation('${tripId}','${date}')">${flag} ${esc(loc)} <span style="opacity:.6">✏️</span></div>
             </div>
-          </div>`).join('')}
-      `).join(''):'<div class="empty"><div class="empty-i">📔</div><div class="empty-h">還沒有日記</div></div>'}
+            <div class="day-card-actions">
+              <button class="ib" onclick="event.stopPropagation();deleteDayConfirm('${tripId}','${date}')">🗑️</button>
+              <span class="day-chev">${collapsed?'›':'⌄'}</span>
+            </div>
+          </div>
+          ${collapsed?'':`<div class="day-card-body" data-date="${date}">
+            ${items.map(e=>`
+              <div class="entry-row2" data-entry-id="${e.id}" data-date="${date}">
+                <div class="entry-row-main">
+                  ${e.photos&&e.photos[0]?`<img class="entry-thumb" src="${e.photos[0]}">`:'<div class="entry-thumb"></div>'}
+                  <div class="entry-info">
+                    <div class="entry-loc">${esc(e.location||'')}</div>
+                    <div class="entry-text">${esc(e.text||'')}</div>
+                  </div>
+                </div>
+                <button class="entry-del-x" onclick="event.stopPropagation();deleteEntryConfirm('${tripId}','${e.id}')">✕</button>
+              </div>`).join('')}
+          </div>`}
+        </div>`;
+      }).join(''):'<div class="empty"><div class="empty-i">📔</div><div class="empty-h">還沒有日記</div></div>'}
     </div>
     <button class="btn btn-g btn-w" style="margin-top:8px" onclick="goTab('trips')">← 回旅程列表</button>`;
+  initEntryDnD(tripId);
 }
-function openEntryFull(tripId,entryId){
-  entriesRef(tripId).child(entryId).once('value',snap=>{
-    const e=snap.val();if(!e)return;
-    const photos=(e.photos||[]).map(p=>`<img src="${p}">`).join('');
-    document.getElementById('entryFullBody').innerHTML=`
-      <div class="ef-date">${(e.date||'').replace(/-/g,'.')}</div>
-      <div class="ef-loc">${esc(e.location||'')}</div>
-      <p style="font-size:15px;line-height:1.8;white-space:pre-wrap;margin-top:10px">${esc(e.text||'')}</p>
-      ${photos?`<div class="photo-grid" style="margin-top:14px">${photos}</div>`:''}
-      <div class="fr" style="margin-top:20px">
-        <button class="btn btn-g" style="flex:1" onclick="closeEntryFull();openEditEntrySheet('${tripId}','${entryId}')">✏️ 編輯</button>
-        <button class="btn btn-r" style="flex:1" onclick="deleteEntryConfirm('${tripId}','${entryId}')">🗑️ 刪除</button>
-      </div>`;
-    document.getElementById('entryFull').classList.add('open');
-  });
-}
-function closeEntryFull(){document.getElementById('entryFull').classList.remove('open');}
 function deleteEntryConfirm(tripId,entryId){
   if(!confirm('確定刪除這則日記？'))return;
   deleteEntry(tripId,entryId);
-  closeEntryFull();
   toast('🗑️ 已刪除日記');
+}
+
+// ─── Entry drag-to-reorder ───────────────────────────
+function initEntryDnD(tripId){
+  const box=document.getElementById('detailBox');
+  let suppressClick=false;
+
+  box.querySelectorAll('.entry-row-main').forEach(row=>{
+    const entryRow=row.closest('.entry-row2');
+    row.addEventListener('click',()=>{
+      if(suppressClick){suppressClick=false;return;}
+      openEditEntrySheet(tripId,entryRow.dataset.entryId);
+    });
+    row.addEventListener('pointerdown',e=>{
+      const startX=e.clientX,startY=e.clientY;
+      let moved=false,fired=false;
+      const timer=setTimeout(()=>{
+        if(!moved){fired=true;startDrag(entryRow,e);}
+      },380);
+      const onMove=me=>{
+        if(Math.abs(me.clientX-startX)>8||Math.abs(me.clientY-startY)>8){
+          moved=true;clearTimeout(timer);
+          row.removeEventListener('pointermove',onMove);
+        }
+      };
+      const onUp=()=>{clearTimeout(timer);row.removeEventListener('pointermove',onMove);};
+      row.addEventListener('pointermove',onMove);
+      row.addEventListener('pointerup',onUp,{once:true});
+    });
+  });
+
+  function startDrag(entryRow,e){
+    navigator.vibrate&&navigator.vibrate(30);
+    suppressClick=true;
+    const entryId=entryRow.dataset.entryId,fromDate=entryRow.dataset.date;
+    entryRow.classList.add('dragging');
+    const rect=entryRow.getBoundingClientRect();
+    const ghost=entryRow.cloneNode(true);
+    ghost.classList.add('entry-ghost');
+    ghost.style.width=rect.width+'px';
+    document.body.appendChild(ghost);
+    positionGhost(ghost,e.clientX,e.clientY);
+    document.querySelectorAll('.day-card-body').forEach(b=>b.classList.add('drop-target'));
+
+    function onMove(me){
+      positionGhost(ghost,me.clientX,me.clientY);
+      document.querySelectorAll('.day-card-body').forEach(b=>b.classList.remove('drop-over'));
+      const bodyEl=bodyFromPoint(me.clientX,me.clientY);
+      if(bodyEl)bodyEl.classList.add('drop-over');
+    }
+    function onUp(me){
+      document.removeEventListener('pointermove',onMove);
+      document.removeEventListener('pointerup',onUp);
+      ghost.remove();
+      entryRow.classList.remove('dragging');
+      document.querySelectorAll('.day-card-body').forEach(b=>b.classList.remove('drop-target','drop-over'));
+      const bodyEl=bodyFromPoint(me.clientX,me.clientY);
+      if(bodyEl){
+        const toDate=bodyEl.dataset.date;
+        const siblings=[...bodyEl.querySelectorAll('.entry-row2')].filter(r=>r!==entryRow);
+        let insertBeforeId=null;
+        for(const sib of siblings){
+          const r=sib.getBoundingClientRect();
+          if(me.clientY<r.top+r.height/2){insertBeforeId=sib.dataset.entryId;break;}
+        }
+        moveEntry(tripId,entryId,fromDate,toDate,insertBeforeId);
+      }
+      setTimeout(()=>{suppressClick=false;},50);
+    }
+    document.addEventListener('pointermove',onMove);
+    document.addEventListener('pointerup',onUp);
+  }
+  function positionGhost(ghost,x,y){
+    ghost.style.position='fixed';ghost.style.left=(x-ghost.offsetWidth/2)+'px';ghost.style.top=(y-20)+'px';ghost.style.zIndex=500;ghost.style.pointerEvents='none';
+  }
+  function bodyFromPoint(x,y){
+    return document.elementsFromPoint(x,y).find(el=>el.classList&&el.classList.contains('day-card-body'));
+  }
+}
+function moveEntry(tripId,entryId,fromDate,toDate,insertBeforeId){
+  const all=Object.entries(curTripEntries).map(([id,e])=>({id,...e}));
+  const targetList=all.filter(e=>e.date===toDate&&e.id!==entryId).sort((a,b)=>(a.order||0)-(b.order||0));
+  let insertIdx=targetList.length;
+  if(insertBeforeId){
+    const idx=targetList.findIndex(e=>e.id===insertBeforeId);
+    if(idx>-1)insertIdx=idx;
+  }
+  targetList.splice(insertIdx,0,{id:entryId});
+  const updates={};
+  targetList.forEach((e,i)=>{updates[e.id]={order:i*10};});
+  if(fromDate!==toDate){
+    updates[entryId]={...updates[entryId],date:toDate};
+    const sourceList=all.filter(e=>e.date===fromDate&&e.id!==entryId).sort((a,b)=>(a.order||0)-(b.order||0));
+    sourceList.forEach((e,i)=>{updates[e.id]={...(updates[e.id]||{}),order:i*10};});
+  }
+  Object.entries(updates).forEach(([id,patch])=>entriesRef(tripId).child(id).update(patch));
 }
 
 // ─── Add / Edit Trip ─────────────────────────────────
 let selTripRegion='east-asia';
-let pendingCoverFile=null;
+let pendingCoverFiles=[];
 let editingTripId=null;
+let editingTripPhotos=[];
+let editingTripCoverUrl=null;
 
 function renderTripRegionPicker(){
   document.getElementById('mt_region').innerHTML=REGIONS.map(r=>
     `<div class="to ${r.id===selTripRegion?'on':''}" onclick="selTripRegionPick('${r.id}')">${r.name}</div>`
   ).join('');
 }
+function renderCoverPreview(){
+  document.getElementById('mtCoverPreview').innerHTML=editingTripPhotos.map(url=>`
+    <div class="cover-thumb ${url===editingTripCoverUrl?'on':''}" onclick="pickCoverPhoto('${url}')">
+      <img src="${url}">
+      ${url===editingTripCoverUrl?'<div class="cover-thumb-badge">封面</div>':''}
+    </div>`).join('')
+    + pendingCoverFiles.map(f=>`<div class="cover-thumb"><img src="${URL.createObjectURL(f)}"></div>`).join('');
+}
+function pickCoverPhoto(url){
+  editingTripCoverUrl=url;
+  renderCoverPreview();
+  if(editingTripId)updateTrip(editingTripId,{coverPhotoUrl:url});
+}
 function openAddTripSheet(){
   editingTripId=null;
-  pendingCoverFile=null;
+  pendingCoverFiles=[];
+  editingTripPhotos=[];
+  editingTripCoverUrl=null;
   document.getElementById('m-trip-t').textContent='新增旅程';
   document.getElementById('mt-save-btn').textContent='建立';
   document.getElementById('mt_id').value='';
   selTripRegion='east-asia';
   renderTripRegionPicker();
   ['mt_title','mt_dest','mt_start','mt_end','mt_lat','mt_lng','mt_tags','mt_country'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('mtCoverPreview').innerHTML='';
+  renderCoverPreview();
   openM('m-trip');
 }
 function openEditTripSheet(tripId){
   const trip=(window.__STATS__.trips||[]).find(t=>t.id===tripId);
   if(!trip)return;
   editingTripId=tripId;
-  pendingCoverFile=null;
+  pendingCoverFiles=[];
+  editingTripPhotos=trip.photos||(trip.coverPhotoUrl?[trip.coverPhotoUrl]:[]);
+  editingTripCoverUrl=trip.coverPhotoUrl||null;
   document.getElementById('m-trip-t').textContent='編輯旅程';
   document.getElementById('mt-save-btn').textContent='儲存';
   document.getElementById('mt_id').value=tripId;
@@ -689,7 +841,7 @@ function openEditTripSheet(tripId){
   document.getElementById('mt_lng').value=trip.lng??'';
   document.getElementById('mt_tags').value=(trip.tags||[]).join(', ');
   document.getElementById('mt_country').value=(trip.countryCode||[]).join(', ');
-  document.getElementById('mtCoverPreview').innerHTML=trip.coverPhotoUrl?`<img src="${trip.coverPhotoUrl}">`:'';
+  renderCoverPreview();
   openM('m-trip');
 }
 function selTripRegionPick(id){
@@ -698,20 +850,18 @@ function selTripRegionPick(id){
   event.target.classList.add('on');
 }
 function onTripCoverPick(ev){
-  pendingCoverFile=ev.target.files&&ev.target.files[0]||null;
-  const prev=document.getElementById('mtCoverPreview');
-  prev.innerHTML='';
-  if(pendingCoverFile){
-    const img=document.createElement('img');
-    img.src=URL.createObjectURL(pendingCoverFile);
-    prev.appendChild(img);
-  }
+  pendingCoverFiles=pendingCoverFiles.concat(Array.from(ev.target.files||[]));
+  renderCoverPreview();
 }
-async function uploadTripCover(tripId,file){
-  const path=`trips/${tripId}/cover/${uid()}-${file.name}`;
-  const ref=STORAGE.ref().child(path);
-  await ref.put(file);
-  return await ref.getDownloadURL();
+async function uploadTripPhotos(tripId,files){
+  const urls=[];
+  for(const file of files){
+    const path=`trips/${tripId}/cover/${uid()}-${file.name}`;
+    const ref=STORAGE.ref().child(path);
+    await ref.put(file);
+    urls.push(await ref.getDownloadURL());
+  }
+  return urls;
 }
 async function saveTrip(){
   const title=document.getElementById('mt_title').value.trim();
@@ -732,17 +882,19 @@ async function saveTrip(){
   if(id){
     updateTrip(id,fields);
   }else{
-    id=createTrip({...fields,status:'visited'});
+    id=createTrip({...fields,status:'visited',photos:[]});
   }
   closeM('m-trip');
   toast(editingTripId?'✅ 已更新旅程':'✅ 已建立旅程');
-  if(pendingCoverFile){
-    toast('📤 上傳封面照中…');
+  if(pendingCoverFiles.length){
+    toast('📤 上傳照片中…');
     try{
-      const url=await uploadTripCover(id,pendingCoverFile);
-      updateTrip(id,{coverPhotoUrl:url});
-      toast('✅ 封面照已上傳');
-    }catch(e){toast('⚠️ 封面照上傳失敗，可稍後重試');console.error(e);}
+      const urls=await uploadTripPhotos(id,pendingCoverFiles);
+      const photos=[...editingTripPhotos,...urls];
+      const cover=editingTripCoverUrl||urls[0];
+      updateTrip(id,{photos,coverPhotoUrl:cover});
+      toast('✅ 照片已上傳');
+    }catch(e){toast('⚠️ 照片上傳失敗，可稍後重試');console.error(e);}
   }
   openTripDetail(id);
 }
@@ -766,7 +918,7 @@ window.addEventListener('online',outboxFlush);
 
 // ─── Add / Edit Entry ────────────────────────────────
 const ENTRY_CATS=[{id:'food',name:'美食'},{id:'sight',name:'景點'},{id:'hotel',name:'住宿'},{id:'transport',name:'交通'}];
-let selEntryCat='sight',pendingPhotoFiles=[],existingEntryPhotos=[],editingEntryId=null;
+let selEntryCat='sight',pendingPhotoFiles=[],existingEntryPhotos=[],editingEntryId=null,editingEntryOrder=0;
 
 function renderEntryCatPicker(){
   document.getElementById('me_cat').innerHTML=ENTRY_CATS.map(c=>
@@ -794,6 +946,7 @@ function openEditEntrySheet(tripId,entryId){
   entriesRef(tripId).child(entryId).once('value',snap=>{
     const e=snap.val();if(!e)return;
     editingEntryId=entryId;
+    editingEntryOrder=e.order||0;
     selEntryCat=e.category||'sight';
     document.getElementById('m-entry-t').textContent='編輯日記';
     document.getElementById('me-save-btn').textContent='儲存';
@@ -844,6 +997,7 @@ async function saveEntry(){
     text:document.getElementById('me_text').value.trim(),
     category:selEntryCat,
     photos:editingEntryId?existingEntryPhotos:[],
+    order:editingEntryId?editingEntryOrder:Date.now(),
   };
   if(!editingEntryId&&!navigator.onLine){
     outboxAdd({tripId,entry});
