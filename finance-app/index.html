@@ -435,7 +435,14 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
 <!-- ══════════════ TAB 5: 統計 ══════════════ -->
 <div id="page-stats" class="page">
   <div class="card">
-    <div class="label">歷年儲蓄率</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div class="label" id="stats-label" style="margin-bottom:0">歷年儲蓄率</div>
+      <select id="stats-mode" onchange="renderStatsMode()" style="width:auto;margin-bottom:0;padding:5px 10px;font-size:12px;border-radius:20px;background:#0f172a;color:#38bdf8;border:1px solid #1e3a5f">
+        <option value="rate">儲蓄率</option>
+        <option value="income">收入</option>
+        <option value="expense">支出</option>
+      </select>
+    </div>
     <div id="stats-years-list"><div class="empty">尚無資料</div></div>
   </div>
 </div>
@@ -986,6 +993,17 @@ async function loadYearlyBalance() {
     }
   } catch(e){console.error(e);}
 }
+
+let statsYearsData = [];
+let statsCatCharts = {};
+
+function statsCatChartRef(year) {
+  return {
+    get chart(){ return statsCatCharts[year]; },
+    set chart(v){ statsCatCharts[year] = v; }
+  };
+}
+
 async function loadStats() {
   if(!API) return;
   try {
