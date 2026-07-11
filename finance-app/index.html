@@ -1083,6 +1083,34 @@ function renderStatsIncome(years, labelEl, listEl) {
     </div>`;
   listEl.innerHTML = rows;
 }
+function renderStatsExpense(years, labelEl, listEl) {
+  labelEl.textContent = '歷年支出';
+  const nowYear = String(new Date().getFullYear());
+  let rows='', sum=0;
+  years.forEach(y=>{
+    sum += y.total_expense;
+    const tag = y.year===nowYear ? ' <span class="badge" style="margin-left:6px;cursor:default">本年</span>' : '';
+    rows += `
+      <div style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:15px;font-weight:700">${y.year}年${tag}</span>
+          <span style="font-size:16px;font-weight:800;color:#f87171">NT$${y.total_expense.toLocaleString()}</span>
+        </div>
+        <div class="chart-wrap"><canvas id="stats-cat-chart-${y.year}"></canvas></div>
+        <div id="stats-cat-legend-${y.year}"></div>
+      </div>`;
+  });
+  const avg = sum/years.length;
+  rows += `
+    <div style="border-top:1px solid #334155;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:14px;font-weight:600">歷年平均</span>
+      <span style="font-size:16px;font-weight:800;color:#f87171">NT$${Math.round(avg).toLocaleString()}</span>
+    </div>`;
+  listEl.innerHTML = rows;
+  years.forEach(y=>{
+    renderCategoryChart(`stats-cat-chart-${y.year}`, `stats-cat-legend-${y.year}`, statsCatChartRef(y.year), y.by_category);
+  });
+}
 async function submitIncome(){
   const ym=document.getElementById('sel-inc').value;
   const src=document.getElementById('inc-src').value.trim()||'薪資';
