@@ -27,9 +27,9 @@ Book
 Note   (統一的「筆記卡片」格式，不分來源使用不同結構)
   id
   book_id           (外鍵 → Book)
-  content           (文字內容，卡片主體)
+  content           (文字內容，卡片主體；若 HyRead 該則劃線有附加個人註解，附加在劃線原文下方，同一欄位)
   source            (hyread | notion | manual)
-  location          (頁碼或位置；僅 hyread 來源會有值，可空)
+  location          (章節/小節標題；僅 hyread 來源會有值，可空)
   highlighted_at    (劃線或建立時間，可空)
   created_at
   updated_at
@@ -42,10 +42,19 @@ Note   (統一的「筆記卡片」格式，不分來源使用不同結構)
 
 ## 匯入管線（一次性歷史匯入 + 之後每本新書手動觸發，不做成 app 內建 UI 功能）
 
-1. **HyRead → Evernote → .enex**：
-   - 使用者在 HyRead 把劃線匯出到 Evernote，再從 Evernote 匯出成 `.enex`（XML）檔案。
-   - 寫一支獨立 Python parser script，解析 `.enex`，依書名分組，轉成 seed JSON，再寫入 SQLite。
-   - 未來讀完一本新書後，重複同樣流程：匯出新 `.enex` → 重跑 script → 匯入新書的卡片。這是手動觸發的批次流程，不需要 app 內建上傳介面。
+1. **HyRead → HTML 匯出**：
+   - HyRead 可直接將劃線內容匯出成 HTML（不需經過 Evernote）。
+   - 匯出的 HTML 結構固定：
+     - `.book-title`：書名
+     - `.book-data`：作者/譯者/出版社（單一字串，格式如「作者．著;譯者．譯．出版社．」）
+     - `.book-cover img[src]`：封面圖網址
+     - 每則劃線是一個 `.note-container`，內含：
+       - `.note-chapter`：章節/小節標題 → 對應 `Note.location`
+       - `.note-time`：劃線時間，格式 `YYYY/M/D H:MM` → 對應 `Note.highlighted_at`
+       - `.highlight-content-*`（`*` 為 red/yellow/green/gray，代表劃線顏色，本次不保留顏色資訊）：劃線原文 → 對應 `Note.content`
+       - `.note-text`：使用者額外寫的個人註解，可能為空。若非空，附加在 `Note.content` 劃線原文下方（同一欄位，不拆兩張卡片）
+   - 寫一支獨立 Python parser script（用 BeautifulSoup），解析 HTML，輸出 seed JSON，再寫入 SQLite。
+   - 未來讀完一本新書後，重複同樣流程：從 HyRead 匯出新書的 HTML → 重跑 script → 匯入新書的卡片。這是手動觸發的批次流程，不需要 app 內建上傳介面。
 
 2. **Notion 歷史筆記（一次性）**：
    - 透過 Notion MCP 工具讀取「閱讀清單」資料庫（`書名`、`種類`、`開始閱讀日`、`完成閱讀日`）與每本書頁面的內文。
@@ -68,5 +77,4 @@ Note   (統一的「筆記卡片」格式，不分來源使用不同結構)
 
 ## 待確認的實作細節（留給 writing-plans 階段處理）
 
-- `.enex` parser 的實際欄位對應（HyRead 匯出到 Evernote 後的具體 XML 結構，需要拿到一份實際檔案樣本才能定案解析規則）。
 - Notion 匯入 script 的具體執行方式（一次性腳本或由 Claude 直接呼叫 MCP 工具產生 seed JSON）。
