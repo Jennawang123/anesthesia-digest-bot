@@ -13,16 +13,16 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
 :root {
-  --bg-base: #1C1815;
-  --bg-card: #2A2622;
-  --text-primary: #E5DFD6;
-  --text-secondary: #A89C8E;
-  --text-muted: #948977;
-  --green: #8FB088;
-  --red: #D97D6C;
-  --blue: #7CAFCE;
-  --border: #443E37;
-  --badge-border: #3E4A47;
+  --bg-base: #0f172a;
+  --bg-card: #1e293b;
+  --text-primary: #e2e8f0;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --green: #4ade80;
+  --red: #f87171;
+  --blue: #38bdf8;
+  --border: #334155;
+  --badge-border: #1e3a5f;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;background:var(--bg-base);color:var(--text-primary);min-height:100vh}
@@ -734,7 +734,7 @@ const CATS=['日常','房租','交通','旅遊','娛樂','教育','醫療','贈�
 // ══════════════ TAB 1: 支出 ══════════════
 let catChart=null;
 let catChartYear=null;
-const CAT_COLORS={日常:'#D4713A',房租:'#4A7FC0',交通:'#3C9470',旅遊:'#8A5CC9',娛樂:'#C15D8A',教育:'#1E9DB8',醫療:'#C24F3A',贈與:'#A4921E',長期規劃:'#A050AE',貸款:'#1E7855'};
+const CAT_COLORS={日常:'#E8735A',房租:'#4F83B5',交通:'#8EA36E',旅遊:'#4B5FA6',娛樂:'#D4618A',教育:'#3A8B4E',醫療:'#B94047',贈與:'#E8A823',長期規劃:'#7B5EA7',貸款:'#475569'};
 
 function renderCategoryChart(canvasId, legendId, chartVar, catMap) {
   const labels=Object.keys(catMap), vals=labels.map(c=>catMap[c]);
