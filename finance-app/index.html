@@ -656,7 +656,17 @@ input,select{background:var(--bg-base);color:var(--text-primary);border:1px soli
 <div class="toast" id="toast"></div>
 
 <script>
-Chart.defaults.color = 'var(--text-primary)';
+// Canvas 不支援 CSS 變數（var(--x) 在 Chart.js/canvas 內會 fallback 成黑色），
+// 這裡把要在圖表上用的顏色變數解析成實際 hex 值。DOM inline style 用 var(--x) 沒有這個問題。
+const CV = getComputedStyle(document.documentElement);
+const C = {
+  green: CV.getPropertyValue('--green').trim(),
+  red: CV.getPropertyValue('--red').trim(),
+  blue: CV.getPropertyValue('--blue').trim(),
+  textPrimary: CV.getPropertyValue('--text-primary').trim(),
+  textSecondary: CV.getPropertyValue('--text-secondary').trim(),
+};
+Chart.defaults.color = C.textPrimary;
 
 // ── Config ──────────────────────────────────────────────────
 let API = localStorage.getItem('api_url') || '';
@@ -738,7 +748,7 @@ const CAT_COLORS={日常:'#E8735A',房租:'#4F83B5',交通:'#8EA36E',旅遊:'#4B
 
 function renderCategoryChart(canvasId, legendId, chartVar, catMap) {
   const labels=Object.keys(catMap), vals=labels.map(c=>catMap[c]);
-  const colors=labels.map(l=>CAT_COLORS[l]||'var(--text-secondary)');
+  const colors=labels.map(l=>CAT_COLORS[l]||C.textSecondary);
   const catTotal=vals.reduce((a,b)=>a+b,0);
   if(chartVar.chart) chartVar.chart.destroy();
   chartVar.chart=new Chart(document.getElementById(canvasId),{
@@ -975,12 +985,12 @@ async function loadIncome(){
     incChart=new Chart(document.getElementById('inc-chart'),{
       type:'line',
       data:{labels:months.map(m=>m.slice(5)),datasets:[
-        {label:'收入',data:sums.map(s=>s.total_income),borderColor:'var(--green)',tension:.3,fill:false,pointRadius:3},
-        {label:'支出',data:sums.map(s=>s.total_expense),borderColor:'var(--red)',tension:.3,fill:false,pointRadius:3},
-        {label:'結餘',data:sums.map(s=>s.balance),borderColor:'var(--blue)',tension:.3,fill:false,pointRadius:3},
+        {label:'收入',data:sums.map(s=>s.total_income),borderColor:C.green,tension:.3,fill:false,pointRadius:3},
+        {label:'支出',data:sums.map(s=>s.total_expense),borderColor:C.red,tension:.3,fill:false,pointRadius:3},
+        {label:'結餘',data:sums.map(s=>s.balance),borderColor:C.blue,tension:.3,fill:false,pointRadius:3},
       ]},
       options:{plugins:{legend:{labels:{font:{size:11},boxWidth:12}}},
-               scales:{x:{ticks:{color:'var(--text-secondary)',font:{size:10}}},y:{ticks:{color:'var(--text-secondary)',font:{size:10}}}}}
+               scales:{x:{ticks:{color:C.textSecondary,font:{size:10}}},y:{ticks:{color:C.textSecondary,font:{size:10}}}}}
     });
   }catch(e){console.error(e);}
 }
@@ -1371,13 +1381,13 @@ function renderNWChart(history){
   grad.addColorStop(1,'rgba(96,165,250,0.02)');
   nwChart=new Chart(canvas,{
     type:'line',
-    data:{labels,datasets:[{label:'淨資產',data,borderColor:'var(--blue)',backgroundColor:grad,fill:true,tension:.35,pointRadius:filtered.length<=12?4:2,pointBackgroundColor:'var(--blue)',borderWidth:2}]},
+    data:{labels,datasets:[{label:'淨資產',data,borderColor:C.blue,backgroundColor:grad,fill:true,tension:.35,pointRadius:filtered.length<=12?4:2,pointBackgroundColor:C.blue,borderWidth:2}]},
     options:{
       responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const v=ctx.parsed.y;return _nwMode==='pct'?`${v>=0?'+':''}${v.toFixed(2)}%`:`NT$${Math.round(v).toLocaleString()}`;},labelColor:()=>({backgroundColor:'var(--blue)',borderColor:'var(--blue)'})}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const v=ctx.parsed.y;return _nwMode==='pct'?`${v>=0?'+':''}${v.toFixed(2)}%`:`NT$${Math.round(v).toLocaleString()}`;},labelColor:()=>({backgroundColor:C.blue,borderColor:C.blue})}}},
       scales:{
-        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'var(--text-secondary)',font:{size:10},maxTicksLimit:6}},
-        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'var(--text-secondary)',font:{size:10},callback:yFmt,maxTicksLimit:6}}
+        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:C.textSecondary,font:{size:10},maxTicksLimit:6}},
+        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:C.textSecondary,font:{size:10},callback:yFmt,maxTicksLimit:6}}
       }
     }
   });
