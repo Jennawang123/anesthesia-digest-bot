@@ -406,6 +406,33 @@ function sphereXYZ(lat,lng){
 }
 function rotY([x,y,z],deg){const r=deg*Math.PI/180,c=Math.cos(r),s=Math.sin(r);return[x*c+z*s,y,-x*s+z*c];}
 function rotX([x,y,z],deg){const r=deg*Math.PI/180,c=Math.cos(r),s=Math.sin(r);return[x,y*c-z*s,y*s+z*c];}
+function slerp(a,b,t){
+  const dot=Math.max(-1,Math.min(1,a[0]*b[0]+a[1]*b[1]+a[2]*b[2]));
+  const theta=Math.acos(dot);
+  if(theta<1e-6)return a;
+  const s=Math.sin(theta);
+  const w1=Math.sin((1-t)*theta)/s,w2=Math.sin(t*theta)/s;
+  return[a[0]*w1+b[0]*w2,a[1]*w1+b[1]*w2,a[2]*w1+b[2]*w2];
+}
+// Coastline rings are RDP-simplified and can have wide gaps (e.g. across the
+// Bering Strait or Arctic coast). At those gaps the horizon-clipping chord
+// deviates from the true sphere silhouette and cuts a visible diagonal
+// through the landmass on rotation, so densify each ring's edges via
+// spherical interpolation before projecting.
+const MAX_EDGE_DEG=3;
+const DENSE_CONTINENTS=CONTINENTS.map(ring=>{
+  const unit=ring.map(([lng,lat])=>sphereXYZ(lat,lng));
+  const out=[];
+  for(let i=0;i<unit.length;i++){
+    const a=unit[i],b=unit[(i+1)%unit.length];
+    out.push(a);
+    const dot=Math.max(-1,Math.min(1,a[0]*b[0]+a[1]*b[1]+a[2]*b[2]));
+    const angDeg=Math.acos(dot)*180/Math.PI;
+    const steps=Math.min(48,Math.ceil(angDeg/MAX_EDGE_DEG));
+    for(let s=1;s<steps;s++)out.push(slerp(a,b,s/steps));
+  }
+  return out;
+});
 function projectGlobe(lat,lng,R,cx,cy){
   let p=sphereXYZ(lat,lng);
   p=rotY(p,globeView.rotLon);
@@ -448,7 +475,7 @@ function renderGlobeCanvas(){
   const DESERT_IDX=new Set([2]);
   ctx.strokeStyle='rgba(23,42,26,.5)';
   ctx.lineWidth=1;
-  const rot3d=(lat,lng)=>{let p=sphereXYZ(lat,lng);p=rotY(p,globeView.rotLon);p=rotX(p,globeView.tilt);return p;};
+  const rot3d=(p)=>rotX(rotY(p,globeView.rotLon),globeView.tilt);
   const proj3d=([x,y,z])=>({sx:cx+x*R,sy:cy-y*R});
   const horizonPt=(a,b)=>{
     const t=(ZC-a[2])/(b[2]-a[2]);
@@ -457,9 +484,9 @@ function renderGlobeCanvas(){
     const s=n>0?Math.sqrt(Math.max(0,1-ZC*ZC))/n:0;
     return proj3d([ix*s,iy*s,ZC]);
   };
-  CONTINENTS.forEach((ring,ringIdx)=>{
+  DENSE_CONTINENTS.forEach((ring,ringIdx)=>{
     ctx.fillStyle=ICY_IDX.has(ringIdx)?ice:DESERT_IDX.has(ringIdx)?desert:land;
-    const pts=ring.map(([lng,lat])=>rot3d(lat,lng));
+    const pts=ring.map(rot3d);
     let path=[];
     const flush=()=>{
       if(path.length>2){
