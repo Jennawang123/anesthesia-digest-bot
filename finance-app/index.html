@@ -1061,6 +1061,28 @@ function renderStatsRate(years, labelEl, listEl) {
     </div>`;
   listEl.innerHTML = rows;
 }
+
+function renderStatsIncome(years, labelEl, listEl) {
+  labelEl.textContent = '歷年收入';
+  const nowYear = String(new Date().getFullYear());
+  let rows='', sum=0;
+  years.forEach(y=>{
+    sum += y.total_income;
+    const tag = y.year===nowYear ? ' <span class="badge" style="margin-left:6px;cursor:default">本年</span>' : '';
+    rows += `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <span style="font-size:15px;font-weight:700">${y.year}年${tag}</span>
+        <span style="font-size:16px;font-weight:800;color:#4ade80">NT$${y.total_income.toLocaleString()}</span>
+      </div>`;
+  });
+  const avg = sum/years.length;
+  rows += `
+    <div style="border-top:1px solid #334155;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:14px;font-weight:600">歷年平均</span>
+      <span style="font-size:16px;font-weight:800;color:#4ade80">NT$${Math.round(avg).toLocaleString()}</span>
+    </div>`;
+  listEl.innerHTML = rows;
+}
 async function submitIncome(){
   const ym=document.getElementById('sel-inc').value;
   const src=document.getElementById('inc-src').value.trim()||'薪資';
