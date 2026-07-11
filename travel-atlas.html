@@ -103,6 +103,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .detail-meta{font-size:12px;color:var(--muted);margin-bottom:14px;}
 .tag-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(74,222,128,.15);color:var(--teal);margin:0 6px 6px 0;}
 .entry-thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.06);}
+.entry-thumb-wrap{position:relative;flex-shrink:0;}
+.entry-thumb-badge{position:absolute;bottom:-3px;right:-3px;background:var(--teal);color:#0B1220;font-size:9px;font-weight:700;border-radius:6px;padding:1px 5px;line-height:1.3;}
 .entry-info{flex:1;min-width:0;}
 .entry-loc{font-size:12px;color:var(--teal);font-weight:700;}
 .entry-text{font-size:13px;color:var(--text);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -118,6 +120,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .entry-row2.dragging{opacity:.3;}
 .entry-row-main{flex:1;min-width:0;display:flex;gap:12px;cursor:pointer;touch-action:pan-y;}
 .entry-del-x{width:24px;height:24px;border-radius:50%;border:none;background:rgba(248,113,113,.15);color:var(--red);font-size:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.day-del-x{width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,.08);color:#fff;font-size:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.cover-pos-preview{height:110px;border-radius:10px;background-size:cover;border:1px solid var(--border);margin-bottom:6px;}
 .entry-ghost{position:fixed;background:var(--card-solid);border:1px solid var(--teal);border-radius:10px;padding:9px 4px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:.95;}
 .day-card-body.drop-over{background:rgba(74,222,128,.08);}
 .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
@@ -125,6 +129,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .cover-thumb img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;border:2px solid transparent;}
 .cover-thumb.on img{border-color:var(--teal);}
 .cover-thumb-badge{position:absolute;top:3px;right:3px;background:var(--teal);color:#0B1220;font-size:9px;font-weight:700;border-radius:6px;padding:1px 5px;}
+.cover-thumb-x{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .photo-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;}
 </style>
 </head>
@@ -176,6 +181,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
       <div class="photo-grid" id="mtCoverPreview"></div>
       <button class="btn btn-g btn-w" style="margin-top:8px" onclick="document.getElementById('mtCoverFile').click()">🖼️ 新增照片</button>
       <input type="file" id="mtCoverFile" accept="image/*" multiple style="display:none" onchange="onTripCoverPick(event)">
+    </div>
+    <div class="fg" id="mtCoverPosWrap" style="display:none">
+      <label class="lb">封面顯示位置（拖曳調整想露出的重點）</label>
+      <div class="cover-pos-preview" id="mtCoverPosPreview"></div>
+      <input type="range" id="mtCoverPosY" min="0" max="100" value="50" oninput="onCoverPosInput(this.value)" style="width:100%">
     </div>
     <div class="fg"><label class="lb">標題</label><input class="inp" id="mt_title" placeholder="例：2026/07 京都"></div>
     <div class="fg"><label class="lb">目的地</label><input class="inp" id="mt_dest" placeholder="例：京都"></div>
@@ -381,6 +391,7 @@ const CONTINENTS=[
   [[173.12,-41.28],[174.3,-41.02],[174.04,-41.24],[174.37,-41.1],[174.07,-41.43],[174.28,-41.74],[172.62,-43.27],[172.53,-43.46],[173.07,-43.87],[172.04,-43.7],[172.18,-43.9],[171.24,-44.26],[170.78,-45.87],[169.1,-46.63],[166.49,-45.96],[167.0,-45.71],[166.73,-45.54],[167.16,-45.41],[167.03,-45.12],[168.37,-44.08],[171.04,-42.86],[172.27,-40.76],[172.94,-40.52],[172.7,-40.67],[173.12,-41.28]], // NZ_South
   [[173.27,-34.93],[174.32,-35.25],[174.72,-36.84],[175.54,-37.2],[175.46,-36.48],[176.11,-37.65],[177.27,-37.99],[178.01,-37.55],[178.54,-37.69],[177.91,-39.24],[177.08,-39.22],[176.84,-40.16],[175.31,-41.61],[174.64,-41.29],[175.16,-40.11],[173.76,-39.32],[174.6,-38.79],[174.93,-37.8],[174.59,-37.1],[174.93,-37.08],[173.41,-35.54],[173.63,-35.32],[173.38,-35.5],[173.12,-35.21],[172.71,-34.46],[173.04,-34.43],[173.27,-34.93]], // NZ_North
   [[-3.11,58.52],[-4.13,57.58],[-1.78,57.47],[-3.31,56.36],[-2.67,56.25],[-3.79,56.1],[-1.66,55.57],[-0.08,54.12],[0.12,53.61],[-0.66,53.72],[0.27,53.34],[0.05,52.91],[1.66,52.75],[0.42,51.47],[1.4,51.18],[-5.62,50.05],[-2.43,51.74],[-5.17,51.74],[-3.98,52.54],[-4.68,52.81],[-4.27,53.14],[-2.75,53.31],[-2.85,54.14],[-3.59,54.56],[-3.04,54.95],[-5.03,54.76],[-4.58,55.94],[-5.08,56.2],[-5.73,55.33],[-5.19,56.76],[-6.13,56.71],[-5.02,58.57],[-3.11,58.52]], // UK
+  [[121.01,22.62],[120.9,22.38],[120.84,21.93],[120.74,21.96],[120.58,22.36],[120.32,22.55],[120.08,23.09],[120.07,23.15],[120.14,23.4],[120.13,23.65],[120.63,24.48],[120.84,24.72],[121.04,25.03],[121.37,25.16],[121.45,25.25],[121.59,25.28],[121.69,25.18],[121.85,25.1],[121.91,25.06],[121.93,24.97],[121.82,24.82],[121.83,24.53],[121.61,24.05],[121.4,23.17],[121.3,22.97],[121.01,22.62]], // Taiwan
 ];
 
 // ─── 3D globe ────────────────────────────────────────
@@ -423,15 +434,29 @@ function renderGlobeCanvas(){
   const w=canvas.width,h=canvas.height;
   const cx=w/2,cy=h/2,R=Math.min(w,h)/2*0.82*globeView.zoom;
   ctx.clearRect(0,0,w,h);
-  // Sphere body
+  // Sphere body (ocean)
   const bg=ctx.createRadialGradient(cx-R*0.35,cy-R*0.35,R*0.1,cx,cy,R);
-  bg.addColorStop(0,'#123448');bg.addColorStop(1,'#081420');
+  bg.addColorStop(0,'#1E6091');bg.addColorStop(0.55,'#154C74');bg.addColorStop(1,'#0A2A42');
   ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
-  // Continents: draw only front-facing (z>0) sub-paths
-  ctx.fillStyle='rgba(74,222,128,.28)';
-  ctx.strokeStyle='rgba(74,222,128,.55)';
+  // Continents (land): clip each ring to the visible hemisphere so edges
+  // follow the horizon instead of jumping in a straight chord across it.
+  const ZC=0.02;
+  const land=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
+  land.addColorStop(0,'#7BA35A');land.addColorStop(0.5,'#5C8B4A');land.addColorStop(1,'#3F6B3A');
+  ctx.fillStyle=land;
+  ctx.strokeStyle='rgba(23,42,26,.5)';
   ctx.lineWidth=1;
+  const rot3d=(lat,lng)=>{let p=sphereXYZ(lat,lng);p=rotY(p,globeView.rotLon);p=rotX(p,globeView.tilt);return p;};
+  const proj3d=([x,y,z])=>({sx:cx+x*R,sy:cy-y*R});
+  const horizonPt=(a,b)=>{
+    const t=(ZC-a[2])/(b[2]-a[2]);
+    const ix=a[0]+(b[0]-a[0])*t,iy=a[1]+(b[1]-a[1])*t;
+    const n=Math.hypot(ix,iy);
+    const s=n>0?Math.sqrt(Math.max(0,1-ZC*ZC))/n:0;
+    return proj3d([ix*s,iy*s,ZC]);
+  };
   CONTINENTS.forEach(ring=>{
+    const pts=ring.map(([lng,lat])=>rot3d(lat,lng));
     let path=[];
     const flush=()=>{
       if(path.length>2){
@@ -441,10 +466,16 @@ function renderGlobeCanvas(){
       }
       path=[];
     };
-    ring.forEach(([lng,lat])=>{
-      const p=projectGlobe(lat,lng,R,cx,cy);
-      if(p.z>0.02)path.push([p.sx,p.sy]);else flush();
-    });
+    for(let i=0;i<pts.length;i++){
+      const cur=pts[i],prev=pts[(i-1+pts.length)%pts.length];
+      const curVis=cur[2]>ZC,prevVis=prev[2]>ZC;
+      if(curVis!==prevVis){
+        const h=horizonPt(prev,cur);
+        if(prevVis){path.push([h.sx,h.sy]);flush();}
+        else{flush();path.push([h.sx,h.sy]);}
+      }
+      if(curVis){const p=proj3d(cur);path.push([p.sx,p.sy]);}
+    }
     flush();
   });
   // Rim highlight
@@ -572,7 +603,7 @@ function renderTripsList(trips){
   box.innerHTML=`<div class="filter-row">${pills.join('')}${tagChip}</div>`+
     (sorted.length?sorted.map(t=>`
       <div class="card trip-row" onclick="openTripDetail('${t.id}')">
-        ${t.coverPhotoUrl?`<img class="trip-thumb" src="${t.coverPhotoUrl}">`:`<div class="trip-flag">${countryFlags(t.countryCode)}</div>`}
+        ${t.coverPhotoUrl?`<img class="trip-thumb" style="object-position:center ${t.coverPosY??50}%" src="${t.coverPhotoUrl}">`:`<div class="trip-flag">${countryFlags(t.countryCode)}</div>`}
         <div class="trip-info">
           <div class="trip-title">${esc(t.title)}</div>
           <div class="trip-meta">${(t.startDate||'').slice(0,7).replace('-','.')} · ${REGIONM[t.region]?.name||''}</div>
@@ -639,7 +670,7 @@ function renderTripDetail(tripId){
   const groups=groupEntriesByDate(list);
   const flag=countryFlags(trip.countryCode);
   box.innerHTML=`
-    <div class="detail-cover" style="${trip.coverPhotoUrl?`background-image:url('${trip.coverPhotoUrl}')`:''}">
+    <div class="detail-cover" style="${trip.coverPhotoUrl?`background-image:url('${trip.coverPhotoUrl}');background-position:center ${trip.coverPosY??50}%`:''}">
       <div><div class="detail-title">${esc(trip.title)}</div></div>
       <button class="ib" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,.45);color:#fff" onclick="openEditTripSheet('${tripId}')">✏️</button>
     </div>
@@ -657,7 +688,7 @@ function renderTripDetail(tripId){
               <div class="day-loc" onclick="event.stopPropagation();editDayLocation('${tripId}','${date}')">${flag} ${esc(loc)} <span style="opacity:.6">✏️</span></div>
             </div>
             <div class="day-card-actions">
-              <button class="ib" onclick="event.stopPropagation();deleteDayConfirm('${tripId}','${date}')">🗑️</button>
+              <button class="day-del-x" onclick="event.stopPropagation();deleteDayConfirm('${tripId}','${date}')">✕</button>
               <span class="day-chev">${collapsed?'›':'⌄'}</span>
             </div>
           </div>
@@ -665,7 +696,10 @@ function renderTripDetail(tripId){
             ${items.map(e=>`
               <div class="entry-row2" data-entry-id="${e.id}" data-date="${date}">
                 <div class="entry-row-main">
-                  ${e.photos&&e.photos[0]?`<img class="entry-thumb" src="${e.photos[0]}">`:'<div class="entry-thumb"></div>'}
+                  <div class="entry-thumb-wrap">
+                    ${e.photos&&e.photos[0]?`<img class="entry-thumb" src="${e.photos[0]}">`:'<div class="entry-thumb"></div>'}
+                    ${e.photos&&e.photos.length>1?`<div class="entry-thumb-badge">+${e.photos.length-1}</div>`:''}
+                  </div>
                   <div class="entry-info">
                     <div class="entry-loc">${esc(e.location||'')}</div>
                     <div class="entry-text">${esc(e.text||'')}</div>
@@ -788,6 +822,7 @@ let pendingCoverFiles=[];
 let editingTripId=null;
 let editingTripPhotos=[];
 let editingTripCoverUrl=null;
+let editingTripCoverPosY=50;
 
 function renderTripRegionPicker(){
   document.getElementById('mt_region').innerHTML=REGIONS.map(r=>
@@ -801,17 +836,37 @@ function renderCoverPreview(){
       ${url===editingTripCoverUrl?'<div class="cover-thumb-badge">封面</div>':''}
     </div>`).join('')
     + pendingCoverFiles.map(f=>`<div class="cover-thumb"><img src="${URL.createObjectURL(f)}"></div>`).join('');
+  renderCoverPosControl();
+}
+function renderCoverPosControl(){
+  const wrap=document.getElementById('mtCoverPosWrap');
+  const prev=document.getElementById('mtCoverPosPreview');
+  if(editingTripCoverUrl){
+    wrap.style.display='';
+    prev.style.backgroundImage=`url('${editingTripCoverUrl}')`;
+    prev.style.backgroundPosition=`center ${editingTripCoverPosY}%`;
+    document.getElementById('mtCoverPosY').value=editingTripCoverPosY;
+  }else{
+    wrap.style.display='none';
+  }
+}
+function onCoverPosInput(v){
+  editingTripCoverPosY=Number(v);
+  document.getElementById('mtCoverPosPreview').style.backgroundPosition=`center ${editingTripCoverPosY}%`;
+  if(editingTripId)updateTrip(editingTripId,{coverPosY:editingTripCoverPosY});
 }
 function pickCoverPhoto(url){
   editingTripCoverUrl=url;
+  editingTripCoverPosY=50;
   renderCoverPreview();
-  if(editingTripId)updateTrip(editingTripId,{coverPhotoUrl:url});
+  if(editingTripId)updateTrip(editingTripId,{coverPhotoUrl:url,coverPosY:50});
 }
 function openAddTripSheet(){
   editingTripId=null;
   pendingCoverFiles=[];
   editingTripPhotos=[];
   editingTripCoverUrl=null;
+  editingTripCoverPosY=50;
   document.getElementById('m-trip-t').textContent='新增旅程';
   document.getElementById('mt-save-btn').textContent='建立';
   document.getElementById('mt_id').value='';
@@ -828,6 +883,7 @@ function openEditTripSheet(tripId){
   pendingCoverFiles=[];
   editingTripPhotos=trip.photos||(trip.coverPhotoUrl?[trip.coverPhotoUrl]:[]);
   editingTripCoverUrl=trip.coverPhotoUrl||null;
+  editingTripCoverPosY=trip.coverPosY??50;
   document.getElementById('m-trip-t').textContent='編輯旅程';
   document.getElementById('mt-save-btn').textContent='儲存';
   document.getElementById('mt_id').value=tripId;
@@ -892,7 +948,7 @@ async function saveTrip(){
       const urls=await uploadTripPhotos(id,pendingCoverFiles);
       const photos=[...editingTripPhotos,...urls];
       const cover=editingTripCoverUrl||urls[0];
-      updateTrip(id,{photos,coverPhotoUrl:cover});
+      updateTrip(id,{photos,coverPhotoUrl:cover,coverPosY:editingTripCoverPosY});
       toast('✅ 照片已上傳');
     }catch(e){toast('⚠️ 照片上傳失敗，可稍後重試');console.error(e);}
   }
@@ -957,7 +1013,7 @@ function openEditEntrySheet(tripId,entryId){
     document.getElementById('me_text').value=e.text||'';
     pendingPhotoFiles=[];
     existingEntryPhotos=e.photos||[];
-    document.getElementById('mePhotoPreview').innerHTML=existingEntryPhotos.map(p=>`<img src="${p}">`).join('');
+    renderEntryPhotoPreview();
     renderEntryCatPicker();
     openM('m-entry');
   });
@@ -967,15 +1023,19 @@ function selEntryCatPick(id){
   document.querySelectorAll('#me_cat .to').forEach(el=>el.classList.remove('on'));
   event.target.classList.add('on');
 }
-function onEntryPhotosPick(ev){
-  pendingPhotoFiles=Array.from(ev.target.files||[]);
+function renderEntryPhotoPreview(){
   const prev=document.getElementById('mePhotoPreview');
-  prev.innerHTML=existingEntryPhotos.map(p=>`<img src="${p}">`).join('');
-  pendingPhotoFiles.forEach(f=>{
-    const img=document.createElement('img');
-    img.src=URL.createObjectURL(f);
-    prev.appendChild(img);
-  });
+  prev.innerHTML=
+    existingEntryPhotos.map((p,i)=>`
+      <div class="cover-thumb"><img src="${p}"><button class="cover-thumb-x" onclick="event.stopPropagation();removeExistingEntryPhoto(${i})">✕</button></div>`).join('')
+    + pendingPhotoFiles.map((f,i)=>`
+      <div class="cover-thumb"><img src="${URL.createObjectURL(f)}"><button class="cover-thumb-x" onclick="event.stopPropagation();removePendingEntryPhoto(${i})">✕</button></div>`).join('');
+}
+function removeExistingEntryPhoto(i){existingEntryPhotos.splice(i,1);renderEntryPhotoPreview();}
+function removePendingEntryPhoto(i){pendingPhotoFiles.splice(i,1);renderEntryPhotoPreview();}
+function onEntryPhotosPick(ev){
+  pendingPhotoFiles=pendingPhotoFiles.concat(Array.from(ev.target.files||[]));
+  renderEntryPhotoPreview();
 }
 async function uploadEntryPhotos(tripId,entryId,files){
   const urls=[];
