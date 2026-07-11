@@ -417,14 +417,9 @@ function projectGlobe(lat,lng,R,cx,cy){
 function drawMap(trips){
   globePins=trips.filter(t=>t.lat!=null&&t.lng!=null).map(t=>({lat:t.lat,lng:t.lng,title:t.title,id:t.id}));
   if(globeAnimId)cancelAnimationFrame(globeAnimId);
+  globeAnimId=null;
   attachGlobeInteractions();
-  const loop=()=>{
-    if(!document.getElementById('mapCanvas')){globeAnimId=null;return;}
-    if(!globeDragging)globeView.rotLon=(globeView.rotLon+0.12)%360;
-    renderGlobeCanvas();
-    globeAnimId=requestAnimationFrame(loop);
-  };
-  loop();
+  renderGlobeCanvas();
 }
 
 function renderGlobeCanvas(){
@@ -443,7 +438,14 @@ function renderGlobeCanvas(){
   const ZC=0.02;
   const land=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
   land.addColorStop(0,'#7BA35A');land.addColorStop(0.5,'#5C8B4A');land.addColorStop(1,'#3F6B3A');
-  ctx.fillStyle=land;
+  const ice=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
+  ice.addColorStop(0,'#F0F5F7');ice.addColorStop(1,'#CBD9DF');
+  const desert=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
+  desert.addColorStop(0,'#C9A66B');desert.addColorStop(1,'#A9895A');
+  // AfroEurasia(0), Americas(1), Australia(2), Greenland(3), Antarctica(4),
+  // Japan(5), Iceland(6), NZ_South(7), NZ_North(8), UK(9), Taiwan(10)
+  const ICY_IDX=new Set([3,4]);
+  const DESERT_IDX=new Set([2]);
   ctx.strokeStyle='rgba(23,42,26,.5)';
   ctx.lineWidth=1;
   const rot3d=(lat,lng)=>{let p=sphereXYZ(lat,lng);p=rotY(p,globeView.rotLon);p=rotX(p,globeView.tilt);return p;};
@@ -455,7 +457,8 @@ function renderGlobeCanvas(){
     const s=n>0?Math.sqrt(Math.max(0,1-ZC*ZC))/n:0;
     return proj3d([ix*s,iy*s,ZC]);
   };
-  CONTINENTS.forEach(ring=>{
+  CONTINENTS.forEach((ring,ringIdx)=>{
+    ctx.fillStyle=ICY_IDX.has(ringIdx)?ice:DESERT_IDX.has(ringIdx)?desert:land;
     const pts=ring.map(([lng,lat])=>rot3d(lat,lng));
     let path=[];
     const flush=()=>{
@@ -498,6 +501,7 @@ function mapZoom(factor){
   globeView.zoom=Math.max(0.6,Math.min(2.5,globeView.zoom*factor));
   const lbl=document.getElementById('mapZoomLabel');
   if(lbl)lbl.textContent=Math.round(globeView.zoom*100)+'%';
+  renderGlobeCanvas();
 }
 
 function attachGlobeInteractions(){
@@ -519,6 +523,7 @@ function attachGlobeInteractions(){
       globeView.rotLon+=dx*0.4;
       globeView.tilt=Math.max(-80,Math.min(80,globeView.tilt-dy*0.4));
       lastX=e.clientX;lastY=e.clientY;
+      renderGlobeCanvas();
     }
   });
   canvas.addEventListener('pointerup',e=>{
@@ -830,13 +835,31 @@ function renderTripRegionPicker(){
   ).join('');
 }
 function renderCoverPreview(){
-  document.getElementById('mtCoverPreview').innerHTML=editingTripPhotos.map(url=>`
+  document.getElementById('mtCoverPreview').innerHTML=editingTripPhotos.map((url,i)=>`
     <div class="cover-thumb ${url===editingTripCoverUrl?'on':''}" onclick="pickCoverPhoto('${url}')">
       <img src="${url}">
       ${url===editingTripCoverUrl?'<div class="cover-thumb-badge">封面</div>':''}
+      <button class="cover-thumb-x" onclick="event.stopPropagation();removeTripPhoto(${i})">✕</button>
     </div>`).join('')
-    + pendingCoverFiles.map(f=>`<div class="cover-thumb"><img src="${URL.createObjectURL(f)}"></div>`).join('');
+    + pendingCoverFiles.map((f,i)=>`
+    <div class="cover-thumb">
+      <img src="${URL.createObjectURL(f)}">
+      <button class="cover-thumb-x" onclick="event.stopPropagation();removePendingCoverFile(${i})">✕</button>
+    </div>`).join('');
   renderCoverPosControl();
+}
+function removeTripPhoto(i){
+  const [url]=editingTripPhotos.splice(i,1);
+  if(url===editingTripCoverUrl){
+    editingTripCoverUrl=editingTripPhotos[0]||null;
+    editingTripCoverPosY=50;
+  }
+  renderCoverPreview();
+  if(editingTripId)updateTrip(editingTripId,{photos:editingTripPhotos,coverPhotoUrl:editingTripCoverUrl,coverPosY:editingTripCoverPosY});
+}
+function removePendingCoverFile(i){
+  pendingCoverFiles.splice(i,1);
+  renderCoverPreview();
 }
 function renderCoverPosControl(){
   const wrap=document.getElementById('mtCoverPosWrap');
