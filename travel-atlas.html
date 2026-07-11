@@ -394,6 +394,42 @@ const CONTINENTS=[
   [[121.01,22.62],[120.9,22.38],[120.84,21.93],[120.74,21.96],[120.58,22.36],[120.32,22.55],[120.08,23.09],[120.07,23.15],[120.14,23.4],[120.13,23.65],[120.63,24.48],[120.84,24.72],[121.04,25.03],[121.37,25.16],[121.45,25.25],[121.59,25.28],[121.69,25.18],[121.85,25.1],[121.91,25.06],[121.93,24.97],[121.82,24.82],[121.83,24.53],[121.61,24.05],[121.4,23.17],[121.3,22.97],[121.01,22.62]], // Taiwan
 ];
 
+// Terrain overlays derived from NOAA ETOPO1 (2° grid, resampled via ERDDAP
+// griddap, thresholded + clustered + convex-hulled offline). Drawn on top of
+// CONTINENTS to give elevation-based shading without a raster texture.
+const HIGHLANDS=[ // elevation >= 1200m
+  [[-69.5,-75.5],[-63.1,-75.5],[-63.1,-69.1],[-66.3,-65.9]],
+  [[-77.6,-9.4],[-71.2,-44.6],[-64.8,-31.8],[-61.6,-19.0],[-61.6,-15.8],[-71.2,-9.4]],
+  [[21.8,-28.5],[25.0,-31.7],[31.4,-31.7],[31.4,-22.1],[28.2,-22.1]],
+  [[14.8,-22.0],[18.0,-25.2],[21.2,-25.2],[21.2,-22.0],[18.0,-18.8],[14.8,-18.8]],
+  [[12.2,-20.4],[21.8,-17.2],[21.8,-10.8],[18.6,-7.6],[15.4,-10.8],[12.2,-17.2]],
+  [[22.8,-12.4],[29.2,-12.4],[26.0,-9.2]],
+  [[29.6,-10.4],[32.8,-10.4],[29.6,-7.2]],
+  [[33.6,-8.4],[36.8,-8.4],[33.6,-5.2]],
+  [[-76.4,3.6],[-73.2,3.6],[-76.4,6.8]],
+  [[34.6,7.3],[37.8,4.1],[41.0,7.3],[41.0,10.5],[37.8,16.9]],
+  [[43.6,13.2],[46.8,13.2],[43.6,19.6]],
+  [[-129.1,46.0],[-125.9,39.6],[-100.3,10.8],[-90.7,7.6],[-90.7,10.8],[-100.3,49.2],[-109.9,52.4],[-116.3,52.4],[-129.1,49.2]],
+  [[46.5,30.6],[49.7,27.4],[110.5,11.4],[113.7,17.8],[116.9,30.6],[120.1,53.0],[120.1,56.2],[100.9,62.6],[97.7,62.6],[56.1,43.4]],
+  [[59.6,27.2],[62.8,27.2],[59.6,33.6]],
+  [[29.2,39.2],[54.8,26.4],[61.2,26.4],[61.2,36.0],[45.2,45.6],[32.4,42.4]],
+  [[106.4,36.4],[119.2,42.8],[106.4,42.8]],
+  [[-121.4,46.6],[-111.8,49.8],[-115.0,53.0],[-118.2,53.0],[-121.4,49.8]],
+  [[84.5,50.3],[87.7,47.1],[90.9,47.1],[90.9,53.5]],
+  [[-129.2,58.4],[-126.0,55.2],[-122.8,58.4]],
+  [[129.6,55.6],[132.8,55.6],[129.6,58.8]],
+  [[-83.1,81.3],[-51.1,55.7],[-44.7,55.7],[-22.3,68.5],[-15.9,78.1],[-19.1,84.5],[-63.9,84.5]],
+  [[135.2,61.6],[148.0,61.6],[144.8,64.8]],
+  [[-82.4,79.4],[-72.8,79.4],[-69.6,82.6],[-79.2,82.6]],
+];
+const MOUNTAINS=[ // elevation >= 2500m (Andes, Himalaya/Tibet, Greenland ice cap peak)
+  [[-68.6,-31.6],[-65.4,-25.2],[-65.4,-15.6],[-68.6,-15.6]],
+  [[-75.5,-13.4],[-72.3,-16.6],[-69.1,-16.6],[-69.1,-13.4]],
+  [[63.3,40.2],[72.9,30.6],[85.7,24.2],[108.1,21.0],[111.3,24.2],[111.3,40.2],[76.1,46.6],[63.3,46.6]],
+  [[61.6,33.6],[71.2,33.6],[71.2,36.8]],
+  [[-52.7,74.3],[-43.1,64.7],[-33.5,64.7],[-27.1,67.9],[-27.1,74.3],[-33.5,77.5],[-43.1,80.7],[-49.5,80.7],[-52.7,77.5]],
+];
+
 // ─── 3D globe ────────────────────────────────────────
 let globeView={rotLon:20,tilt:18,zoom:1};
 let globePins=[];
@@ -420,19 +456,29 @@ function slerp(a,b,t){
 // through the landmass on rotation, so densify each ring's edges via
 // spherical interpolation before projecting.
 const MAX_EDGE_DEG=3;
-const DENSE_CONTINENTS=CONTINENTS.map(ring=>{
-  const unit=ring.map(([lng,lat])=>sphereXYZ(lat,lng));
-  const out=[];
-  for(let i=0;i<unit.length;i++){
-    const a=unit[i],b=unit[(i+1)%unit.length];
-    out.push(a);
-    const dot=Math.max(-1,Math.min(1,a[0]*b[0]+a[1]*b[1]+a[2]*b[2]));
-    const angDeg=Math.acos(dot)*180/Math.PI;
-    const steps=Math.min(48,Math.ceil(angDeg/MAX_EDGE_DEG));
-    for(let s=1;s<steps;s++)out.push(slerp(a,b,s/steps));
-  }
-  return out;
-});
+// During drag every pointermove triggers a re-render; a coarser edge budget
+// cuts the trig cost roughly in half for the ~10 fps of extra frames a fast
+// drag produces, and the difference is imperceptible while the globe is moving.
+const MAX_EDGE_DEG_DRAG=9;
+function densifyRings(rings,maxEdgeDeg){
+  return rings.map(ring=>{
+    const unit=ring.map(([lng,lat])=>sphereXYZ(lat,lng));
+    const out=[];
+    for(let i=0;i<unit.length;i++){
+      const a=unit[i],b=unit[(i+1)%unit.length];
+      out.push(a);
+      const dot=Math.max(-1,Math.min(1,a[0]*b[0]+a[1]*b[1]+a[2]*b[2]));
+      const angDeg=Math.acos(dot)*180/Math.PI;
+      const steps=Math.min(48,Math.ceil(angDeg/maxEdgeDeg));
+      for(let s=1;s<steps;s++)out.push(slerp(a,b,s/steps));
+    }
+    return out;
+  });
+}
+const DENSE_CONTINENTS=densifyRings(CONTINENTS,MAX_EDGE_DEG);
+const DENSE_CONTINENTS_DRAG=densifyRings(CONTINENTS,MAX_EDGE_DEG_DRAG);
+const DENSE_HIGHLANDS=densifyRings(HIGHLANDS,MAX_EDGE_DEG_DRAG);
+const DENSE_MOUNTAINS=densifyRings(MOUNTAINS,MAX_EDGE_DEG_DRAG);
 function projectGlobe(lat,lng,R,cx,cy){
   let p=sphereXYZ(lat,lng);
   p=rotY(p,globeView.rotLon);
@@ -449,50 +495,41 @@ function drawMap(trips){
   renderGlobeCanvas();
 }
 
-function renderGlobeCanvas(){
-  const canvas=document.getElementById('mapCanvas');
-  if(!canvas)return;
-  const ctx=canvas.getContext('2d');
-  const w=canvas.width,h=canvas.height;
-  const cx=w/2,cy=h/2,R=Math.min(w,h)/2*0.82*globeView.zoom;
-  ctx.clearRect(0,0,w,h);
-  // Sphere body (ocean)
+const ZC=0.02;
+// AfroEurasia(0), Americas(1), Australia(2), Greenland(3), Antarctica(4),
+// Japan(5), Iceland(6), NZ_South(7), NZ_North(8), UK(9), Taiwan(10)
+const ICY_IDX=new Set([3,4]);
+const DESERT_IDX=new Set([2]);
+// Gradients only depend on screen geometry (cx,cy,R), not on rotation, so
+// they're cached across frames and only rebuilt when the canvas size or
+// zoom actually changes instead of on every drag/render call.
+let _gradKey=null,_grad=null;
+function buildGlobeGradients(ctx,cx,cy,R){
   const bg=ctx.createRadialGradient(cx-R*0.35,cy-R*0.35,R*0.1,cx,cy,R);
   bg.addColorStop(0,'#1E6091');bg.addColorStop(0.55,'#154C74');bg.addColorStop(1,'#0A2A42');
-  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
-  // Continents (land): clip each ring to the visible hemisphere so edges
-  // follow the horizon instead of jumping in a straight chord across it.
-  const ZC=0.02;
   const land=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
   land.addColorStop(0,'#7BA35A');land.addColorStop(0.5,'#5C8B4A');land.addColorStop(1,'#3F6B3A');
   const ice=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
   ice.addColorStop(0,'#F0F5F7');ice.addColorStop(1,'#CBD9DF');
   const desert=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
   desert.addColorStop(0,'#C9A66B');desert.addColorStop(1,'#A9895A');
-  // AfroEurasia(0), Americas(1), Australia(2), Greenland(3), Antarctica(4),
-  // Japan(5), Iceland(6), NZ_South(7), NZ_North(8), UK(9), Taiwan(10)
-  const ICY_IDX=new Set([3,4]);
-  const DESERT_IDX=new Set([2]);
-  ctx.strokeStyle='rgba(23,42,26,.5)';
-  ctx.lineWidth=1;
-  const rot3d=(p)=>rotX(rotY(p,globeView.rotLon),globeView.tilt);
-  const proj3d=([x,y,z])=>({sx:cx+x*R,sy:cy-y*R});
-  const horizonPt=(a,b)=>{
-    const t=(ZC-a[2])/(b[2]-a[2]);
-    const ix=a[0]+(b[0]-a[0])*t,iy=a[1]+(b[1]-a[1])*t;
-    const n=Math.hypot(ix,iy);
-    const s=n>0?Math.sqrt(Math.max(0,1-ZC*ZC))/n:0;
-    return proj3d([ix*s,iy*s,ZC]);
-  };
-  DENSE_CONTINENTS.forEach((ring,ringIdx)=>{
-    ctx.fillStyle=ICY_IDX.has(ringIdx)?ice:DESERT_IDX.has(ringIdx)?desert:land;
+  const highland=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
+  highland.addColorStop(0,'#CBAE72');highland.addColorStop(1,'#A88C52');
+  const mountain=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
+  mountain.addColorStop(0,'#8A6B45');mountain.addColorStop(1,'#5E4530');
+  return{bg,land,ice,desert,highland,mountain};
+}
+function fillRingSet(ctx,rings,styleFn,rot3d,proj3d,horizonPt,doStroke){
+  rings.forEach((ring,ringIdx)=>{
+    ctx.fillStyle=styleFn(ringIdx);
     const pts=ring.map(rot3d);
     let path=[];
     const flush=()=>{
       if(path.length>2){
         ctx.beginPath();
         path.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
-        ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.closePath();ctx.fill();
+        if(doStroke)ctx.stroke();
       }
       path=[];
     };
@@ -508,6 +545,41 @@ function renderGlobeCanvas(){
     }
     flush();
   });
+}
+
+function renderGlobeCanvas(){
+  const canvas=document.getElementById('mapCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width,h=canvas.height;
+  const cx=w/2,cy=h/2,R=Math.min(w,h)/2*0.82*globeView.zoom;
+  ctx.clearRect(0,0,w,h);
+  const key=w+'_'+h+'_'+R;
+  if(_gradKey!==key){_grad=buildGlobeGradients(ctx,cx,cy,R);_gradKey=key;}
+  const{bg,land,ice,desert,highland,mountain}=_grad;
+  // Sphere body (ocean)
+  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+  // Continents (land): clip each ring to the visible hemisphere so edges
+  // follow the horizon instead of jumping in a straight chord across it.
+  // While dragging, use a coarser edge budget and skip the decorative
+  // terrain overlays entirely — cuts per-frame trig cost during interaction.
+  ctx.strokeStyle='rgba(23,42,26,.5)';
+  ctx.lineWidth=1;
+  const rot3d=(p)=>rotX(rotY(p,globeView.rotLon),globeView.tilt);
+  const proj3d=([x,y,z])=>({sx:cx+x*R,sy:cy-y*R});
+  const horizonPt=(a,b)=>{
+    const t=(ZC-a[2])/(b[2]-a[2]);
+    const ix=a[0]+(b[0]-a[0])*t,iy=a[1]+(b[1]-a[1])*t;
+    const n=Math.hypot(ix,iy);
+    const s=n>0?Math.sqrt(Math.max(0,1-ZC*ZC))/n:0;
+    return proj3d([ix*s,iy*s,ZC]);
+  };
+  const continentSet=globeDragging?DENSE_CONTINENTS_DRAG:DENSE_CONTINENTS;
+  fillRingSet(ctx,continentSet,ringIdx=>ICY_IDX.has(ringIdx)?ice:DESERT_IDX.has(ringIdx)?desert:land,rot3d,proj3d,horizonPt,true);
+  if(!globeDragging){
+    fillRingSet(ctx,DENSE_HIGHLANDS,()=>highland,rot3d,proj3d,horizonPt,false);
+    fillRingSet(ctx,DENSE_MOUNTAINS,()=>mountain,rot3d,proj3d,horizonPt,false);
+  }
   // Rim highlight
   ctx.strokeStyle='rgba(74,222,128,.4)';ctx.lineWidth=1.5;
   ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
@@ -542,6 +614,7 @@ function attachGlobeInteractions(){
     globeDragging=true;moved=false;lastX=e.clientX;lastY=e.clientY;
     canvas.setPointerCapture(e.pointerId);
   });
+  let rafPending=false;
   canvas.addEventListener('pointermove',e=>{
     if(!globeDragging)return;
     const dx=e.clientX-lastX,dy=e.clientY-lastY;
@@ -550,11 +623,17 @@ function attachGlobeInteractions(){
       globeView.rotLon+=dx*0.4;
       globeView.tilt=Math.max(-80,Math.min(80,globeView.tilt-dy*0.4));
       lastX=e.clientX;lastY=e.clientY;
-      renderGlobeCanvas();
+      // Coalesce bursts of pointermove into one render per animation frame
+      // instead of one full re-render per event.
+      if(!rafPending){
+        rafPending=true;
+        requestAnimationFrame(()=>{rafPending=false;renderGlobeCanvas();});
+      }
     }
   });
   canvas.addEventListener('pointerup',e=>{
     globeDragging=false;
+    if(moved)renderGlobeCanvas(); // restore full-density coastline + terrain overlays
     if(!moved){
       const r=canvas.getBoundingClientRect();
       const scale=canvas.width/r.width;
