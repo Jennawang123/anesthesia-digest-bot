@@ -177,6 +177,7 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
   <button class="tab" onclick="go('income')">💰 收入</button>
   <button class="tab" onclick="go('investment')">📈 投資</button>
   <button class="tab" onclick="go('assets')">🏦 資產</button>
+  <button class="tab" onclick="go('stats')">📊 統計</button>
 </div>
 
 <!-- ══════════════ TAB 1: 支出 ══════════════ -->
@@ -431,6 +432,14 @@ input,select{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-ra
   </div>
 </div>
 
+<!-- ══════════════ TAB 5: 統計 ══════════════ -->
+<div id="page-stats" class="page">
+  <div class="card">
+    <div class="label">歷年儲蓄率</div>
+    <div id="stats-years-list"><div class="empty">尚無資料</div></div>
+  </div>
+</div>
+
 <!-- ══════════════ MODALS ══════════════ -->
 
 <!-- Manual add transaction -->
@@ -651,7 +660,7 @@ function toast(msg, ms=2500) {
 }
 
 // ── Tabs ─────────────────────────────────────────────────────
-const TABS=['expenses','income','investment','assets'];
+const TABS=['expenses','income','investment','assets','stats'];
 let cur='expenses';
 function go(tab) {
   document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',TABS[i]===tab));
