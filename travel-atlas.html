@@ -612,7 +612,7 @@ function renderTripDetail(tripId,entries){
     <div>${(trip.tags||[]).map(tag=>`<span class="tag-pill">${esc(tag)}</span>`).join('')}</div>
     <div style="margin-top:14px">
       ${groups.length?groups.map(([date,items])=>`
-        <div class="day-header">${fmtDayHeader(date)} · ${flag} ${esc(items[0].location||'')}</div>
+        <div class="day-header">${fmtDayHeader(date)} · ${flag} ${esc(trip.destination||'')}</div>
         ${items.map(e=>`
           <div class="card entry-row" onclick="openEntryFull('${tripId}','${e.id}')">
             ${e.photos&&e.photos[0]?`<img class="entry-thumb" src="${e.photos[0]}">`:'<div class="entry-thumb"></div>'}
