@@ -922,6 +922,22 @@ function buildGlobeGradients(ctx,cx,cy,R){
   mountain.addColorStop(0,'#8A6B45');mountain.addColorStop(1,'#5E4530');
   return{bg,land,ice,desert,highland,mountain};
 }
+// Draws a smoothed curve through `pts` instead of straight lineTo segments:
+// each original point becomes a quadraticCurveTo control point and the
+// curve actually passes through the midpoint of each consecutive pair. This
+// is the standard cheap way to round off a jagged polyline in Canvas 2D —
+// same number of draw calls as lineTo, no extra source data needed.
+function tracePath(ctx,pts){
+  const n=pts.length;
+  ctx.moveTo(pts[0][0],pts[0][1]);
+  if(n===2){ctx.lineTo(pts[1][0],pts[1][1]);return;}
+  for(let i=1;i<n-1;i++){
+    const[x,y]=pts[i],[nx,ny]=pts[i+1];
+    ctx.quadraticCurveTo(x,y,(x+nx)/2,(y+ny)/2);
+  }
+  const[lx0,ly0]=pts[n-2],[lx1,ly1]=pts[n-1];
+  ctx.quadraticCurveTo(lx0,ly0,lx1,ly1);
+}
 function fillRingSet(ctx,rings,styleFn,rot3d,proj3d,horizonPt,doStroke){
   rings.forEach((ring,ringIdx)=>{
     ctx.fillStyle=styleFn(ringIdx);
@@ -930,7 +946,7 @@ function fillRingSet(ctx,rings,styleFn,rot3d,proj3d,horizonPt,doStroke){
     const flush=()=>{
       if(path.length>2){
         ctx.beginPath();
-        path.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+        tracePath(ctx,path);
         ctx.closePath();ctx.fill();
         if(doStroke)ctx.stroke();
       }
@@ -956,7 +972,7 @@ function strokePolylineSet(ctx,lines,rot3d,proj3d,horizonPt){
     const flush=()=>{
       if(path.length>1){
         ctx.beginPath();
-        path.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+        tracePath(ctx,path);
         ctx.stroke();
       }
       path=[];
