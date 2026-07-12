@@ -229,6 +229,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
     </div>
     <div class="fg"><label class="lb">國家代碼（逗號分隔，決定國旗，例：JP、AU、IT）</label><input class="inp" id="mt_country" placeholder="JP"></div>
     <div class="fg"><label class="lb">短語（顯示在旅程卡片上，用空格分隔，純顯示無分類功能）</label><input class="inp" id="mt_note" placeholder="繡球花 水蜜桃"></div>
+    <div class="fg"><label class="lb">地點（多國/多城市行程用，地球儀會各畫一個點；只需填地名，座標事後補上）</label>
+      <div id="mtWaypointsList"></div>
+      <button class="btn btn-g btn-w" style="margin-top:8px" onclick="addWaypointRow()">📍 新增地點</button>
+    </div>
     <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-trip')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveTrip()" id="mt-save-btn">建立</button></div>
   </div>
 </div>
@@ -987,8 +991,12 @@ function initGlobeScene(canvas){
 // so existing trips need no migration.
 function tripToPins(t){
   if(Array.isArray(t.waypoints)&&t.waypoints.length){
-    return t.waypoints.filter(w=>w.lat!=null&&w.lng!=null)
+    const resolved=t.waypoints.filter(w=>w.lat!=null&&w.lng!=null)
       .map(w=>({lat:w.lat,lng:w.lng,title:w.label||t.title,id:t.id}));
+    // If every waypoint is still pending coordinates, fall back to the
+    // trip's own point so it doesn't vanish from the globe while waiting —
+    // only switch fully to waypoints once at least one has coordinates.
+    if(resolved.length)return resolved;
   }
   if(t.lat!=null&&t.lng!=null)return[{lat:t.lat,lng:t.lng,title:t.title,id:t.id}];
   return[];
@@ -1327,11 +1335,38 @@ let editingTripId=null;
 let editingTripPhotos=[];
 let editingTripCoverUrl=null;
 let editingTripCoverPosY=50;
+let editingWaypoints=[];
 
 function renderTripRegionPicker(){
   document.getElementById('mt_region').innerHTML=REGIONS.map(r=>
     `<div class="to ${r.id===selTripRegion?'on':''}" onclick="selTripRegionPick('${r.id}')">${r.name}</div>`
   ).join('');
+}
+// Manual "地點" list in the trip edit sheet only ever collects a label —
+// lat/lng stay null until filled in later (by curl import or a future
+// geocode step), matching how waypoints are already populated for imported
+// trips. tripToPins() already skips waypoints without coordinates, so a
+// pending place just doesn't show a globe pin yet instead of erroring.
+function renderWaypointsList(){
+  const box=document.getElementById('mtWaypointsList');
+  if(!box)return;
+  box.innerHTML=editingWaypoints.map((w,i)=>`
+    <div class="fr" style="align-items:center;margin-bottom:8px">
+      <input class="inp" style="flex:1" value="${esc(w.label||'')}" placeholder="例：曼谷轉機" oninput="updateWaypointLabel(${i},this.value)">
+      ${w.lat==null?'<span style="font-size:11px;color:var(--muted);flex-shrink:0">⏳ 待補座標</span>':''}
+      <button class="ib" onclick="removeWaypointRow(${i})">✕</button>
+    </div>`).join('');
+}
+function addWaypointRow(){
+  editingWaypoints.push({label:'',lat:null,lng:null});
+  renderWaypointsList();
+}
+function removeWaypointRow(i){
+  editingWaypoints.splice(i,1);
+  renderWaypointsList();
+}
+function updateWaypointLabel(i,val){
+  editingWaypoints[i].label=val;
 }
 function renderCoverPreview(){
   document.getElementById('mtCoverPreview').innerHTML=editingTripPhotos.map((url,i)=>`
@@ -1395,6 +1430,8 @@ function openAddTripSheet(){
   selTripRegion='east-asia';
   renderTripRegionPicker();
   ['mt_title','mt_dest','mt_start','mt_end','mt_lat','mt_lng','mt_note','mt_country'].forEach(id=>document.getElementById(id).value='');
+  editingWaypoints=[];
+  renderWaypointsList();
   renderCoverPreview();
   openM('m-trip');
 }
@@ -1419,6 +1456,8 @@ function openEditTripSheet(tripId){
   document.getElementById('mt_lng').value=trip.lng??'';
   document.getElementById('mt_note').value=trip.note||'';
   document.getElementById('mt_country').value=(trip.countryCode||[]).join(', ');
+  editingWaypoints=(trip.waypoints||[]).map(w=>({...w}));
+  renderWaypointsList();
   renderCoverPreview();
   openM('m-trip');
 }
@@ -1455,6 +1494,7 @@ async function saveTrip(){
     lng:parseFloat(document.getElementById('mt_lng').value)||null,
     note:document.getElementById('mt_note').value.trim(),
     countryCode:document.getElementById('mt_country').value.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean),
+    waypoints:editingWaypoints.filter(w=>w.label.trim()).map(w=>({label:w.label.trim(),lat:w.lat??null,lng:w.lng??null})),
   };
   let id=editingTripId;
   if(id){
