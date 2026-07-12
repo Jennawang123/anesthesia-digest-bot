@@ -129,6 +129,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .detail-title{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6);}
 .detail-meta{font-size:12px;color:var(--muted);margin-bottom:14px;}
 .tag-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(74,222,128,.15);color:var(--teal);margin:0 6px 6px 0;}
+.trip-note-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.trip-note-row .tag-pill{margin:0;padding:2px 8px;font-size:10px;}
 .entry-thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.06);}
 .entry-thumb-wrap{position:relative;flex-shrink:0;}
 .entry-thumb-badge{position:absolute;bottom:-3px;right:-3px;background:var(--teal);color:#0B1220;font-size:9px;font-weight:700;border-radius:6px;padding:1px 5px;line-height:1.3;}
@@ -226,7 +228,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
       <div class="fg"><label class="lb">經度</label><input class="inp" id="mt_lng" type="number" step="0.01" placeholder="例：127.68"></div>
     </div>
     <div class="fg"><label class="lb">國家代碼（逗號分隔，決定國旗，例：JP、AU、IT）</label><input class="inp" id="mt_country" placeholder="JP"></div>
-    <div class="fg"><label class="lb">標籤（逗號分隔）</label><input class="inp" id="mt_tags" placeholder="海島, 潛水"></div>
+    <div class="fg"><label class="lb">短語（顯示在旅程卡片上，用空格分隔，純顯示無分類功能）</label><input class="inp" id="mt_note" placeholder="繡球花 水蜜桃"></div>
     <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-trip')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveTrip()" id="mt-save-btn">建立</button></div>
   </div>
 </div>
@@ -359,10 +361,7 @@ function computeStats(trips){
   for(let y=startYear;y<=curYear;y++){
     yearCounts.push({year:y,count:list.filter(t=>Number((t.startDate||'').slice(0,4))===y).length,highlight:y===curYear});
   }
-  const tagCounts={};
-  list.forEach(t=>(t.tags||[]).forEach(tag=>{tagCounts[tag]=(tagCounts[tag]||0)+1;}));
-  const topTags=Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([tag,count])=>({tag,count}));
-  return{trips:list,tripCount:list.length,countryCount:countries.size,startYear,regionCounts,yearCounts,topTags};
+  return{trips:list,tripCount:list.length,countryCount:countries.size,startYear,regionCounts,yearCounts};
 }
 
 // ─── Atlas home ──────────────────────────────────────
@@ -392,10 +391,7 @@ function renderAtlas(stats){
         <div id="donutLegend"></div>
       </div>
       <div class="card chart-card"><div class="chart-title">年度足跡</div><canvas id="barCanvas" width="140" height="140"></canvas></div>
-    </div>
-    ${stats.topTags.length?`<div class="card"><div class="chart-title">熱門標籤</div><div class="filter-row">${
-      stats.topTags.map(t=>`<div class="filter-pill" onclick="goTagFilter('${esc(t.tag)}')">${esc(t.tag)} · ${t.count}</div>`).join('')
-    }</div></div>`:''}`;
+    </div>`;
   drawMap(stats.trips);
   drawDonut(document.getElementById('donutCanvas'),stats.regionCounts);
   document.getElementById('donutLegend').innerHTML=stats.regionCounts.map(r=>
@@ -984,8 +980,21 @@ function initGlobeScene(canvas){
   animate();
 }
 
+// A trip normally has a single lat/lng. Multi-country trips can instead set
+// `waypoints: [{lat,lng,label}]` and get one globe pin per waypoint, all
+// pointing back at the same trip id (clicking any of them opens the same
+// detail page). Falls back to the single lat/lng when waypoints is absent,
+// so existing trips need no migration.
+function tripToPins(t){
+  if(Array.isArray(t.waypoints)&&t.waypoints.length){
+    return t.waypoints.filter(w=>w.lat!=null&&w.lng!=null)
+      .map(w=>({lat:w.lat,lng:w.lng,title:w.label||t.title,id:t.id}));
+  }
+  if(t.lat!=null&&t.lng!=null)return[{lat:t.lat,lng:t.lng,title:t.title,id:t.id}];
+  return[];
+}
 function drawMap(trips){
-  globePins=trips.filter(t=>t.lat!=null&&t.lng!=null).map(t=>({lat:t.lat,lng:t.lng,title:t.title,id:t.id}));
+  globePins=trips.flatMap(tripToPins);
   if(!window.THREE||!window.OrbitControls){
     window.addEventListener('three-ready',()=>drawMap(trips),{once:true});
     return;
@@ -1043,7 +1052,6 @@ function drawYearlyBars(canvas,yearCounts){
 
 // ─── Trip list ───────────────────────────────────────
 let curRegionFilter='all';
-let curTagFilter=null;
 let curTripView=localStorage.getItem('travelAtlasTripView')||'list';
 function setTripView(v){
   curTripView=v;
@@ -1051,13 +1059,14 @@ function setTripView(v){
   renderTripsList(window.__STATS__.trips);
 }
 
-function goTagFilter(tag){
-  curTagFilter=tag;
-  curRegionFilter='all';
-  goTab('trips');
-  renderTripsList(window.__STATS__.trips);
+// Purely decorative — styled like a tag pill but has no filter/category
+// behavior. Splits on whitespace only for display; stored as one free-text
+// string (trip.note) rather than an array.
+function noteRowHtml(t){
+  const words=(t.note||'').trim().split(/\s+/).filter(Boolean);
+  if(!words.length)return'';
+  return`<div class="trip-note-row">${words.map(w=>`<span class="tag-pill">${esc(w)}</span>`).join('')}</div>`;
 }
-function clearTagFilter(){curTagFilter=null;renderTripsList(window.__STATS__.trips);}
 
 function renderTripsList(trips){
   const box=document.getElementById('tripsBox');
@@ -1069,13 +1078,11 @@ function renderTripsList(trips){
     .concat(REGIONS.filter(r=>trips.some(t=>t.region===r.id)).map(r=>
       `<div class="filter-pill ${curRegionFilter===r.id?'on':''}" onclick="setRegionFilter('${r.id}')">${r.name}</div>`
     ));
-  const tagChip=curTagFilter?`<div class="filter-pill on" onclick="clearTagFilter()">🏷️ ${esc(curTagFilter)} ✕</div>`:'';
   const viewToggle=`<div class="view-toggle">
     <div class="view-toggle-btn ${curTripView==='list'?'on':''}" onclick="setTripView('list')">☰</div>
     <div class="view-toggle-btn ${curTripView==='grid'?'on':''}" onclick="setTripView('grid')">▦</div>
   </div>`;
   let filtered=curRegionFilter==='all'?trips:trips.filter(t=>t.region===curRegionFilter);
-  if(curTagFilter)filtered=filtered.filter(t=>(t.tags||[]).includes(curTagFilter));
   const sorted=[...filtered].sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
   const years=[];
   sorted.forEach(t=>{
@@ -1089,6 +1096,7 @@ function renderTripsList(trips){
         <div class="trip-info">
           <div class="trip-title">${esc(t.title)}</div>
           <div class="trip-meta">${(t.startDate||'').slice(0,7).replace('-','.')} · ${REGIONM[t.region]?.name||''}</div>
+          ${noteRowHtml(t)}
         </div>
       </div>`;
   const tripCardHtml=t=>`
@@ -1097,12 +1105,13 @@ function renderTripsList(trips){
         <div class="trip-card-body">
           <div class="trip-card-title">${esc(t.title)}</div>
           <div class="trip-card-meta">${(t.startDate||'').slice(0,7).replace('-','.')} · ${REGIONM[t.region]?.name||''}</div>
+          ${noteRowHtml(t)}
         </div>
       </div>`;
   const yearHeader=y=>`<div class="year-heading">${y}</div>`;
   const listHtml=years.map(g=>yearHeader(g.year)+g.trips.map(tripRowHtml).join('')).join('');
   const gridHtml=years.map(g=>yearHeader(g.year)+`<div class="trip-grid">${g.trips.map(tripCardHtml).join('')}</div>`).join('');
-  box.innerHTML=`<div class="filter-row">${pills.join('')}${tagChip}${viewToggle}</div>`+
+  box.innerHTML=`<div class="filter-row">${pills.join('')}${viewToggle}</div>`+
     (sorted.length?(curTripView==='grid'?gridHtml:listHtml):'<div class="empty"><div class="empty-i">🔍</div><div class="empty-h">沒有符合的旅程</div></div>');
 }
 function setRegionFilter(r){curRegionFilter=r;renderTripsList(window.__STATS__.trips);}
@@ -1170,7 +1179,7 @@ function renderTripDetail(tripId){
       <button class="ib" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,.45);color:#fff" onclick="openEditTripSheet('${tripId}')">✏️</button>
     </div>
     <div class="detail-meta">${(trip.startDate||'').replace(/-/g,'.')} – ${(trip.endDate||'').replace(/-/g,'.')} · ${REGIONM[trip.region]?.name||''}</div>
-    <div>${(trip.tags||[]).map(tag=>`<span class="tag-pill">${esc(tag)}</span>`).join('')}</div>
+    ${noteRowHtml(trip)}
     <div style="margin-top:14px">
       ${groups.length?groups.map(([date,items])=>{
         const loc=dayLocation(tripId,trip,date);
@@ -1385,7 +1394,7 @@ function openAddTripSheet(){
   document.getElementById('mt_id').value='';
   selTripRegion='east-asia';
   renderTripRegionPicker();
-  ['mt_title','mt_dest','mt_start','mt_end','mt_lat','mt_lng','mt_tags','mt_country'].forEach(id=>document.getElementById(id).value='');
+  ['mt_title','mt_dest','mt_start','mt_end','mt_lat','mt_lng','mt_note','mt_country'].forEach(id=>document.getElementById(id).value='');
   renderCoverPreview();
   openM('m-trip');
 }
@@ -1408,7 +1417,7 @@ function openEditTripSheet(tripId){
   document.getElementById('mt_end').value=trip.endDate||'';
   document.getElementById('mt_lat').value=trip.lat??'';
   document.getElementById('mt_lng').value=trip.lng??'';
-  document.getElementById('mt_tags').value=(trip.tags||[]).join(', ');
+  document.getElementById('mt_note').value=trip.note||'';
   document.getElementById('mt_country').value=(trip.countryCode||[]).join(', ');
   renderCoverPreview();
   openM('m-trip');
@@ -1444,7 +1453,7 @@ async function saveTrip(){
     endDate:document.getElementById('mt_end').value||start,
     lat:parseFloat(document.getElementById('mt_lat').value)||null,
     lng:parseFloat(document.getElementById('mt_lng').value)||null,
-    tags:document.getElementById('mt_tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    note:document.getElementById('mt_note').value.trim(),
     countryCode:document.getElementById('mt_country').value.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean),
   };
   let id=editingTripId;
