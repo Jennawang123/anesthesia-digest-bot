@@ -14,6 +14,10 @@
 2. 反駁該論點（Rebuttal）
 3. 得出結論（Conclusion）
 
+## 開發流程
+
+- 設計會解析外部檔案格式（HTML/CSV/匯出檔等）的功能時，brainstorming 階段不可只憑記憶或猜測假設檔案結構就寫進 spec 與測試 fixture；務必先請使用者提供一份實際樣本檔案，用該檔案驗證解析邏輯後才進入 writing-plans。曾發生假設 HyRead 匯出 HTML 有 `.book-title` 等 class，實際檔案是 inline style 排版，部署後才發現格式完全不同。
+
 ## 可用 MCP 工具
 
 | 工具 | 能做什麼 |
