@@ -1071,6 +1071,19 @@ function renderGlobeCanvas(){
   ctx.strokeStyle='rgba(120,180,220,.55)';
   ctx.lineWidth=0.9*globeDpr;
   strokePolylineSet(ctx,DENSE_RIVERS,rot3d,proj3d,horizonPt);
+  // 3D shading: directional highlight near the light source (same offset as
+  // the ocean gradient) fading to limb-darkened edges. source-atop keeps the
+  // gradient confined to pixels already painted (the sphere disc), so it
+  // doesn't bleed onto the transparent canvas outside the globe.
+  const shade=ctx.createRadialGradient(cx-R*0.35,cy-R*0.35,R*0.1,cx,cy,R*1.05);
+  shade.addColorStop(0,'rgba(255,255,255,.18)');
+  shade.addColorStop(0.5,'rgba(255,255,255,0)');
+  shade.addColorStop(0.85,'rgba(0,0,0,.15)');
+  shade.addColorStop(1,'rgba(0,0,0,.45)');
+  ctx.globalCompositeOperation='source-atop';
+  ctx.fillStyle=shade;
+  ctx.fillRect(cx-R,cy-R,R*2,R*2);
+  ctx.globalCompositeOperation='source-over';
   // Rim highlight
   ctx.strokeStyle='rgba(74,222,128,.4)';ctx.lineWidth=1.5*globeDpr;
   ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
