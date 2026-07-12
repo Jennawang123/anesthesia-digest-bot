@@ -839,7 +839,6 @@ function densifyRings(rings,maxEdgeDeg){
   });
 }
 const DENSE_CONTINENTS=densifyRings(CONTINENTS,MAX_EDGE_DEG);
-const DENSE_CONTINENTS_DRAG=densifyRings(CONTINENTS,MAX_EDGE_DEG_DRAG);
 const DENSE_HIGHLANDS=densifyRings(HIGHLANDS,MAX_EDGE_DEG_DRAG);
 const DENSE_MOUNTAINS=densifyRings(MOUNTAINS,MAX_EDGE_DEG_DRAG);
 // Borders/rivers are open polylines, not closed rings — densifyRings()'s
@@ -1010,8 +1009,9 @@ function renderGlobeCanvas(){
   ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
   // Continents (land): clip each ring to the visible hemisphere so edges
   // follow the horizon instead of jumping in a straight chord across it.
-  // While dragging, use a coarser edge budget and skip the decorative
-  // terrain overlays entirely — cuts per-frame trig cost during interaction.
+  // Measured render cost (~0.5ms/frame even with borders+rivers+terrain) has
+  // enough headroom that dragging no longer needs a reduced-quality path —
+  // every layer renders at full density every frame.
   ctx.strokeStyle='rgba(23,42,26,.5)';
   ctx.lineWidth=1*globeDpr;
   const rot3d=(p)=>rotX(rotY(p,globeView.rotLon),globeView.tilt);
@@ -1023,18 +1023,15 @@ function renderGlobeCanvas(){
     const s=n>0?Math.sqrt(Math.max(0,1-ZC*ZC))/n:0;
     return proj3d([ix*s,iy*s,ZC]);
   };
-  const continentSet=globeDragging?DENSE_CONTINENTS_DRAG:DENSE_CONTINENTS;
-  fillRingSet(ctx,continentSet,ringIdx=>ICY_IDX.has(ringIdx)?ice:DESERT_IDX.has(ringIdx)?desert:land,rot3d,proj3d,horizonPt,true);
-  if(!globeDragging){
-    fillRingSet(ctx,DENSE_HIGHLANDS,()=>highland,rot3d,proj3d,horizonPt,false);
-    fillRingSet(ctx,DENSE_MOUNTAINS,()=>mountain,rot3d,proj3d,horizonPt,false);
-    ctx.strokeStyle='rgba(255,255,255,.25)';
-    ctx.lineWidth=0.6*globeDpr;
-    strokePolylineSet(ctx,DENSE_BORDERS,rot3d,proj3d,horizonPt);
-    ctx.strokeStyle='rgba(120,180,220,.55)';
-    ctx.lineWidth=0.9*globeDpr;
-    strokePolylineSet(ctx,DENSE_RIVERS,rot3d,proj3d,horizonPt);
-  }
+  fillRingSet(ctx,DENSE_CONTINENTS,ringIdx=>ICY_IDX.has(ringIdx)?ice:DESERT_IDX.has(ringIdx)?desert:land,rot3d,proj3d,horizonPt,true);
+  fillRingSet(ctx,DENSE_HIGHLANDS,()=>highland,rot3d,proj3d,horizonPt,false);
+  fillRingSet(ctx,DENSE_MOUNTAINS,()=>mountain,rot3d,proj3d,horizonPt,false);
+  ctx.strokeStyle='rgba(255,255,255,.25)';
+  ctx.lineWidth=0.6*globeDpr;
+  strokePolylineSet(ctx,DENSE_BORDERS,rot3d,proj3d,horizonPt);
+  ctx.strokeStyle='rgba(120,180,220,.55)';
+  ctx.lineWidth=0.9*globeDpr;
+  strokePolylineSet(ctx,DENSE_RIVERS,rot3d,proj3d,horizonPt);
   // Rim highlight
   ctx.strokeStyle='rgba(74,222,128,.4)';ctx.lineWidth=1.5*globeDpr;
   ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
