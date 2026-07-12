@@ -902,6 +902,8 @@ const ZC=0.02;
 // Japan(5), Iceland(6), NZ_South(7), NZ_North(8), UK(9), Taiwan(10)
 const ICY_IDX=new Set([3,4]);
 const DESERT_IDX=new Set([2]);
+const HIGHLAND_RGB='203,174,114';
+const MOUNTAIN_RGB='138,107,69';
 // Gradients only depend on screen geometry (cx,cy,R), not on rotation, so
 // they're cached across frames and only rebuilt when the canvas size or
 // zoom actually changes instead of on every drag/render call.
@@ -915,11 +917,7 @@ function buildGlobeGradients(ctx,cx,cy,R){
   ice.addColorStop(0,'#F0F5F7');ice.addColorStop(1,'#CBD9DF');
   const desert=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
   desert.addColorStop(0,'#C9A66B');desert.addColorStop(1,'#A9895A');
-  const highland=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
-  highland.addColorStop(0,'#CBAE72');highland.addColorStop(1,'#A88C52');
-  const mountain=ctx.createLinearGradient(cx,cy-R,cx,cy+R);
-  mountain.addColorStop(0,'#8A6B45');mountain.addColorStop(1,'#5E4530');
-  return{bg,land,ice,desert,highland,mountain};
+  return{bg,land,ice,desert};
 }
 // Draws a smoothed curve through `pts` instead of straight lineTo segments:
 // each original point becomes a quadraticCurveTo control point and the
@@ -993,6 +991,47 @@ function strokePolylineSet(ctx,lines,rot3d,proj3d,horizonPt){
     flush();
   });
 }
+// Like fillRingSet, but fills each ring with its own radial gradient
+// (opaque at the shape's screen-space centroid, fully transparent at its
+// edge) instead of one flat color — this feathers highland/mountain patches
+// into the surrounding land color instead of a hard cutout edge.
+function fillFeatheredRingSet(ctx,rings,colorRgb,rot3d,proj3d,horizonPt){
+  rings.forEach(ring=>{
+    const pts=ring.map(rot3d);
+    const proj=pts.map(p=>p[2]>ZC?proj3d(p):null);
+    let sx=0,sy=0,n=0;
+    proj.forEach(p=>{if(p){sx+=p.sx;sy+=p.sy;n++;}});
+    if(n===0)return; // whole shape on the far side of the globe this frame
+    sx/=n;sy/=n;
+    let maxR=1;
+    proj.forEach(p=>{if(p){const d=Math.hypot(p.sx-sx,p.sy-sy);if(d>maxR)maxR=d;}});
+    const grad=ctx.createRadialGradient(sx,sy,0,sx,sy,maxR*1.15);
+    grad.addColorStop(0,`rgba(${colorRgb},0.85)`);
+    grad.addColorStop(0.65,`rgba(${colorRgb},0.4)`);
+    grad.addColorStop(1,`rgba(${colorRgb},0)`);
+    ctx.fillStyle=grad;
+    let path=[];
+    const flush=()=>{
+      if(path.length>2){
+        ctx.beginPath();
+        tracePath(ctx,path);
+        ctx.closePath();ctx.fill();
+      }
+      path=[];
+    };
+    for(let i=0;i<pts.length;i++){
+      const cur=pts[i],prev=pts[(i-1+pts.length)%pts.length];
+      const curVis=cur[2]>ZC,prevVis=prev[2]>ZC;
+      if(curVis!==prevVis){
+        const h=horizonPt(prev,cur);
+        if(prevVis){path.push([h.sx,h.sy]);flush();}
+        else{flush();path.push([h.sx,h.sy]);}
+      }
+      if(curVis){const p=proj3d(cur);path.push([p.sx,p.sy]);}
+    }
+    flush();
+  });
+}
 
 function renderGlobeCanvas(){
   const canvas=document.getElementById('mapCanvas');
@@ -1004,7 +1043,7 @@ function renderGlobeCanvas(){
   ctx.clearRect(0,0,w,h);
   const key=w+'_'+h+'_'+R;
   if(_gradKey!==key){_grad=buildGlobeGradients(ctx,cx,cy,R);_gradKey=key;}
-  const{bg,land,ice,desert,highland,mountain}=_grad;
+  const{bg,land,ice,desert}=_grad;
   // Sphere body (ocean)
   ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
   // Continents (land): clip each ring to the visible hemisphere so edges
@@ -1024,8 +1063,8 @@ function renderGlobeCanvas(){
     return proj3d([ix*s,iy*s,ZC]);
   };
   fillRingSet(ctx,DENSE_CONTINENTS,ringIdx=>ICY_IDX.has(ringIdx)?ice:DESERT_IDX.has(ringIdx)?desert:land,rot3d,proj3d,horizonPt,true);
-  fillRingSet(ctx,DENSE_HIGHLANDS,()=>highland,rot3d,proj3d,horizonPt,false);
-  fillRingSet(ctx,DENSE_MOUNTAINS,()=>mountain,rot3d,proj3d,horizonPt,false);
+  fillFeatheredRingSet(ctx,DENSE_HIGHLANDS,HIGHLAND_RGB,rot3d,proj3d,horizonPt);
+  fillFeatheredRingSet(ctx,DENSE_MOUNTAINS,MOUNTAIN_RGB,rot3d,proj3d,horizonPt);
   ctx.strokeStyle='rgba(255,255,255,.25)';
   ctx.lineWidth=0.6*globeDpr;
   strokePolylineSet(ctx,DENSE_BORDERS,rot3d,proj3d,horizonPt);
