@@ -107,6 +107,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
 .filter-pill{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer;}
 .filter-pill.on{background:var(--teal);color:#0B1220;border-color:var(--teal);}
+.year-heading{font-size:13px;font-weight:800;color:var(--muted);letter-spacing:.04em;margin:18px 0 8px;}
+.year-heading:first-child{margin-top:0;}
 .trip-row{display:flex;align-items:center;gap:12px;padding:13px 14px;margin-bottom:8px;cursor:pointer;}
 .trip-flag{font-size:22px;flex-shrink:0;}
 .trip-thumb{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;}
@@ -790,6 +792,16 @@ function densifyBorderLine(line,radius,maxEdgeDeg){
   return out.map(p=>p.clone().multiplyScalar(radius));
 }
 
+// Screen-space-constant pin size: sprite.scale is in world units, and a
+// THREE.Sprite's on-screen size grows linearly as the camera gets closer
+// (billboard scaling). Nearby trips (eg. all of Japan) sit close enough in
+// lat/lng that their geographic separation on screen scales by roughly the
+// same factor as camera distance shrinks — so a fixed world-unit scale never
+// resolves them, zoomed in or not. PIN_SCALE_K is multiplied by the live
+// camera-to-pin distance each frame (see animate()) so the pin keeps a
+// constant screen size while zooming, letting growing geographic separation
+// actually pull nearby pins apart visually.
+const PIN_SCALE_K=0.016;
 let _pinSpriteMat=null;
 function buildPinSpriteMaterial(){
   if(_pinSpriteMat)return _pinSpriteMat;
@@ -798,7 +810,8 @@ function buildPinSpriteMaterial(){
   const cctx=c.getContext('2d');
   const g=cctx.createRadialGradient(32,32,0,32,32,32);
   g.addColorStop(0,'rgba(255,246,221,1)');
-  g.addColorStop(0.25,'rgba(244,201,93,.95)');
+  g.addColorStop(0.15,'rgba(244,201,93,.95)');
+  g.addColorStop(0.4,'rgba(244,201,93,.35)');
   g.addColorStop(1,'rgba(244,201,93,0)');
   cctx.fillStyle=g;cctx.beginPath();cctx.arc(32,32,32,0,Math.PI*2);cctx.fill();
   const tex=new THREE.CanvasTexture(c);
@@ -814,10 +827,17 @@ function updateGlobePins(){
   globePins.forEach(pin=>{
     const sprite=new THREE.Sprite(mat);
     sprite.position.copy(latLngToVector3(pin.lat,pin.lng,GLOBE_RADIUS*1.02));
-    sprite.scale.set(0.09,0.09,1);
     sprite.userData.pin=pin;
     globeScene.add(sprite);
     globePinObjects.push(sprite);
+  });
+  updatePinScales();
+}
+function updatePinScales(){
+  if(!globeCamera)return;
+  globePinObjects.forEach(obj=>{
+    const s=PIN_SCALE_K*globeCamera.position.distanceTo(obj.position);
+    obj.scale.set(s,s,1);
   });
 }
 
@@ -918,7 +938,12 @@ function initGlobeScene(canvas){
   loadEarthTextureWithBathymetry(
     'assets/2k_earth_daymap.jpg',
     'assets/ocean_bathymetry.jpg',
-    tex=>{globeMesh.material=new THREE.MeshBasicMaterial({map:tex});},
+    tex=>{
+      tex.colorSpace=THREE.SRGBColorSpace;
+      tex.anisotropy=globeRenderer.capabilities.getMaxAnisotropy();
+      tex.needsUpdate=true;
+      globeMesh.material=new THREE.MeshBasicMaterial({map:tex});
+    },
     ()=>{/* keep the placeholder navy sphere on load failure */}
   );
 
@@ -946,6 +971,7 @@ function initGlobeScene(canvas){
   function animate(){
     globeAnimId=requestAnimationFrame(animate);
     globeControls.update();
+    updatePinScales();
     globeRenderer.render(globeScene,globeCamera);
     const dist=globeCamera.position.distanceTo(globeControls.target);
     const pct=Math.round((GLOBE_INITIAL_DISTANCE/dist)*100);
@@ -1051,22 +1077,31 @@ function renderTripsList(trips){
   let filtered=curRegionFilter==='all'?trips:trips.filter(t=>t.region===curRegionFilter);
   if(curTagFilter)filtered=filtered.filter(t=>(t.tags||[]).includes(curTagFilter));
   const sorted=[...filtered].sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
-  const listHtml=sorted.map(t=>`
+  const years=[];
+  sorted.forEach(t=>{
+    const y=(t.startDate||'').slice(0,4)||'未知';
+    if(years[years.length-1]?.year!==y)years.push({year:y,trips:[]});
+    years[years.length-1].trips.push(t);
+  });
+  const tripRowHtml=t=>`
       <div class="card trip-row" onclick="openTripDetail('${t.id}')">
         ${t.coverPhotoUrl?`<img class="trip-thumb" style="object-position:center ${t.coverPosY??50}%" src="${t.coverPhotoUrl}">`:`<div class="trip-flag">${countryFlags(t.countryCode)}</div>`}
         <div class="trip-info">
           <div class="trip-title">${esc(t.title)}</div>
           <div class="trip-meta">${(t.startDate||'').slice(0,7).replace('-','.')} · ${REGIONM[t.region]?.name||''}</div>
         </div>
-      </div>`).join('');
-  const gridHtml=`<div class="trip-grid">${sorted.map(t=>`
+      </div>`;
+  const tripCardHtml=t=>`
       <div class="card trip-card" onclick="openTripDetail('${t.id}')">
         ${t.coverPhotoUrl?`<img class="trip-card-img" style="object-position:center ${t.coverPosY??50}%" src="${t.coverPhotoUrl}">`:`<div class="trip-card-flag">${countryFlags(t.countryCode)}</div>`}
         <div class="trip-card-body">
           <div class="trip-card-title">${esc(t.title)}</div>
           <div class="trip-card-meta">${(t.startDate||'').slice(0,7).replace('-','.')} · ${REGIONM[t.region]?.name||''}</div>
         </div>
-      </div>`).join('')}</div>`;
+      </div>`;
+  const yearHeader=y=>`<div class="year-heading">${y}</div>`;
+  const listHtml=years.map(g=>yearHeader(g.year)+g.trips.map(tripRowHtml).join('')).join('');
+  const gridHtml=years.map(g=>yearHeader(g.year)+`<div class="trip-grid">${g.trips.map(tripCardHtml).join('')}</div>`).join('');
   box.innerHTML=`<div class="filter-row">${pills.join('')}${tagChip}${viewToggle}</div>`+
     (sorted.length?(curTripView==='grid'?gridHtml:listHtml):'<div class="empty"><div class="empty-i">🔍</div><div class="empty-h">沒有符合的旅程</div></div>');
 }
