@@ -13,6 +13,21 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+window.THREE = THREE;
+window.OrbitControls = OrbitControls;
+window.dispatchEvent(new Event("three-ready"));
+</script>
 <style>
 :root{
   --bg:#0B1220;--bg2:#0E1830;--card:rgba(255,255,255,.06);--card-solid:#152238;
