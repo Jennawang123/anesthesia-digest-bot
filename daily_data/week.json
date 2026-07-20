@@ -1,118 +1,190 @@
 {
-  "week": "2026-W29",
-  "fetched_at": "2026-07-13T04:20:36.644104+00:00",
+  "week": "2026-W30",
+  "fetched_at": "2026-07-20T04:25:22.771502+00:00",
   "articles": {
     "1": {
-      "hot_theme": null,
+      "hot_theme": "Lung-protective mechanical ventilation strategies",
       "items": [
         {
-          "title": "Proactive haemodynamic management using the hypotension prediction index during caesarean section: a randomised controlled study.",
-          "abstract": "Intra-operative hypotension is common during caesarean section and may result in adverse maternal effects, such as nausea and vomiting. While oscillometric blood pressure and continuous non-invasive arterial pressure monitoring enable reactive treatment, the hypotension prediction index offers a machine learning-based approach that may allow proactive haemodynamic intervention. This study investigated whether hypotension prediction index-guided management could reduce the incidence of intra-oper",
+          "title": "Pulmonary complications with individualised vs. fixed positive end-expiratory pressure in older patients recovering from lung cancer surgery: a randomised trial.",
+          "abstract": "Postoperative pulmonary complications are common after lung cancer surgery in older adults. Individualised positive end-expiratory pressure may optimise intra-operative lung mechanics, but its effect on postoperative pulmonary complications is uncertain. We hypothesised that individualised positive end-expiratory pressure would reduce the incidence of postoperative pulmonary complications compared with a fixed positive end-expiratory pressure in older patients (age ≥ 60 years) undergoing lung ca",
           "journal": "Anaesthesia",
           "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41693355/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41815001/",
           "score": 10
         },
         {
-          "title": "Three versus six weeks of corticosteroids for mild immune-related pneumonitis: a randomized trial.",
-          "abstract": "Optimal corticosteroid treatment duration for immune checkpoint inhibitor-related pneumonitis remains uncertain. No randomized trials have addressed this issue.",
+          "title": "Early high-dose vitamin C for out-of-hospital cardiac arrest: the VITaCCA randomized clinical trial.",
+          "abstract": "Besides temperature management, there is currently no effective therapy to decrease the burden of post-cardiac arrest syndrome. The pleiotropic effects of vitamin C may improve clinical outcome.",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42301311/",
+          "score": 10
+        },
+        {
+          "title": "Incretins Predict Response to Enteral Nutrition Strategies in the EDEN Trial: A Secondary Analysis.",
+          "abstract": "The Early versus Delayed Enteral Nutrition (EDEN) trial found no significant difference in mortality between trophic and full enteral nutrition strategies in acute respiratory distress syndrome (ARDS) patients. Heterogeneity of treatment effect (HTE) has been identified in prior ARDS trials. We previously identified intestine-derived incretin hormones (glucose-dependent insulinotropic peptide [GIP] and glucagon-like peptide [GLP]-1 as potential predictive biomarkers in the response to nutrition.",
           "journal": "AJRCCM",
           "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42398004/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42439515/",
           "score": 10
         },
         {
-          "title": "Nutrition Therapy in Critically Ill Adults",
-          "abstract": "New England Journal of Medicine, Volume 395, Issue 2, Page 162-174, July 9, 2026.",
-          "journal": "NEJM",
-          "pub_date": "",
-          "url": "https://www.nejm.org/doi/full/10.1056/NEJMra2506111?af=R&rss=currentIssue",
-          "score": 10
-        },
-        {
-          "title": "Using peri-operative patient- and parent-reported experience and outcome measures to identify paediatric postsurgical recovery trajectories: an observational cohort study.",
-          "abstract": "Identifying postoperative pain trajectories and pre-operative risk factors may support preventative measures and enhance pain management. We aimed to determine the feasibility of gathering peri-operative data from families of children, describe their recovery trajectories and identify risk factors for high postsurgical pain.",
-          "journal": "Anaesthesia",
+          "title": "Nutrition and Exercise in Critical Illness (NEXIS) trial: randomized trial of combined in-bed cycling and intravenous amino acid plus usual care.",
+          "abstract": "Patients with acute respiratory failure (ARF) in intensive care units (ICUs) often experience immobility and limited nutritional intake, with long-lasting impairments.",
+          "journal": "AJRCCM",
           "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41744133/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42438140/",
+          "score": 10
+        },
+        {
+          "title": "International evidence-based recommendations for point-of-care lung ultrasound : 2025 focused update of the 2012 recommendations.",
+          "abstract": "Since the publication of the previous consensus document on point-of-care lung ultrasound (PoCLUS) in 2012, new evidence has emerged. This consensus aims to update current recommendations by focusing on the clinical applications of PoCLUS as a standalone tool, while acknowledging that this focused approach represents a necessary preliminary step toward its effective integration with other organ-specific ultrasound examinations and complementary diagnostic modalities.",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42257880/",
+          "score": 8
+        },
+        {
+          "title": "Mechanical Power and Energy in Invasively Ventilated Newborn Infants.",
+          "abstract": "Mechanical power estimates the amount of energy delivered to ventilated lungs, but there are no available data for neonates. This study aimed to provide a real-world description of power and investigate its relationship with clinical variables in neonates.",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42101008/",
+          "score": 7
+        },
+        {
+          "title": "Epidemiology, ventilation management, and clinical outcomes in children (PRoVENT-PED): first results from the 10-year, investigator-initiated, international, multicentre, prospective cohort study.",
+          "abstract": "Evidence supporting lung-protective ventilation in children overwhelmingly stems from adult trials. This study aimed to assess the epidemiology, ventilation management, and outcomes across predefined age groups of invasively ventilated critically ill children with or without paediatric acute respiratory distress syndrome (PARDS), and to identify potentially modifiable factors associated with outcome.",
+          "journal": "Lancet Resp Med",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42081907/",
+          "score": 7
+        },
+        {
+          "title": "Acute exacerbation in fibrotic interstitial lung disease: An International Working Group Report.",
+          "abstract": "Acute exacerbations (AEs) occur both in patients with idiopathic pulmonary fibrosis (IPF) and non-IPF fibrotic interstitial lung disease (fILD). These events confer high morbidity and mortality, with a lack of proven effective therapeutic interventions. The objective of this state-of-the-art document is to summarize latest evidence since the 2016 international working group report on AE-IPF, expanding it across the spectrum of all fILDs. A comprehensive literature review on the epidemiology, ass",
+          "journal": "AJRCCM",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42447235/",
+          "score": 7
+        },
+        {
+          "title": "Effects of inflammatory phenotypes in acute respiratory distress syndrome on mortality and partitioning of lung and chest wall mechanics in patients in the USA and Canada: a retrospective cohort study.",
+          "abstract": "Inflammatory phenotypes of acute respiratory distress syndrome (ARDS) predict outcomes and can respond differently to treatment strategies. We aimed to establish whether these phenotypes differ in respiratory mechanics and in response to lung-protective ventilation strategies.",
+          "journal": "Lancet Resp Med",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42155495/",
           "score": 6
         },
         {
-          "title": "A Population-based Cross-sectional Analysis of Extended-release Opioid Dispensing Incidence, Prognostic Factors, and Variation after Total Joint Arthroplasty.",
-          "abstract": "Extended-release opioids (EROs) are not recommended for acute postoperative pain, yet their prescribing persists. This study examined the incidence, predictors, and variation in ERO dispensing after total hip and knee arthroplasty.",
-          "journal": "Anesthesiology",
+          "title": "Persistent tissue hypoperfusion improves risk stratification beyond vasopressor dose in refractory septic shock: a secondary analysis of the ANDROMEDA-SHOCK-2 trial.",
+          "abstract": "A recent Delphi consensus highlighted elements for defining refractory septic shock. We assessed whether integrating persistent tissue hypoperfusion with vasopressor dose after protocolized resuscitation improves mortality risk stratification compared with vasopressor dose alone.",
+          "journal": "Intensive Care",
           "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42018768/",
-          "score": 5
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42467247/",
+          "score": 6
         },
         {
-          "title": "Prevalence and Risk Factors of Deep Spinal Infection after Single-shot Epidural Injections: A Nationwide Cohort Study of 3.8 Million Pain Outpatients.",
-          "abstract": "Deep spinal infection (DSI) is a rare but potentially devastating complication of epidural injections. This study aimed to determine the nationwide incidence and risk factors of DSI after single-shot outpatient epidural injections for pain management.",
-          "journal": "Anesthesiology",
+          "title": "High-flow nasal cannula oxygen during breaks from noninvasive ventilation after extubation: an observational study.",
+          "abstract": "Clinical practice guidelines recommend prophylactic noninvasive ventilation (NIV) after extubation in high-risk patients. The effects of high-flow nasal cannula (HFNC) oxygen during breaks from NIV after extubation have been poorly explored. Our objective was to assess whether HFNC rather than standard oxygen during breaks from NIV may prevent extubation failure.",
+          "journal": "Intensive Care",
           "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41944580/",
-          "score": 5
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42440109/",
+          "score": 6
         },
         {
-          "title": "Two-part Statistical Model for Identifying Baseline Predictors of Chronic Postsurgical Pain.",
-          "abstract": "A substantial proportion of patients report no pain after surgery, resulting in an excess of zero values that pose challenges for analysis using traditional statistical models. The current study was designed to test the hypothesis that a two-part model, commonly used in healthcare expenditures research, would demonstrate superior performance in predicting postsurgical pain when compared with traditional models and would secondarily better identify predictors of this clinically important outcome.",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41941700/",
-          "score": 5
-        },
-        {
-          "title": "Dose-dependent relationship between intra-operative dexmedetomidine and delirium after non-cardiac surgery: a retrospective cohort study.",
-          "abstract": "Dexmedetomidine can attenuate delirium in patients who are critically ill, but evidence with regards to its preventive effect on postoperative delirium remains equivocal. We hypothesised that the risk of delirium after intra-operative dexmedetomidine administration varies depending on the dose administered and aimed to identify the optimum dose to mitigate delirium.",
+          "title": "Management of major thoracic trauma: a narrative review.",
+          "abstract": "Traumatic thoracic injuries are a leading cause of morbidity and mortality worldwide, not only as a direct consequence of the injury itself, but also due to development of secondary insults such as infection; acute kidney injury; acute respiratory distress syndrome; and shock. The thorax houses vital structures, and even seemingly trivial trauma may result in catastrophic damage particularly in children or older patients. This review aims to highlight important considerations in diagnosis and ma",
           "journal": "Anaesthesia",
           "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41717663/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42405450/",
           "score": 5
         },
         {
-          "title": "Diagnostic criteria for invasive pulmonary aspergillosis in COPD patients.",
-          "abstract": "Over 400 million people have chronic obstructive pulmonary disease (COPD), with exacerbations representing a major health burden. Although the overall incidence of invasive pulmonary aspergillosis (IPA) in patients with COPD with hospitalised exacerbation is only 1 to 4%, certain factors substantially increase this frequency. Risk factors compromising defences against Aspergillus spp in COPD patients include systemic or high-dose inhaled corticosteroids, comorbidities including bronchiectasis, d",
-          "journal": "AJRCCM",
+          "title": "Key principles for rehabilitation of critically ill patients with obesity.",
+          "abstract": "Patients with obesity who are admitted to an ICU bring specific challenges for rehabilitation during and after critical illness. This narrative review explores impact of differences in body compositions and pathophysiology on outcomes to summarise interprofessional, patient-centred rehabilitation strategies across the trajectory of recovery.",
+          "journal": "Intensive Care",
           "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42384914/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42467246/",
           "score": 5
         },
         {
-          "title": "Inhaled sedation in intensive care units: a modelling study of the environmental impact",
-          "abstract": "Publication date: Available online 7 July 2026   Source:  British Journal of Anaesthesia  Author(s): Nicolas Massart, Florence Boissier, Matthieu Bernat, David Grimaldi, Marie Lecronier, Julien Poissy, Erwan D'Aranda, Marc Leone, Hans P. Arp, Alain Kalmar, Laurent Zieleskiewicz",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226004149?dgcid=rss_sd_all",
+          "title": "Antiseizure medication dosing and monitoring in the intensive care unit: a practical narrative review.",
+          "abstract": "Antiseizure medications (ASMs) are commonly used in the intensive care unit (ICU) and often exhibit pharmacokinetics that differ substantially from those in healthy volunteers or in the outpatient setting. Organ dysfunction, polypharmacy, exogenous devices, and greater severity of illness all influence ASM pharmacokinetics, dosing decisions, and monitoring parameters. It is essential for critical care clinicians to familiarize themselves with the pharmacokinetics, dosing considerations, effects ",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42455344/",
           "score": 5
+        },
+        {
+          "title": "Prehospital airway and ventilatory management: a collaborative and narrative review.",
+          "abstract": "Prehospital airway and ventilatory management is a frequent, high-stakes and technically demanding component of emergency care. Environmental constraints, limited resources, and variable provider experience make it particularly challenging, and prehospital care systems differ substantially across countries, from paramedic-based to physician-led models, contributing to heterogeneity in clinical practices and patient outcomes. In this narrative review, we discuss evidence-based best practice, incl",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42390593/",
+          "score": 5
+        },
+        {
+          "title": "How to optimize brain perfusion and prevent cerebral complications during extracorporeal life support.",
+          "abstract": "Extracorporeal life support (ECLS) is increasingly used to rescue patients with refractory respiratory failure, cardiogenic shock and/or cardiac arrest. Acute brain injury during ECLS is common and associated with a significant increase in mortality and long-term disability. Brain injury in ECLS patients can arise from either the underlying disease or pre-ECLS events, such as cardiac arrest, or from secondary mechanisms linked to ECLS-related complications, management strategies, and physiologic",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42315625/",
+          "score": 5
+        },
+        {
+          "title": "\"It was torture for him, and it was torture for us to see him like that\": understanding multiple ICU-related triggers of family PTSD symptoms-a qualitative thematic study.",
+          "abstract": "Family members of patients admitted to intensive care units (ICU) are at high risk of developing post-traumatic stress disorder (PTSD) in the months following ICU discharge. We aimed to explore relatives' ICU experiences and identify common ICU-phase triggers shaping PTSD symptom experiences.",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42268369/",
+          "score": 5
+        },
+        {
+          "title": "The HLH-Risk-Calculator is a machine learning-based tool to predict course & mortality of secondary hemophagocytic lymphohistiocytosis.",
+          "abstract": "Secondary hemophagocytic lymphohistiocytosis (sHLH) is a life-threatening hyperinflammatory condition. While few diagnostic scores are established, none exist to predict both clinical course and time-point specific outcome of sHLH patients so far. We present a machine learning (ML)-based tool to predict Initial Disease Severity (IDS; defined as admission to intensive care units (ICU) OR death < 90 days without ICU admission) and mortality across different time points in sHLH patients.",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42377458/",
+          "score": 4
+        },
+        {
+          "title": "Lung- and diaphragm-protective mechanical ventilation in acute respiratory distress syndrome.",
+          "abstract": "Lung-protective ventilation is the current standard for mechanical ventilation of patients with acute respiratory distress syndrome (ARDS). Traditionally, this approach has focused on the controlled phase of mechanical ventilation, but emerging data suggest that how patients are managed during assisted ventilation may also impact clinical outcomes. Experimental and observational clinical data indicate that excessive respiratory effort may further damage already injured lungs and may also lead to",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42412219/",
+          "score": 1
+        },
+        {
+          "title": "60 years of ARDS and the evolution of extracorporeal lung support - from ECMO to ECCO",
+          "abstract": "Extracorporeal life support (ECLS), including venovenous extracorporeal membrane oxygenation (VV-ECMO) and extracorporeal carbon dioxide removal (ECCO₂R), is an established treatment for selected patients with acute respiratory distress syndrome (ARDS). In this review, on the 60th anniversary of ARDS, we review the evolution of ECLS as a support strategy in ARDS, the evidence surrounding its efficacy, factors associated with prognosis, management of patients on ECLS, associated complications, an",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42412218/",
+          "score": 1
         }
       ]
     },
     "2": {
-      "hot_theme": "Chronic postsurgical pain prediction and mechanisms",
+      "hot_theme": "Chronic pain neurobiology and mechanisms",
       "items": [
         {
-          "title": "Comparison of intrathecal morphine, lateral quadratus lumborum block, and their combination for analgesia and quality of recovery after Caesarean delivery: a randomised, double-blind, two-centre clinical trial",
-          "abstract": "Publication date: Available online 10 July 2026   Source:  British Journal of Anaesthesia  Author(s): Vishal Uppal, Valerie Zaphiratos, Victoria M. Allen, Ana Sjaus, Aaron Shephard, Ariane Clairoux, Rami Issa, Philippe Richebé, Dolores M. McKeen",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226004101?dgcid=rss_sd_all",
+          "title": "Effect of fractalkine signaling on neuroinflammation and neuropathic pain-like behavior in mice.",
+          "abstract": "Neuropathic pain is the most prevalent and incapacitating form of chronic pain. Understanding its pathogenesis at the cellular and molecular levels is crucial to guide the development of new therapeutics. A major controversy has been on the roles of Fractalkine (CX3CL1) signaling between neurons and immune cells in the pathogenesis of neuropathic pain. In this study, we investigated two distinct pathways of CX3CL1 signaling in the pathogenesis of neuropathic pain, namely the CX3CR1-dependent pat",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42461101/",
           "score": 10
         },
         {
-          "title": "Effects of fentanyl on diaphragm muscle force in patients undergoing knee arthroplasty: a randomised double-blind clinical trial",
-          "abstract": "Publication date: Available online 8 July 2026   Source:  British Journal of Anaesthesia  Author(s): Heather M. Gransee, Matthew W. Urban, Beth A. Martin, Anita D. Stoltenberg, Kate M. Knoll, Sepideh Jahanian, Brenda K. Anderson, Jason K. Panchamia, Darrell R. Schroeder, Carlos B. Mantilla",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226004186?dgcid=rss_sd_all",
+          "title": "Continuous Erector Spinae Plane Blocks to Treat Pain after Percutaneous Nephrolithotomy: A Randomized, Triple-masked, Placebo-controlled Clinical Trial.",
+          "abstract": "Single-injection erector spinae plane blocks (ESPB) provide analgesia after percutaneous nephrolithotomy (PCNL) but are limited in their duration. A continuous ESPB involving local anesthetic administered via a perineural catheter may extend analgesia duration. This study hypothesized that adding a continuous ESPB to a single-injection ESPB after outpatient PCNL would decrease pain severity and/or opioid consumption over the first 2 postoperative days (dual primary outcomes).",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42081194/",
           "score": 10
-        },
-        {
-          "title": "Regional anaesthesia and chronic postsurgical pain: a systematic review and network meta-analysis",
-          "abstract": "Publication date: Available online 9 July 2026   Source:  British Journal of Anaesthesia  Author(s): Martin Taylor-Rowan, Iain Mactier, Clareece Nevill, Rahma Said, Elizabeth Fisher, Sakineh S. Bidar, Will Robinson, Tom Morris, Anna Noel-Storr, Nishant Jaiswal, Rachel J. Kearns, Alan J.R. Macfarlane, Brett Doleman, Jonathan G. Hardman, David W. Hewson, Nicola J. Cooper, Alex J. Sutton, Olivia Wu, Terry Quinn",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226004174?dgcid=rss_sd_all",
-          "score": 9
         },
         {
           "title": "Neural correlates of mechanical allodynia and hyperalgesia in the human brain in health and disease: a systematic review and activation-likelihood estimation analysis.",
@@ -131,11 +203,19 @@
           "score": 8
         },
         {
-          "title": "A Fentanyl Vaccine Is Now in Human Trials",
-          "abstract": "This Medical News article discusses an investigational fentanyl vaccine that has entered human trials and, if proven safe and effective, could prevent overdose and treat addiction.",
-          "journal": "JAMA",
-          "pub_date": "2026/Jul",
-          "url": "https://jamanetwork.com/journals/jama/fullarticle/2850522",
+          "title": "Transversus abdominis plane block for postoperative pain management and opioid sparing: a systematic review and meta-analysis of randomised controlled trials. Comment on <em>Br J Anaesth</em> 2026;136: 266–82",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Christopher B. Salmonsen, Kai H.W. Lange, Christian Rothe, Jakob Kleif, Claus A. Bertelsen",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003880?dgcid=rss_sd_all",
+          "score": 8
+        },
+        {
+          "title": "Evaluation of Postblock Hypersensitivity Using Quantitative Sensory Testing before, during, and after Axillary Brachial Plexus Block Resolution in Healthy Volunteers.",
+          "abstract": "The problem of a sharp increase in pain after resolution of a nerve block, known as rebound pain, has been increasingly recognized. It is currently unknown whether rebound pain simply reflects the unmasking of untreated, residual surgical pain, or if it represents a de novo hyperalgesic state driven by a mechanistic resetting of pain thresholds in response to regional anesthesia. In this study, the authors assessed nociceptive processing after a single-injection axillary brachial plexus block in",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42359695/",
           "score": 7
         },
         {
@@ -144,7 +224,15 @@
           "journal": "PAIN",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42017907/",
-          "score": 6
+          "score": 7
+        },
+        {
+          "title": "Neuroimmune pathways linking sleep disturbance to persistent pain after injury are mitigated by exercise.",
+          "abstract": "Sleep and physical activity are modifiable behaviours linked to pain. Sleep disturbance often co-occurs with persistent pain and may contribute to its development. Exercise is a first-line treatment for chronic pain. Previous work showed that sleep disturbance worsens and prolongs postinjury pain behaviours, exercise mitigates these effects, and brain-derived neurotrophic factor may play a mechanistic role. Deeper insight requires a broader assessment of pain behaviours and systemic biomarkers r",
+          "journal": "PAIN",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42017897/",
+          "score": 7
         },
         {
           "title": "Predictors of patient treatment adherence and moderators of response for a randomized clinical trial comparing remote cognitive behavioral therapy approaches for high-impact chronic musculoskeletal pain.",
@@ -152,31 +240,7 @@
           "journal": "PAIN",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42013134/",
-          "score": 6
-        },
-        {
-          "title": "Single-dose intraoperative methadone and QTc interval: a prospective observational cohort investigation",
-          "abstract": "Publication date: Available online 4 July 2026   Source:  British Journal of Anaesthesia  Author(s): Vijay K. Ramaiah, Evan D. Kharasch",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S000709122600396X?dgcid=rss_sd_all",
-          "score": 6
-        },
-        {
-          "title": "A Population-based Cross-sectional Analysis of Extended-release Opioid Dispensing Incidence, Prognostic Factors, and Variation after Total Joint Arthroplasty.",
-          "abstract": "Extended-release opioids (EROs) are not recommended for acute postoperative pain, yet their prescribing persists. This study examined the incidence, predictors, and variation in ERO dispensing after total hip and knee arthroplasty.",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42018768/",
-          "score": 5
-        },
-        {
-          "title": "Two-part Statistical Model for Identifying Baseline Predictors of Chronic Postsurgical Pain.",
-          "abstract": "A substantial proportion of patients report no pain after surgery, resulting in an excess of zero values that pose challenges for analysis using traditional statistical models. The current study was designed to test the hypothesis that a two-part model, commonly used in healthcare expenditures research, would demonstrate superior performance in predicting postsurgical pain when compared with traditional models and would secondarily better identify predictors of this clinically important outcome.",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41941700/",
-          "score": 5
+          "score": 7
         },
         {
           "title": "Understanding opioid use for noncancer pain: a community pharmacy-based observational study of patient profiles and experiences.",
@@ -195,19 +259,11 @@
           "score": 5
         },
         {
-          "title": "Establishing clinical significance thresholds for common pediatric pain-related patient-reported outcome measures.",
-          "abstract": "Pediatric patient-reported outcome measures (PROMs) are essential in pain intervention research, yet their changes often lack clear clinical significance. The authors estimated minimally important differences (MIDs) for commonly used and freely available PROMs in pediatric pain intervention research. Using data from a longitudinal multicenter study (N = 453) on children and adolescents aged 8 to 17 years with chronic pain in Germany, the authors applied equipercentile linking to align pre-post i",
+          "title": "Psychosocial factors do not explain discrepancy between daily diary and one-week retrospective reports of pain.",
+          "abstract": "Self-report is the gold standard for assessing pain intensity, although the method of acquiring pain reports may influence the ratings obtained. Retrospective reports of pain intensity are often found to be elevated relative to daily diary reports, possibly due to recall bias and the influence of psychosocial factors on memory. In this study, we sought to examine differences between retrospective reporting of average pain intensity in the past week vs averaged daily diary reporting of pain inten",
           "journal": "PAIN",
           "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41972415/",
-          "score": 4
-        },
-        {
-          "title": "Single-dose intraoperative methadone QTc effects. Comment on <em>Br J Anaesth</em> 2026",
-          "abstract": "Publication date: Available online 6 July 2026   Source:  British Journal of Anaesthesia  Author(s): Adam J. Milam, Jacky M. Jennings, David O. Warner",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226004162?dgcid=rss_sd_all",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42455064/",
           "score": 4
         },
         {
@@ -216,7 +272,7 @@
           "journal": "PAIN",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42153470/",
-          "score": 3
+          "score": 4
         },
         {
           "title": "Post-traumatic stress symptoms are associated with altered working memory circuits and periaqueductal gray pathways in people with chronic pain.",
@@ -224,7 +280,7 @@
           "journal": "PAIN",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42093181/",
-          "score": 3
+          "score": 4
         },
         {
           "title": "Temporal dynamics of mental defeat in chronic pain: a longitudinal network analysis of ecological momentary assessment data.",
@@ -232,7 +288,7 @@
           "journal": "PAIN",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42093175/",
-          "score": 3
+          "score": 4
         },
         {
           "title": "Towards a tool to discriminate between pain mechanistic descriptors: expert ranking of clinical features and allocation of weights using a forced choice paradigm.",
@@ -240,15 +296,15 @@
           "journal": "PAIN",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42048572/",
-          "score": 3
+          "score": 4
         },
         {
-          "title": "Dual Roles of Voltage-gated Calcium Channels and γ-Aminobutyric Acid-mediated Signaling in Modulating Neurotensin Receptor Type 2-induced Antinociception.",
-          "abstract": "The potential to mitigate pain by targeting a single receptor while simultaneously modulating peripheral and spinal circuits, offers an exciting nonopioid therapeutic strategy. Neurotensin receptor type 2 (NTSR2) is a promising yet underexplored pathway for nonopioid analgesia. The authors investigated the antinociceptive effects of NTSR2 activation and its mechanisms in rodent models of perioperative and chronic pain.",
-          "journal": "Anesthesiology",
+          "title": "International classification of diseases-11 chronic primary headache diagnoses: data-based adaptations of criteria for the pediatric population.",
+          "abstract": "Many children present with chronic primary headache (CPH), yet classification within the International Classification of Diseases (ICD-11) is difficult, potentially impeding treatment pathways. The ICD-11 includes adult criteria, but it lacks coding notes addressing pediatric neurodevelopmental differences, and it stipulates inconsistent time criteria. The current study thus proposes optimized diagnostic criteria for CPH, chronic tension-type headache (TTH), and chronic migraine to better fit th",
+          "journal": "PAIN",
           "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42262386/",
-          "score": 2
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42455074/",
+          "score": 3
         },
         {
           "title": "Peripheral kappa opioid receptors modulate cold hypersensitivity in a mouse model of chemotherapy-induced neuropathy.",
@@ -256,7 +312,7 @@
           "journal": "PAIN",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42402893/",
-          "score": 2
+          "score": 3
         },
         {
           "title": "Male-specific analgesic effects of minocycline in sickle cell disease are mediated by microglia and the microbiome.",
@@ -264,7 +320,7 @@
           "journal": "PAIN",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42187072/",
-          "score": 2
+          "score": 3
         },
         {
           "title": "Characterization of the circular RNA landscape of human dorsal root ganglia reveals a neurotrophin-related circRNA is modulated by opioid exposure.",
@@ -272,7 +328,7 @@
           "journal": "PAIN",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42152618/",
-          "score": 2
+          "score": 3
         },
         {
           "title": "De novo nitric oxide synthesis drives tactile hypersensitivity induced by ATP-sensitive potassium channel opening in mice: relevance to migraine and other headache disorders.",
@@ -280,15 +336,7 @@
           "journal": "PAIN",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42048631/",
-          "score": 2
-        },
-        {
-          "title": "Neuroimmune pathways linking sleep disturbance to persistent pain after injury are mitigated by exercise.",
-          "abstract": "Sleep and physical activity are modifiable behaviours linked to pain. Sleep disturbance often co-occurs with persistent pain and may contribute to its development. Exercise is a first-line treatment for chronic pain. Previous work showed that sleep disturbance worsens and prolongs postinjury pain behaviours, exercise mitigates these effects, and brain-derived neurotrophic factor may play a mechanistic role. Deeper insight requires a broader assessment of pain behaviours and systemic biomarkers r",
-          "journal": "PAIN",
-          "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42017897/",
-          "score": 2
+          "score": 3
         },
         {
           "title": "Peripheral capsaicin reverses nerve injury-associated maladaptive brain networks in male rats: a simultaneous chemogenetic-functional magnetic resonance imaging study.",
@@ -296,44 +344,36 @@
           "journal": "PAIN",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/41973718/",
+          "score": 3
+        },
+        {
+          "title": "Neurobiology of the trigeminal ganglion in comparison to the dorsal root ganglion.",
+          "abstract": "The trigeminal ganglion (TG) represents the craniofacial counterpart of the dorsal root ganglion (DRG) in the peripheral nervous system (PNS). TG and DRG are clusters of cell bodies of highly specialized sensory neurons, with TG neurons innervating the head and face and DRG neurons innervating the body. TG and DRG neurons are essential for detecting various mechanical, thermal, and chemical stimuli and relaying these internal or external signals to the central nervous system (CNS). Despite shari",
+          "journal": "PAIN",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42402895/",
           "score": 2
         },
         {
-          "title": "Effects of transcranial ultrasound stimulation of primary somatosensory cortex and ventral posterolateral nucleus of the thalamus on acute pain perception.",
-          "abstract": "Noninvasive neuromodulatory techniques provide important means to study the role of brain regions activated by nociceptive stimuli in pain perception. This study investigates the role of the primary somatosensory cortex (S1) and the ventral posterolateral nucleus (VPL) of the thalamus in acute pain perception using transcranial ultrasound stimulation (TUS). Twenty-five healthy participants underwent a double-blind, sham-controlled, within-subject experimental design. Transcranial ultrasound stim",
-          "journal": "PAIN",
-          "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41972908/",
+          "title": "Morphine and hydromorphone pharmacodynamics in human volunteers: sensitivity to benefit–harm thresholds. Comment on <em>Br J Anaesth</em> 2026; 136: 1459-71",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Yiran Feng, Boyi Zhang, Jiale Chen",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003466?dgcid=rss_sd_all",
           "score": 2
         }
       ]
     },
     "3": {
-      "hot_theme": "Protective ventilation strategies in perioperative lung injury",
+      "hot_theme": "Delirium prevention in older surgical patients",
       "items": [
         {
-          "title": "Feasibility Pilot Trial for the Trajectories of Recovery after Intravenous Propofol versus Inhaled Volatile Anesthesia (THRIVE) Pragmatic Randomized Clinical Trial.",
-          "abstract": "The Trajectories of Recovery after Intravenous propofol versus inhaled VolatilE anesthesia (THRIVE) trial is a multicenter prospective, randomized comparative effectiveness trial examining patients' experiences and outcomes after receiving either total intravenous anesthesia with propofol or inhaled volatile anesthesia for general anesthesia (NCT05991453). Before the 13,000-patient trial, a pilot trial (NCT05346588) was performed to establish feasibility and determine the percentage of success o",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41950401/",
-          "score": 7
-        },
-        {
-          "title": "Effects of Protective Ventilation with Lung Expansion versus Permissive Atelectasis on Pulmonary Inflammation and Mechanical Power of Ventilation in an Experimental Model of Acute Lung Injury.",
-          "abstract": "The energy transferred from the mechanical ventilator to the respiratory system over time, so-called mechanical power, may cause lung injury even with protective ventilation. This study hypothesized that protective ventilation aiming at moderate lung expansion results in less mechanical power and lung injury than aiming at permissive atelectasis or maximum lung expansion.",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41941706/",
-          "score": 7
-        },
-        {
-          "title": "Pulmonary complications with individualised vs. fixed positive end-expiratory pressure in older patients recovering from lung cancer surgery: a randomised trial.",
-          "abstract": "Postoperative pulmonary complications are common after lung cancer surgery in older adults. Individualised positive end-expiratory pressure may optimise intra-operative lung mechanics, but its effect on postoperative pulmonary complications is uncertain. We hypothesised that individualised positive end-expiratory pressure would reduce the incidence of postoperative pulmonary complications compared with a fixed positive end-expiratory pressure in older patients (age ≥ 60 years) undergoing lung ca",
+          "title": "Remimazolam vs. propofol anaesthesia for delirium in older patients recovering from lung resections: a randomised non-inferiority trial.",
+          "abstract": "Remimazolam tosylate is an ultra-short-acting benzodiazepine sedative and anaesthetic. The related drug, midazolam, is associated with delirium but it remains unclear whether remimazolam also promotes delirium. We tested the primary hypothesis that remimazolam is non-inferior to propofol for delirium in patients during the initial 3 days after lung resection surgery. Secondary outcomes were the proportion of delirium-positive assessments; duration of stay in the post-anaesthesia care unit; and h",
           "journal": "Anaesthesia",
           "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41815001/",
-          "score": 7
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42464898/",
+          "score": 10
         },
         {
           "title": "Dose-dependent relationship between intra-operative dexmedetomidine and delirium after non-cardiac surgery: a retrospective cohort study.",
@@ -341,38 +381,78 @@
           "journal": "Anaesthesia",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/41717663/",
-          "score": 5
+          "score": 6
         },
         {
-          "title": "Audit of procedural sedation complications using a novel digital application",
-          "abstract": "Publication date: Available online 3 July 2026   Source:  British Journal of Anaesthesia  Author(s): Martin Lees, Andreia R. de Oliveira Trigo, Craig R. Cook, J. Robert Sneyd",
+          "title": "Risk of postoperative respiratory complications in adults treated with GLP-1 receptor agonists: a propensity-matched population-based study",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Tomer Talmy, Stephane Ledot, Barak Cohen, Ron Suharev, Miryam Frishman, Alexander Avidan, Idit Matot, Itay Nitzan",
           "journal": "BJA",
           "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226004010?dgcid=rss_sd_all",
-          "score": 5
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003429?dgcid=rss_sd_all",
+          "score": 6
         },
         {
-          "title": "Direct inhibition of cystathionine-β-synthase by isoflurane contributes to delayed neurocognitive recovery after isoflurane general anaesthesia in mice: interpreting reduced freezing after isoflurane. Comment on <em>Br J Anaesth</em> 2025; 135: 360–74",
-          "abstract": "Publication date: Available online 6 July 2026   Source:  British Journal of Anaesthesia  Author(s): Jiaming Ji, Yuheng Xu, Siyang Zeng, Chaojin Chen",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226004150?dgcid=rss_sd_all",
-          "score": 4
-        },
-        {
-          "title": "Beyond Unconsciousness: Optimizing Antinociception during General Anesthesia.",
-          "abstract": "Perioperative analgesia is an essential component of anesthesia, yet the intraoperative management of surgical nociception remains underdiscussed. This gap largely reflects our incomplete understanding of how the central nervous system is activated by noxious surgical stimulation (nociception) during general anesthesia, and what neurophysiologic \"targets\" intraoperative antinociception should aim for. Although it is widely accepted that general anesthesia renders patients unconscious and elimina",
+          "title": "Neuromuscular Blockade Depth and Oculocardiac Reflex in Pediatric Strabismus Surgery: A Randomized Clinical Trial.",
+          "abstract": "Although neuromuscular blockade reduces oculocardiac reflex (OCR) incidence compared with no neuromuscular blockade, the effect of blockade depth on OCR has not been prospectively evaluated. This study aimed to evaluate whether the depth of neuromuscular blockade influences the incidence of the OCR during pediatric strabismus surgery.",
           "journal": "Anesthesiology",
           "pub_date": "2026/Jul",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42053164/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42461097/",
+          "score": 5
+        },
+        {
+          "title": "Greenhouse gas emissions of sevoflurane outweigh those of carrier gas and CO2 absorbers across the fresh gas flow spectrum.",
+          "abstract": "The absolute and relative effects of lowering fresh gas flows (FGF) on the CO2 equivalent (CO2e) emissions of sevoflurane, carrier gases (O2/air) and prepacked CO2 canister remain poorly quantified. We quantified these factors across a 0.2-4 L/min FGF range during the first hour of anesthesia.",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42461090/",
+          "score": 5
+        },
+        {
+          "title": "Awake tracheal intubation in the era of videolaryngoscopy: an international survey of 4728 clinicians.",
+          "abstract": "Awake tracheal intubation is recommended for the anticipated difficult airway, but its application worldwide is poorly understood. We performed an international survey to understand more about the current global utilisation of awake tracheal intubation and barriers to its more widespread implementation.",
+          "journal": "Anaesthesia",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42458235/",
+          "score": 5
+        },
+        {
+          "title": "Gucagon-like peptide-1 receptor agonists and pulmonary aspiration: stratify physiology, not prescriptions",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Lukasz Szarpak, Maciej Maslyk, Dawid Aleksandrowicz",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003545?dgcid=rss_sd_all",
+          "score": 5
+        },
+        {
+          "title": "Continuous <em>versus</em> bolus norepinephrine administration to treat hypotension after induction of general anaesthesia in low-to-moderate risk noncardiac surgery patients: monitoring and event-rate considerations. Comment on <em>Br J Anaesth</em> 2026; 136: 1137-44",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Chen Lin",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003910?dgcid=rss_sd_all",
           "score": 2
         },
         {
-          "title": "Uncoupling immobility and unconsciousness",
-          "abstract": "Publication date: Available online 6 July 2026   Source:  British Journal of Anaesthesia  Author(s): Kathleen F. Vincent, Ken Solt",
+          "title": "Prediction and risk evaluation of delirium after surgery in older patients: bridging the gap between explanatory algorithms and pragmatic clinical tools. Comment on <em>Br J Anaesth</em> 2026; 136: 1495-1508",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Yan Zhang",
           "journal": "BJA",
           "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226004034?dgcid=rss_sd_all",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003557?dgcid=rss_sd_all",
+          "score": 2
+        },
+        {
+          "title": "Propofol infusion syndrome in an infant after low-dose and short duration administration revealing carnitine palmitoyltransferase 2 deficiency",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Raul Bustos B, Lucas Gomez R",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003478?dgcid=rss_sd_all",
+          "score": 2
+        },
+        {
+          "title": "Difficult Airway Society 2025 guidelines for management of unanticipated difficult tracheal intubation in adults: awake tracheal intubation for a physiologically difficult airway. Comment on <em>Br J Anaesth</em> 2026; 136: 283–307",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Muhammad J. Khan, Arunabha Karmakar",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003508?dgcid=rss_sd_all",
           "score": 2
         }
       ]
@@ -402,14 +482,14 @@
           "journal": "Anaesthesia",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/41854017/",
-          "score": 8
+          "score": 9
         },
         {
-          "title": "First National Estimates of Type 2 Diabetes in Children Raise Alarm",
-          "abstract": "Type 2 diabetes may be more prevalent in US children and adolescents than previously thought, according to the first nationally representative estimates, published in JAMA Pediatrics.",
-          "journal": "JAMA",
+          "title": "Mechanical Power and Energy in Invasively Ventilated Newborn Infants.",
+          "abstract": "Mechanical power estimates the amount of energy delivered to ventilated lungs, but there are no available data for neonates. This study aimed to provide a real-world description of power and investigate its relationship with clinical variables in neonates.",
+          "journal": "Anesthesiology",
           "pub_date": "2026/Jul",
-          "url": "https://jamanetwork.com/journals/jama/fullarticle/2850527",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42101008/",
           "score": 7
         },
         {
@@ -418,7 +498,15 @@
           "journal": "Anaesthesia",
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/41744133/",
-          "score": 6
+          "score": 7
+        },
+        {
+          "title": "Neuromuscular Blockade Depth and Oculocardiac Reflex in Pediatric Strabismus Surgery: A Randomized Clinical Trial.",
+          "abstract": "Although neuromuscular blockade reduces oculocardiac reflex (OCR) incidence compared with no neuromuscular blockade, the effect of blockade depth on OCR has not been prospectively evaluated. This study aimed to evaluate whether the depth of neuromuscular blockade influences the incidence of the OCR during pediatric strabismus surgery.",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Jul",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42461097/",
+          "score": 5
         },
         {
           "title": "Quality of care received by children with suspected appendicitis in the UK National Health Service.",
@@ -427,6 +515,30 @@
           "pub_date": "2026/Jul",
           "url": "https://pubmed.ncbi.nlm.nih.gov/41816950/",
           "score": 5
+        },
+        {
+          "title": "Utilising central and mobile destruction units during labour to reduce ambient nitrous oxide levels: a triple bottom line analysis",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Katherine Whitehouse, Elizabeth P. Hu, Theo S. Cooke, Hashim M. Khan, Hussein Tuzlaw, Ian Baxter",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003569?dgcid=rss_sd_all",
+          "score": 5
+        },
+        {
+          "title": "Intrathecal bupivacaine <em>versus</em> bupivacaine plus fentanyl for anaesthesia for Caesarean delivery: noninferiority analysis and exclusions. Response to <em>Br J Anaesth</em> 2026; 137: 285–286",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Li-Hong Sun, Warwick D. Ngan Kee, Xin-Zhong Chen",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003521?dgcid=rss_sd_all",
+          "score": 2
+        },
+        {
+          "title": "Use of supraglottic airways in neonates and infants less than 2 months old and role in difficult mask ventilation. Response to <em>Br J Anaesth</em> 2026; 137: 313–314",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Shawn Jackson, Julia H. Nagle, Iasha Z. Khan, Steven J. Staffa, Amira Toivonen, Stephen G. Flynn, James M. Peyton, Raymond S. Park, Pete G. Kovatsis, Mary Lyn Stein",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S000709122600351X?dgcid=rss_sd_all",
+          "score": 2
         }
       ]
     },
@@ -434,20 +546,28 @@
       "hot_theme": null,
       "items": [
         {
-          "title": "Survivors of Cyanotic Congenital Heart Disease: A Review",
-          "abstract": "This Review discusses the pathophysiology of cardiovascular complications in adults with cyanotic congenital heart disease after early management and examines late complications and management strategies.",
-          "journal": "JAMA",
+          "title": "Short- and Long-term Efficacy and Safety of Levosimendan in Veno-arterial Extracorporeal Membrane Oxygenation Weaning: The WEANILEVO Randomized Double-Blind Multicenter Trial.",
+          "abstract": "Liberation from veno-arterial extracorporeal membrane oxygenation (VA-ECMO) remains challenging. To date, there is limited evidence from observational studies supporting pharmacologic interventions to facilitate successful VA-ECMO weaning. The current study aimed to evaluate the efficacy and safety of a single dose of levosimendan in patients supported by VA-ECMO who met predefined criteria for weaning.",
+          "journal": "Anesthesiology",
           "pub_date": "2026/Jul",
-          "url": "https://jamanetwork.com/journals/jama/fullarticle/2850177",
-          "score": 8
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42101006/",
+          "score": 10
         },
         {
-          "title": "Management of anaesthesia for transfemoral transcatheter aortic valve implantation: translating national consensus into international standards. Comment on <em>Br J Anaesth</em> 2026; 136: 824–35",
-          "abstract": "Publication date: Available online 9 July 2026   Source:  British Journal of Anaesthesia  Author(s): Tumay Uludag Yanaral, Yasar G. Gul",
+          "title": "Association of duration of amino acids infusion and renal protection: is 48 hours of amino acids infusion enough after cardiac surgery? Comment on <em>Br J Anaesth</em> 2026; 137: 110–117",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Baodong Wang, Jiayuan Huang, Zhiyun Chen",
           "journal": "BJA",
           "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226004095?dgcid=rss_sd_all",
-          "score": 4
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003417?dgcid=rss_sd_all",
+          "score": 2
+        },
+        {
+          "title": "Low dose of landiolol does not prevent postoperative atrial fibrillation after cardiac surgery in non-Asian patients. Comment on <em>Br J Anaesth</em> 2026; 136: 65–73",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Jean-Luc Fellahi, Martin Ruste, Matthias Jacquet-Lagreze",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003909?dgcid=rss_sd_all",
+          "score": 2
         }
       ]
     }
