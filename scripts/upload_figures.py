@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""把抽好的圖上傳 Notion，插入目標 sub-page 的「二、圖表」區塊。
+"""把抽好的圖上傳 Notion，插入目標 sub-page 的對應內文位置。
 
-只做插入，不刪除或改寫既有內容。圖排在該區塊既有的文字摘要與表格之上。
+每張圖插在 manifest 指定的 target_section 小節末尾，讀筆記時圖就在旁邊。
+沒指定小節的落回「二、圖表」區塊。只做插入，不刪除或改寫既有內容。
 manifest 的 uploaded_block_id 作為防重複依據，可安全重跑。
 
 用法：
@@ -60,7 +61,7 @@ class Notion:
             cursor = data["next_cursor"]
 
     def find_heading(self, page_id, text):
-        """找「二、圖表」標題 block；找不到回傳 None。"""
+        """找指定標題 block；找不到回傳 None。"""
         for b in self.children(page_id):
             if not b["type"].startswith("heading_"):
                 continue
@@ -68,6 +69,34 @@ class Notion:
             if plain.strip() == text:
                 return b["id"]
         return None
+
+    def section_end(self, page_id, heading_text):
+        """回傳該小節最後一個 block 的 id —— 圖要插在這之後，才會落在
+        對應內文的末尾而不是下一節開頭。小節結束於同級或更高級的標題。"""
+        blocks = self.children(page_id)
+        start = None
+        for i, b in enumerate(blocks):
+            if not b["type"].startswith("heading_"):
+                continue
+            plain = "".join(r["plain_text"] for r in b[b["type"]]["rich_text"])
+            if plain.strip() == heading_text:
+                start = i
+                break
+        if start is None:
+            return None
+
+        level = int(blocks[start]["type"].split("_")[1])
+        last = blocks[start]
+        for b in blocks[start + 1:]:
+            if b["type"].startswith("heading_") and \
+                    int(b["type"].split("_")[1]) <= level:
+                break
+            last = b
+        return last["id"]
+
+    def delete(self, block_id):
+        self._check(requests.delete(f"{API}/blocks/{block_id}",
+                                    headers=self.h, timeout=30), "刪除 block")
 
     def upload(self, path: Path):
         """Notion File Upload API 兩步：建立 upload → 送出檔案。"""
@@ -158,13 +187,15 @@ def main():
         print("沒有待上傳的圖（可能都上傳過了）。")
         return
 
+    # 以 (sub-page, 歸屬小節) 分組。沒指定小節的落回「二、圖表」區塊。
     by_page = {}
     for f in todo:
-        by_page.setdefault(f["target_page_id"], []).append(f)
+        key = (f["target_page_id"], f.get("target_section") or FIGURE_HEADING)
+        by_page.setdefault(key, []).append(f)
 
-    print(f"待上傳 {len(todo)} 張，分佈於 {len(by_page)} 篇 sub-page：")
-    for pid, figs in by_page.items():
-        print(f"  {pid[:8]}… ← {', '.join('Fig ' + f['fig_id'] for f in figs)}")
+    print(f"待上傳 {len(todo)} 張，分佈於 {len(by_page)} 個位置：")
+    for (pid, sect), figs in by_page.items():
+        print(f"  {pid[:8]}… 「{sect}」← {', '.join('Fig ' + f['fig_id'] for f in figs)}")
     if args.dry_run:
         print("\n--dry-run，未實際寫入。")
         return
@@ -174,11 +205,16 @@ def main():
         sys.exit("找不到 NOTION_TOKEN（請寫進 .env）。")
     notion = Notion(token)
 
-    for pid, figs in by_page.items():
-        heading = notion.find_heading(pid, FIGURE_HEADING)
-        if not heading:
+    for (pid, sect), figs in by_page.items():
+        # 插在小節最後一個 block 之後，圖才會落在該段內文末尾。
+        anchor = notion.section_end(pid, sect)
+        if not anchor:
+            if sect != FIGURE_HEADING:
+                print(f"  ⚠ 找不到小節「{sect}」，改放「{FIGURE_HEADING}」區塊")
+            anchor = notion.find_heading(pid, FIGURE_HEADING)
+        if not anchor:
             print(f"  {pid[:8]}… 沒有「{FIGURE_HEADING}」區塊，建立一個")
-            heading = notion.add_heading(pid, FIGURE_HEADING)
+            anchor = notion.add_heading(pid, FIGURE_HEADING)
 
         items = []
         for f in figs:
@@ -186,7 +222,7 @@ def main():
             items.append((notion.upload(d / f["png"]), caption_for(f)))
             print("完成")
 
-        by_caption = notion.insert_images(pid, heading, items)
+        by_caption = notion.insert_images(pid, anchor, items)
         done = 0
         for f in figs:
             bid = by_caption.get(caption_for(f))
