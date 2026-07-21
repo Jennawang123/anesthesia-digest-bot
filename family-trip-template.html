@@ -245,15 +245,13 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
       <div class="fg"><label class="lb">天數</label><input class="inp" id="s_days" type="number" value="6" min="1" max="30"></div>
     </div>
     <div class="fg"><label class="lb">Header 照片網址（選填）</label><input class="inp" id="s_photo" type="url" placeholder="https://...jpg"></div>
-    <div class="fg"><label class="lb">主要城市</label>
-      <select class="inp" id="s_city">
-        <option value="東京">東京</option>
-        <option value="大阪">大阪</option>
-        <option value="京都">京都</option>
-        <option value="岡山" selected>岡山</option>
-        <option value="札幌">札幌</option>
-        <option value="福岡">福岡</option>
-      </select>
+    <div class="fg">
+      <label class="lb">主要城市</label>
+      <div class="fr" style="align-items:flex-end">
+        <div class="fg" style="margin-bottom:0"><input class="inp" id="s_city" placeholder="例如：京都、Rome、Paris"></div>
+        <button type="button" class="btn btn-g" style="flex:0 0 auto;padding:11px 14px" onclick="geoLookup('s')">📍 查詢</button>
+      </div>
+      <p class="hint" id="s_geo_result" style="text-align:left;margin-top:6px"></p>
     </div>
     <div class="fg"><label class="lb">Gemini API Key</label><input class="inp" id="s_gemini" type="password" placeholder="AIza…"></div>
     <button class="btn btn-b btn-w" onclick="doSetup()">開始使用 →</button>
@@ -318,15 +316,13 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
             <div class="fg"><label class="lb">天數</label><input class="inp" id="c_days" type="number" min="1" max="30"></div>
           </div>
           <div class="fg"><label class="lb">Header 照片網址（選填）</label><input class="inp" id="c_photo" type="url" placeholder="https://...jpg"></div>
-          <div class="fg"><label class="lb">主要城市</label>
-            <select class="inp" id="c_city">
-              <option value="東京">東京</option>
-              <option value="大阪">大阪</option>
-              <option value="京都">京都</option>
-              <option value="岡山">岡山</option>
-              <option value="札幌">札幌</option>
-              <option value="福岡">福岡</option>
-            </select>
+          <div class="fg">
+            <label class="lb">主要城市</label>
+            <div class="fr" style="align-items:flex-end">
+              <div class="fg" style="margin-bottom:0"><input class="inp" id="c_city" placeholder="例如：京都、Rome、Paris"></div>
+              <button type="button" class="btn btn-g" style="flex:0 0 auto;padding:11px 14px" onclick="geoLookup('c')">📍 查詢</button>
+            </div>
+            <p class="hint" id="c_geo_result" style="text-align:left;margin-top:6px"></p>
           </div>
           <div class="fg"><label class="lb">Gemini API Key</label><input class="inp" id="c_gemini" type="password" placeholder="AIza…"></div>
           <button class="btn btn-b btn-w" onclick="saveCfg()">儲存設定</button>
@@ -449,14 +445,6 @@ const ACTS=[
   {id:'custom',ico:'✏️',name:'自訂',bg:'#E4E9E8'},
 ];
 const ACTM=Object.fromEntries(ACTS.map(c=>[c.id,c]));
-const CITIES={
-  '東京':{lat:35.68,lng:139.69},
-  '大阪':{lat:34.69,lng:135.50},
-  '京都':{lat:35.01,lng:135.77},
-  '岡山':{lat:34.66,lng:133.93},
-  '札幌':{lat:43.06,lng:141.35},
-  '福岡':{lat:33.59,lng:130.40},
-};
 const PRESET_CURRENCIES=[
   {code:'JPY',flag:'🇯🇵'},{code:'AUD',flag:'🇦🇺'},{code:'USD',flag:'🇺🇸'},
   {code:'EUR',flag:'🇪🇺'},{code:'TWD',flag:'🇹🇼'},
@@ -601,13 +589,35 @@ function weatherDesc(code){
   if(code>=95&&code<=99)return{icon:'⛈️',desc:'雷雨'};
   return{icon:'☁️',desc:'陰'};
 }
+let pendingGeo=null;
+async function geocodeCity(name){
+  try{
+    const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=zh`);
+    const d=await r.json();
+    const first=d.results?.[0];
+    if(!first)return null;
+    const label=[first.name,first.admin1,first.country].filter(Boolean).join(', ');
+    return{lat:first.latitude,lng:first.longitude,label};
+  }catch(e){return null;}
+}
+async function geoLookup(prefix){
+  const input=document.getElementById(prefix+'_city');
+  const resultEl=document.getElementById(prefix+'_geo_result');
+  const name=input.value.trim();
+  if(!name){resultEl.textContent='';pendingGeo=null;return;}
+  resultEl.textContent='🔍 定位中…';
+  const geo=await geocodeCity(name);
+  if(!geo){resultEl.textContent='⚠️ 找不到這個地點，請確認拼寫或換個名稱';pendingGeo=null;return;}
+  pendingGeo={queriedFor:name,...geo};
+  resultEl.textContent=`📍 已定位：${geo.label} (${geo.lat.toFixed(2)}, ${geo.lng.toFixed(2)})`;
+}
 async function fetchWeather(){
   try{
     const tripStart=new Date(CFG.start||today());
     const now=new Date(today());
     const pastDays=Math.min(92,Math.max(0,Math.floor((now-tripStart)/86400000)));
     const forecastDays=Math.min(16,Math.max(1,(CFG.days||7)-pastDays+1));
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${CFG.lat||35.68}&longitude=${CFG.lng||139.69}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=${forecastDays}&past_days=${pastDays}`);
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${CFG.lat||25.03}&longitude=${CFG.lng||121.56}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=${forecastDays}&past_days=${pastDays}`);
     const d=await r.json();
     const times=d.hourly.time,temps=d.hourly.temperature_2m,codes=d.hourly.weathercode;
     // 每天收集所有小時資料，選最接近 12:00 的那筆
@@ -633,14 +643,15 @@ function doSetup(){
   if(!url){alert('請輸入 Firebase 資料庫網址');return;}
   const members=['s_m1','s_m2','s_m3','s_m4'].map(id=>document.getElementById(id).value.trim()).filter(Boolean);
   if(members.length<2){alert('請至少填寫 2 位成員');return;}
-  const city=document.getElementById('s_city').value||'東京';
-  const coords=CITIES[city]||{lat:35.68,lng:139.69};
+  const cityName=document.getElementById('s_city').value.trim();
+  if(!cityName){alert('請輸入城市名稱');return;}
+  if(!pendingGeo||pendingGeo.queriedFor!==cityName){alert('請先點「📍 查詢」確認城市座標');return;}
   CFG={url,title:document.getElementById('s_title').value.trim()||'家庭旅行',
     members,
     start:document.getElementById('s_start').value||today(),
     days:parseInt(document.getElementById('s_days').value)||7,
     photo:document.getElementById('s_photo').value.trim(),
-    city,lat:coords.lat,lng:coords.lng,
+    city:pendingGeo.label,cityQuery:cityName,lat:pendingGeo.lat,lng:pendingGeo.lng,
     geminiKey:document.getElementById('s_gemini').value.trim()};
   localStorage.setItem('family_trip',JSON.stringify(CFG));
   bootApp();
@@ -660,7 +671,8 @@ function bootApp(){
   document.getElementById('c_start').value=CFG.start;document.getElementById('c_days').value=CFG.days;
   document.getElementById('c_url').value=CFG.url;
   document.getElementById('c_photo').value=CFG.photo||'';
-  document.getElementById('c_city').value=CFG.city||'東京';
+  document.getElementById('c_city').value=CFG.cityQuery||'';
+  document.getElementById('c_geo_result').textContent=CFG.city?`📍 目前定位：${CFG.city} (${(CFG.lat||0).toFixed(2)}, ${(CFG.lng||0).toFixed(2)})`:'';
   document.getElementById('c_gemini').value=CFG.geminiKey||'';
   const ph=document.getElementById('hdrPhoto');
   if(CFG.photo){ph.src=CFG.photo;ph.style.display='';}else{ph.style.display='none';}
@@ -1262,8 +1274,11 @@ function saveCfg(){
   const dateChanged=newStart!==CFG.start;
   CFG.start=newStart;CFG.days=parseInt(document.getElementById('c_days').value)||CFG.days;
   CFG.photo=document.getElementById('c_photo').value.trim();
-  const newCity=document.getElementById('c_city').value||CFG.city;
-  if(newCity!==CFG.city){CFG.city=newCity;const coords=CITIES[newCity]||{lat:35.68,lng:139.69};CFG.lat=coords.lat;CFG.lng=coords.lng;}
+  const newCityName=document.getElementById('c_city').value.trim();
+  if(newCityName&&newCityName!==CFG.cityQuery){
+    if(!pendingGeo||pendingGeo.queriedFor!==newCityName){toast('⚠️ 城市已變更，請先點「📍 查詢」確認新座標，設定未儲存城市部分');}
+    else{CFG.cityQuery=newCityName;CFG.city=pendingGeo.label;CFG.lat=pendingGeo.lat;CFG.lng=pendingGeo.lng;}
+  }
   CFG.geminiKey=document.getElementById('c_gemini').value.trim()||CFG.geminiKey;
   const ph=document.getElementById('hdrPhoto');
   if(CFG.photo){ph.src=CFG.photo;ph.style.display='';}else{ph.style.display='none';}
