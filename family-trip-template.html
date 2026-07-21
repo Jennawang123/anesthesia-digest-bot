@@ -434,10 +434,10 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 
 
 <script>
-const RECEIPT_PROMPT=`你是日本收據辨識助手。請分析這張收據圖片，回傳 JSON 格式，欄位如下：
+const RECEIPT_PROMPT=`你是收據辨識助手。請分析這張收據圖片，回傳 JSON 格式，欄位如下：
 - store: 店名字串（看不清填空字串）
-- amount: 含稅總金額（日圓整數，日本收據有外税8%/10%與内税，取最終合計金額）
-- currency: 固定填 "JPY"
+- amount: 含稅總金額數字（取收據上最終合計金額）
+- currency: 從 JPY/AUD/USD/EUR/TWD 五選一，依收據上的幣別符號或文字判斷；無法判斷則填 "TWD"
 - category: 從 food/transport/hotel/shopping/ticket/activity 選一個最符合的
 - date: 收據日期 YYYY-MM-DD（看不清填今天日期）
 只輸出 JSON 物件，不加任何說明文字。`;
@@ -1086,7 +1086,8 @@ function openExpMPrefilled(data){
   document.getElementById('e_amt').value=data.amount||'';
   document.getElementById('e_date').value=data.date||today();
   const cat=(['food','transport','hotel','shopping','ticket','activity'].includes(data.category))?data.category:'food';
-  curCat=cat;renderCatGrid();selPayer(0);selSplit('both');selCur(data.currency||'JPY');
+  const safeCur=PRESET_CURRENCIES.some(c=>c.code===data.currency)?data.currency:'TWD';
+  curCat=cat;renderCatGrid();selPayer(0);selSplit('both');selCur(safeCur);
   openM('m-exp');setTimeout(()=>document.getElementById('e_amt').focus(),280);
 }
 function openExpEdit(eid){
