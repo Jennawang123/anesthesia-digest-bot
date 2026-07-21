@@ -1155,13 +1155,14 @@ function drawDonut(canvasId,exps,cur){
   const canvas=document.getElementById(canvasId);if(!canvas)return null;
   const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
   ctx.clearRect(0,0,w,h);
-  const rate=exchRate||21.5,isCombined=cur==='combined';
+  const isCombined=cur==='combined';
   const totals={};
   Object.values(exps).forEach(e=>{
-    if(!isCombined&&(e.cur||'JPY')!==cur)return;
+    const eCur=e.cur||'JPY';
+    if(!isCombined&&eCur!==cur)return;
     const cat=e.cat||'other';
     let amt=e.amt||0;
-    if(isCombined)amt=(e.cur==='TWD')?amt:amt*rate;
+    if(isCombined)amt=(eCur==='TWD')?amt:amt*rateFor(eCur);
     totals[cat]=(totals[cat]||0)+amt;
   });
   const entries=Object.entries(totals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
@@ -1177,7 +1178,7 @@ function drawDonut(canvasId,exps,cur){
     angle+=slice;
   });
   ctx.beginPath();ctx.arc(cx,cy,ir,0,2*Math.PI);ctx.fillStyle='#fff';ctx.fill();
-  const sym=curSym(cur),dp=0;
+  const sym=isCombined?'NT$':curSym(cur),dp=0;
   const dispTotal=isCombined?total.toFixed(0):total.toFixed(dp);
   ctx.fillStyle='#1A1A2E';ctx.textAlign='center';
   ctx.font='bold 11px sans-serif';ctx.fillText('總計',cx,cy-7);
@@ -1186,18 +1187,16 @@ function drawDonut(canvasId,exps,cur){
 }
 
 function renderPie(exps){
-  const hasJPY=Object.values(exps).some(e=>(e.cur||'JPY')==='JPY'&&(e.amt||0)>0);
-  const hasTWD=Object.values(exps).some(e=>e.cur==='TWD'&&(e.amt||0)>0);
-  if(!hasJPY&&!hasTWD){document.getElementById('pieSec').innerHTML='';return;}
+  const presentCurs=PRESET_CURRENCIES.filter(c=>Object.values(exps).some(e=>(e.cur||'JPY')===c.code&&(e.amt||0)>0));
+  if(!presentCurs.length){document.getElementById('pieSec').innerHTML='';return;}
 
   // Ensure curPieCur is valid
-  if(curPieCur==='JPY'&&!hasJPY)curPieCur=hasTWD?'TWD':'combined';
-  if(curPieCur==='TWD'&&!hasTWD)curPieCur=hasJPY?'JPY':'combined';
+  if(curPieCur!=='combined'&&!presentCurs.some(c=>c.code===curPieCur)){
+    curPieCur=presentCurs[0].code;
+  }
 
-  const tabs=[];
-  if(hasJPY)tabs.push({k:'JPY',label:'🇯🇵 JPY',cls:''});
-  if(hasTWD)tabs.push({k:'TWD',label:'🇹🇼 TWD',cls:'twd'});
-  if(hasJPY&&hasTWD)tabs.push({k:'combined',label:'合計(TWD)',cls:'twd'});
+  const tabs=presentCurs.map(c=>({k:c.code,label:`${c.flag} ${c.code}`,cls:''}));
+  if(presentCurs.length>1)tabs.push({k:'combined',label:'合計(TWD)',cls:'twd'});
 
   document.getElementById('pieSec').innerHTML=`<div class="pie-card">
     <div class="pie-hdr">
@@ -1208,7 +1207,7 @@ function renderPie(exps){
       <canvas id="pieCanvas" width="140" height="140" style="flex-shrink:0"></canvas>
       <div class="pie-legend" id="pieLegend"></div>
     </div>
-    <div class="pie-rate" id="pieRate">${exchRate?`即時匯率 1 JPY ≈ NT$${exchRate.toFixed(4)}（台灣銀行參考）`:''}</div>
+    <div class="pie-rate" id="pieRate">${presentCurs.filter(c=>c.code!=='TWD'&&exchRates[c.code]).map(c=>`1 ${c.code}≈NT$${exchRates[c.code].toFixed(c.code==='JPY'?4:2)}`).join(' · ')}</div>
   </div>`;
 
   const result=drawDonut('pieCanvas',exps,curPieCur);
