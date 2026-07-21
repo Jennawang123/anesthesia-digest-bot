@@ -823,6 +823,7 @@ function initDnD(){
   document.addEventListener('touchmove',e=>{
     const t=e.touches[0];
     if(Math.abs(t.clientX-DG.sx)>12||Math.abs(t.clientY-DG.sy)>12)clearTimeout(DG.timer);
+    DG.lastY=t.clientY;
     if(!DG.on)return;
     e.preventDefault();
     if(DG.ghost){DG.ghost.style.left=(t.clientX-110)+'px';DG.ghost.style.top=(t.clientY-22)+'px';}
@@ -849,16 +850,14 @@ function initDnD(){
       candRows.forEach(r=>r.classList.toggle('drag-over-act',r===nearest));
     }
   },{passive:false});
-  document.addEventListener('touchend',e=>{
-    clearTimeout(DG.timer);
-    if(!DG.on){DG.on=false;return;}
-    DG.on=false;
+  function finishDnD(clientY){
     if(DG.ghost){DG.ghost.remove();DG.ghost=null;}
     if(DG.srcEl)DG.srcEl.classList.remove('dragging');
-    const t=e.changedTouches[0];let tgt=null,minCardDist=Infinity;
+    const y=clientY??DG.lastY??DG.sy;
+    let tgt=null,minCardDist=Infinity;
     document.querySelectorAll('.day-card').forEach(c=>{
       const r=c.getBoundingClientRect();
-      const dist=t.clientY<r.top?r.top-t.clientY:(t.clientY>r.bottom?t.clientY-r.bottom:0);
+      const dist=y<r.top?r.top-y:(y>r.bottom?y-r.bottom:0);
       if(dist<minCardDist){minCardDist=dist;tgt=c.id.replace('dc-','');}
       c.classList.remove('droppable','drop-over');
     });
@@ -873,7 +872,7 @@ function initDnD(){
     actRows.forEach(r=>{
       if(r.dataset.aid===DG.aid)return;
       const rr=r.getBoundingClientRect();
-      const dist=Math.abs(t.clientY-(rr.top+rr.bottom)/2);
+      const dist=Math.abs(y-(rr.top+rr.bottom)/2);
       if(dist<minDist){minDist=dist;tgtRow=r;}
     });
     if(!tgtRow)return;
@@ -886,6 +885,21 @@ function initDnD(){
     aids.forEach((a,i)=>upd['/schedule/'+tgt+'/acts/'+a+'/order']=i);
     DB.ref('/').update(upd);
     toast('✅ 已重新排序');
+  }
+  document.addEventListener('touchend',e=>{
+    clearTimeout(DG.timer);
+    if(!DG.on){DG.on=false;return;}
+    DG.on=false;
+    finishDnD(e.changedTouches[0]?.clientY);
+  });
+  // iOS 在觸控過程中若被系統判定成滾動/其他手勢，會送出 touchcancel 而不是 touchend，
+  // 沒接這個事件的話，DG.on 會卡在 true、拖曳中的浮動小卡也不會消失，
+  // 使用者放開手指後畫面完全沒反應（跟只接 touchend 時的症狀一致）。
+  document.addEventListener('touchcancel',e=>{
+    clearTimeout(DG.timer);
+    if(!DG.on){DG.on=false;return;}
+    DG.on=false;
+    finishDnD(e.changedTouches[0]?.clientY);
   });
   box.addEventListener('dragstart',e=>{
     const row=e.target.closest('.act-row');if(!row)return;
