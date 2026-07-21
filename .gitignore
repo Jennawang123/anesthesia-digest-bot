@@ -3,3 +3,4 @@ finance-server/
 node_modules/
 netlify-travel-atlas/
 .env
+figures/
