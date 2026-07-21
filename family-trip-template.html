@@ -117,17 +117,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .cost-box{background:#F0FDF4;border-radius:10px;padding:14px;margin-bottom:14px;}
 .cost-box .lb{color:#065F46;}
 
-/* Expenses – compact balance */
-.bc-card{background:linear-gradient(135deg,var(--blue2),var(--cyan));border-radius:12px;padding:14px 16px;margin-bottom:8px;color:#fff;}
-.bc-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;}
-.bc-row+.bc-row{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.2);}
-.bc-flag{font-size:14px;font-weight:700;}
-.bc-tot{font-size:18px;font-weight:800;margin-left:6px;}
-.bc-ps{font-size:11px;opacity:.75;margin-top:2px;}
-.bc-settle{font-size:12px;font-weight:700;background:rgba(255,255,255,.15);padding:3px 8px;border-radius:20px;white-space:nowrap;}
-.bc-settle.ok{background:rgba(16,185,129,.25);}
-.twd-row{background:linear-gradient(135deg,var(--purple),#B8AACC);}
-
 /* Pie chart */
 .pie-card{background:var(--card);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
 .pie-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
@@ -155,7 +144,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .eright{text-align:right;flex-shrink:0;}
 .eamt{font-size:17px;font-weight:700;}
 .bdg{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;}
-.bp1{background:#DBEAFE;color:#1D4ED8;}.bp2{background:#FCE7F3;color:#BE185D;}
+.bpayer{background:#DBEAFE;color:#1D4ED8;}
 .bcur{background:#E0F2FE;color:#0369A1;}.bact{background:#D1FAE5;color:#065F46;}
 
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
@@ -293,7 +282,6 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
           <div class="acc-opt"    id="acc-stat" onclick="switchAcc('stat')">統計圖表</div>
         </div>
         <div id="expContent">
-          <div id="balSec"></div>
           <div id="expList"></div>
         </div>
         <div id="statContent" style="display:none">
@@ -409,9 +397,6 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
         </div>
       </div>
       <div class="fg"><label class="lb">誰付</label><div class="pr" id="payer-row-act"></div></div>
-      <div class="fg" style="margin-bottom:0"><label class="lb">分攤</label>
-        <div class="tw"><div class="to on" id="asp-both" onclick="selASplit('both')">均分</div><div class="to" id="asp-p1" onclick="selASplit('p1')"></div><div class="to" id="asp-p2" onclick="selASplit('p2')"></div></div>
-      </div>
     </div>
     <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-act')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveAct()">儲存</button></div>
   </div>
@@ -432,9 +417,6 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     </div>
     <div class="fg"><label class="lb">日期</label><input class="inp" id="e_date" type="date"></div>
     <div class="fg"><label class="lb">誰付錢</label><div class="pr" id="payer-row-exp"></div></div>
-    <div class="fg"><label class="lb">分攤方式</label>
-      <div class="tw"><div class="to on" id="sp-both" onclick="selSplit('both')">兩人均分</div><div class="to" id="sp-p1" onclick="selSplit('p1')"></div><div class="to" id="sp-p2" onclick="selSplit('p2')"></div></div>
-    </div>
     <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-exp')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveExp()">儲存</button></div>
   </div>
 </div>
@@ -499,8 +481,8 @@ function mapActCat(actCat){
 
 let CFG={},DB=null,curTab='sched',curAcc='exp';
 let weatherByDate=new Map();
-let curCat='food',curPayer=0,curSplit='both',curCur='JPY';
-let curAC='sight',curACur='JPY',curAPayer=0,curASplit='both';
+let curCat='food',curPayer=0,curCur='JPY';
+let curAC='sight',curACur='JPY',curAPayer=0;
 let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},exchRates={},curActImages=[];
 const FALLBACK_RATES={JPY:0.21,AUD:21,USD:32,EUR:35};
 const _ratesFetching=new Set();
@@ -940,7 +922,7 @@ function moveAct(fromDid,aid,act,toDid){
     DB.ref('/schedule/'+fromDid+'/acts/'+aid).remove();
     if(act.cost?.amt>0){
       DB.ref('/expenses/actcost_'+fromDid+'_'+aid).remove();
-      DB.ref('/expenses/actcost_'+toDid+'_'+aid).set({desc:act.name,amt:act.cost.amt,cur:act.cost.cur||'JPY',cat:mapActCat(act.cat),paidBy:act.cost.paidBy||CFG.members[0],split:act.cost.split||'both',date:newDate,fromAct:true,at:new Date().toISOString()});
+      DB.ref('/expenses/actcost_'+toDid+'_'+aid).set({desc:act.name,amt:act.cost.amt,cur:act.cost.cur||'JPY',cat:mapActCat(act.cat),paidBy:act.cost.paidBy||CFG.members[0],date:newDate,fromAct:true,at:new Date().toISOString()});
     }
     toast('✅ 已移動到 '+toDid.replace('day','Day '));
   });
@@ -953,7 +935,6 @@ function renderACGrid(){
 function selAC(id){curAC=id;document.querySelectorAll('.ac-btn').forEach(e=>e.classList.remove('on'));document.getElementById('ac-'+id)?.classList.add('on');document.getElementById('custom-ico-row').style.display=id==='custom'?'':'none';}
 function selACur(c){curACur=c;renderCurChips('cur-row-act',c,'selACur');}
 function selAPayer(i){curAPayer=i;renderPayerPicker('payer-row-act',i,'selAPayer');}
-function selASplit(m){curASplit=m;['both','p1','p2'].forEach(x=>document.getElementById('asp-'+x).classList.toggle('on',x===m));}
 
 function renderSched(sched){
   const box=document.getElementById('schedBox');
@@ -1030,7 +1011,7 @@ function openActM(did){
   document.getElementById('a_loc').value='';document.getElementById('a_note').value='';document.getElementById('a_cost').value='';
   document.getElementById('a_custom_ico').value='';document.getElementById('custom-ico-row').style.display='none';
   curActImages=[];renderActImgPreviews();
-  curAC='sight';renderACGrid();selAPayer(0);selASplit('both');selACur('JPY');
+  curAC='sight';renderACGrid();selAPayer(0);selACur('JPY');
   openM('m-act');setTimeout(()=>document.getElementById('a_name').focus(),280);
 }
 function openActEdit(did,aid){
@@ -1045,7 +1026,7 @@ function openActEdit(did,aid){
     document.getElementById('a_custom_ico').value=a.customIco||'';
     document.getElementById('custom-ico-row').style.display=a.cat==='custom'?'':'none';
     curActImages=a.images?[...a.images]:[];renderActImgPreviews();
-    selACur(a.cost?.cur||'JPY');selAPayer(Math.max(0,CFG.members.indexOf(a.cost?.paidBy)));selASplit(a.cost?.split||'both');
+    selACur(a.cost?.cur||'JPY');selAPayer(Math.max(0,CFG.members.indexOf(a.cost?.paidBy)));
     curActOrder=a.order||0;
     openM('m-act');
   });
@@ -1065,12 +1046,12 @@ function saveAct(){
       ...(curAC==='custom'&&customIco?{customIco}:{}),
       images:curActImages.length?[...curActImages]:null,
       loc:document.getElementById('a_loc').value.trim(),note:document.getElementById('a_note').value.trim(),
-      cost:hasCost?{amt:costAmt,cur:curACur,paidBy:CFG.members[curAPayer],split:curASplit}:null,
+      cost:hasCost?{amt:costAmt,cur:curACur,paidBy:CFG.members[curAPayer]}:null,
       order:isNew?(maxOrder+1):curActOrder};
     const id=aid||('a'+uid());
     DB.ref('/schedule/'+did+'/acts/'+id).set(obj);
     const expId='actcost_'+did+'_'+id;
-    if(hasCost){DB.ref('/expenses/'+expId).set({desc:name,amt:costAmt,cur:curACur,cat:mapActCat(curAC),paidBy:CFG.members[curAPayer],split:curASplit,date:dayData.date||'',fromAct:true,at:new Date().toISOString()});}
+    if(hasCost){DB.ref('/expenses/'+expId).set({desc:name,amt:costAmt,cur:curACur,cat:mapActCat(curAC),paidBy:CFG.members[curAPayer],date:dayData.date||'',fromAct:true,at:new Date().toISOString()});}
     else{DB.ref('/expenses/'+expId).remove();}
     closeM('m-act');toast('✅ 已儲存');
   });
@@ -1083,13 +1064,12 @@ function renderCatGrid(){
 }
 function selCat(id){curCat=id;document.querySelectorAll('.cat-btn').forEach(e=>e.classList.remove('on'));document.getElementById('cat-'+id)?.classList.add('on');}
 function selPayer(i){curPayer=i;renderPayerPicker('payer-row-exp',i,'selPayer');}
-function selSplit(m){curSplit=m;['both','p1','p2'].forEach(x=>document.getElementById('sp-'+x).classList.toggle('on',x===m));}
 function selCur(c){curCur=c;renderCurChips('cur-row-exp',c,'selCur');}
 
 function openExpM(){
   document.getElementById('m-exp-t').textContent='新增支出';document.getElementById('me-id').value='';
   document.getElementById('e_desc').value='';document.getElementById('e_amt').value='';document.getElementById('e_date').value=today();
-  curCat='food';renderCatGrid();selPayer(0);selSplit('both');selCur('JPY');
+  curCat='food';renderCatGrid();selPayer(0);selCur('JPY');
   openM('m-exp');setTimeout(()=>document.getElementById('e_desc').focus(),280);
 }
 
@@ -1101,7 +1081,7 @@ function openExpMPrefilled(data){
   document.getElementById('e_date').value=data.date||today();
   const cat=(['food','transport','hotel','shopping','ticket','activity'].includes(data.category))?data.category:'food';
   const safeCur=PRESET_CURRENCIES.some(c=>c.code===data.currency)?data.currency:'TWD';
-  curCat=cat;renderCatGrid();selPayer(0);selSplit('both');selCur(safeCur);
+  curCat=cat;renderCatGrid();selPayer(0);selCur(safeCur);
   openM('m-exp');setTimeout(()=>document.getElementById('e_amt').focus(),280);
 }
 function openExpEdit(eid){
@@ -1109,7 +1089,7 @@ function openExpEdit(eid){
     const e=snap.val();if(!e)return;
     document.getElementById('m-exp-t').textContent='編輯支出';document.getElementById('me-id').value=eid;
     document.getElementById('e_desc').value=e.desc||'';document.getElementById('e_amt').value=e.amt||'';document.getElementById('e_date').value=e.date||today();
-    curCat=e.cat||'food';renderCatGrid();selPayer(Math.max(0,CFG.members.indexOf(e.paidBy)));selSplit(e.split||'both');selCur(e.cur||'JPY');
+    curCat=e.cat||'food';renderCatGrid();selPayer(Math.max(0,CFG.members.indexOf(e.paidBy)));selCur(e.cur||'JPY');
     openM('m-exp');
   });
 }
@@ -1118,20 +1098,10 @@ function saveExp(){
   if(!desc){toast('請輸入描述');return;}if(!amtStr||isNaN(amt)||amt<=0){toast('請輸入正確金額');return;}
   const eid=document.getElementById('me-id').value||('e'+uid());
   sync(true);
-  DB.ref('/expenses/'+eid).set({desc,amt,cur:curCur,cat:curCat,paidBy:CFG.members[curPayer],split:curSplit,date:document.getElementById('e_date').value||today(),at:new Date().toISOString()})
+  DB.ref('/expenses/'+eid).set({desc,amt,cur:curCur,cat:curCat,paidBy:CFG.members[curPayer],date:document.getElementById('e_date').value||today(),at:new Date().toISOString()})
     .then(()=>{sync(false);closeM('m-exp');toast('✅ 已儲存');}).catch(e=>{sync(false);toast('⚠️ 儲存失敗：'+e.message);});
 }
 function delExp(eid){if(!confirm('確定刪除？'))return;DB.ref('/expenses/'+eid).remove().then(()=>toast('🗑️ 已刪除'));}
-
-function calcBal(exps,cur){
-  let p1p=0,p2p=0,p1s=0,p2s=0;
-  Object.values(exps).filter(e=>(e.cur||'JPY')===cur).forEach(e=>{
-    const a=e.amt||0;
-    if(e.paidBy===CFG.p1)p1p+=a;else p2p+=a;
-    if(e.split==='p1')p1s+=a;else if(e.split==='p2')p2s+=a;else{p1s+=a/2;p2s+=a/2;}
-  });
-  return{p1p,p2p,total:p1p+p2p,settle:p1p-p1s};
-}
 
 function calcDaySpend(exps,dateStr){
   const totals=new Map();
@@ -1254,51 +1224,28 @@ function renderStat(exps){
 }
 
 function renderExp(exps){
-  const balSec=document.getElementById('balSec'),expList=document.getElementById('expList');
+  const expList=document.getElementById('expList');
   const entries=Object.entries(exps);
   if(!entries.length){
-    balSec.innerHTML='';
     expList.innerHTML='<div class="empty"><div class="empty-i">💰</div><div class="empty-h">尚無支出紀錄</div><div class="empty-s">點 ＋ 新增支出</div></div>';
     return;
   }
-  const jpy=calcBal(exps,'JPY'),twd=calcBal(exps,'TWD');
 
-  const balRow=(b,cur,rowCls)=>{
-    if(b.total<=0)return'';
-    const sym=curSym(cur),dp=0;
-    const sAmt=Math.abs(b.settle);
-    const settleHtml=sAmt>0.005
-      ?`<span class="bc-settle">${b.settle>0?esc(CFG.p2)+'→'+esc(CFG.p1):esc(CFG.p1)+'→'+esc(CFG.p2)} ${sym}${sAmt.toFixed(dp)}</span>`
-      :`<span class="bc-settle ok">✅ 結清</span>`;
-    return`<div class="bc-row ${rowCls}">
-      <div>
-        <span class="bc-flag">${cur==='JPY'?'🇯🇵':'🇹🇼'}</span><span class="bc-tot">${sym}${b.total.toFixed(dp)}</span>
-        <div class="bc-ps">${esc(CFG.p1)} ${sym}${b.p1p.toFixed(dp)} &nbsp;·&nbsp; ${esc(CFG.p2)} ${sym}${b.p2p.toFixed(dp)}</div>
-      </div>
-      ${settleHtml}
-    </div>`;
-  };
-
-  balSec.innerHTML=`<div class="bc-card">${balRow(jpy,'JPY','')}${balRow(twd,'TWD','twd-row')}</div>`;
-
-  // Expense list
   const groups={};
   entries.forEach(([id,e])=>{const d=e.date||'';(groups[d]=groups[d]||[]).push([id,e]);});
   expList.innerHTML=Object.keys(groups).sort().reverse().map(date=>`
     <div class="edl">${fmtD(date)}</div>`+
     groups[date].map(([id,e])=>{
-      const cat=CATM[e.cat]||CATM.other,isP1=e.paidBy===CFG.p1;
-      const slbl=e.split==='both'?'均分':e.split==='p1'?esc(CFG.p1)+'自付':esc(CFG.p2)+'自付';
+      const cat=CATM[e.cat]||CATM.other;
       const sym=curSym(e.cur||'JPY'),dp=0;
       return`<div class="er">
         <div class="ei" style="background:${cat.bg}">${cat.ico}</div>
         <div class="einfo">
           <div class="edesc">${esc(e.desc||'')}</div>
           <div class="emeta">
-            <span class="bdg ${isP1?'bp1':'bp2'}">${esc(e.paidBy)}</span>
+            <span class="bdg bpayer">${esc(e.paidBy)}</span>
             <span class="bdg bcur">${e.cur||'JPY'}</span>
             ${e.fromAct?'<span class="bdg bact">📅行程</span>':''}
-            ${slbl}
           </div>
         </div>
         <div class="eright">
