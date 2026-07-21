@@ -475,7 +475,7 @@ let CFG={},DB=null,curTab='sched',curAcc='exp';
 let weatherByDate=new Map();
 let curCat='food',curPayer=0,curCur='JPY';
 let curAC='sight',curACur='JPY',curAPayer=0;
-let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},exchRates={},curActImages=[];
+let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[];
 const FALLBACK_RATES={JPY:0.21,AUD:21,USD:32,EUR:35};
 const _ratesFetching=new Set();
 const DG={on:false,did:null,aid:null,act:null,srcEl:null,ghost:null,timer:null,sx:0,sy:0};
@@ -736,6 +736,7 @@ function _fbListen(){
     }
     lastExps=d.expenses||{};
     lastNotes=d.notes||{};
+    lastSched=sched;
     renderSched(sched);
     renderExp(lastExps);
     renderStat(lastExps);
@@ -802,18 +803,21 @@ function initDnD(){
     const fromHandle=!!e.target.closest('.act-handle');
     DG.timer=setTimeout(()=>{
       const did=row.dataset.did,aid=row.dataset.aid;
-      DB.ref('/schedule/'+did+'/acts/'+aid).once('value',snap=>{
-        if(!snap.val())return;
-        navigator.vibrate&&navigator.vibrate(40);
-        DG.on=true;DG.did=did;DG.aid=aid;DG.act=snap.val();DG.srcEl=row;
-        row.classList.add('dragging');
-        const g=document.createElement('div');g.id='drag-ghost';
-        const ac=ACTM[DG.act.cat]||ACTM.other;
-        g.innerHTML=`<span>${ac.ico}</span>${esc(DG.act.name||'活動')}`;
-        g.style.left=(DG.sx-110)+'px';g.style.top=(DG.sy-22)+'px';
-        document.body.appendChild(g);DG.ghost=g;
-        document.querySelectorAll('.day-card').forEach(c=>c.classList.add('droppable'));
-      });
+      // 直接讀本地已同步的 lastSched，不要在這裡等 Firebase 網路來回——
+      // 原本用 DB.ref(...).once('value',...) 非同步才設定 DG.on=true，
+      // 導致使用者一般手速的「按住把手就拖」在網路回應前就 touchend 了，
+      // DG.on 還是 false，整個拖曳被無聲吃掉、完全沒反應。
+      const act=lastSched[did]?.acts?.[aid];
+      if(!act)return;
+      navigator.vibrate&&navigator.vibrate(40);
+      DG.on=true;DG.did=did;DG.aid=aid;DG.act=act;DG.srcEl=row;
+      row.classList.add('dragging');
+      const g=document.createElement('div');g.id='drag-ghost';
+      const ac=ACTM[DG.act.cat]||ACTM.other;
+      g.innerHTML=`<span>${ac.ico}</span>${esc(DG.act.name||'活動')}`;
+      g.style.left=(DG.sx-110)+'px';g.style.top=(DG.sy-22)+'px';
+      document.body.appendChild(g);DG.ghost=g;
+      document.querySelectorAll('.day-card').forEach(c=>c.classList.add('droppable'));
     },fromHandle?0:500);
   },{passive:true});
   document.addEventListener('touchmove',e=>{
