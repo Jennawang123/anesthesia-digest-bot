@@ -94,7 +94,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .day-card.open .day-body{display:block;}
 
 .act-row{display:flex;align-items:flex-start;padding:11px 16px;border-bottom:1px solid var(--border);gap:10px;cursor:grab;transition:opacity .2s;}
-.act-handle{width:18px;font-size:16px;color:var(--border);cursor:grab;flex-shrink:0;display:flex;align-items:center;user-select:none;}
+.act-handle{width:18px;font-size:16px;color:var(--border);cursor:grab;flex-shrink:0;display:flex;align-items:center;user-select:none;touch-action:none;-webkit-user-drag:none;-webkit-touch-callout:none;}
 .act-handle:active{cursor:grabbing;}
 .act-row.drag-over-act{border-top:2px solid var(--blue);}
 .act-row:last-of-type{border-bottom:none;}
