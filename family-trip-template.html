@@ -156,7 +156,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .eamt{font-size:17px;font-weight:700;}
 .bdg{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;}
 .bp1{background:#DBEAFE;color:#1D4ED8;}.bp2{background:#FCE7F3;color:#BE185D;}
-.baud{background:#E0F2FE;color:#0369A1;}.btwd{background:#EDE9FE;color:#6D28D9;}.bact{background:#D1FAE5;color:#065F46;}
+.bcur{background:#E0F2FE;color:#0369A1;}.bact{background:#D1FAE5;color:#065F46;}
 
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
 .cat-btn{padding:9px 3px;border-radius:10px;border:2px solid var(--border);background:#fff;cursor:pointer;text-align:center;transition:all .12s;}
@@ -167,10 +167,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .pb{flex:1;padding:11px;border-radius:10px;border:2px solid var(--border);background:#fff;text-align:center;cursor:pointer;font-size:14px;font-weight:600;transition:all .12s;}
 .pb.p1.on{border-color:#3B82F6;background:#DBEAFE;color:#1D4ED8;}
 .pb.p2.on{border-color:#EC4899;background:#FCE7F3;color:#BE185D;}
-.cur-row{display:flex;background:var(--bg);border-radius:10px;padding:3px;gap:3px;}
-.cr{flex:1;padding:9px;text-align:center;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;color:var(--muted);transition:all .15s;}
-.cr.aud.on{background:#fff;color:var(--blue);box-shadow:0 1px 4px rgba(0,0,0,.1);}
-.cr.twd.on{background:#fff;color:var(--purple);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.cur-row{display:flex;flex-wrap:wrap;background:var(--bg);border-radius:10px;padding:3px;gap:3px;}
+.cr{flex:1 1 30%;min-width:64px;padding:9px 4px;text-align:center;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);transition:all .15s;}
+.cr.on{background:#fff;color:var(--blue);box-shadow:0 1px 4px rgba(0,0,0,.1);}
 
 /* Notes */
 .nc{background:var(--card);border-radius:12px;padding:14px 15px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
@@ -399,7 +398,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
       <div class="fr">
         <div class="fg" style="flex:0 0 130px"><label class="lb">金額</label><input class="inp" id="a_cost" type="number" placeholder="0.00" step="0.01" min="0"></div>
         <div class="fg"><label class="lb">幣別</label>
-          <div class="cur-row"><div class="cr aud on" id="acur-jpy" onclick="selACur('JPY')">🇯🇵 JPY</div><div class="cr twd" id="acur-twd" onclick="selACur('TWD')">🇹🇼 TWD</div></div>
+          <div class="cur-row" id="cur-row-act"></div>
         </div>
       </div>
       <div class="fg"><label class="lb">誰付</label><div class="pr"><div class="pb p1" id="apb1" onclick="selAPayer(0)"></div><div class="pb p2" id="apb2" onclick="selAPayer(1)"></div></div></div>
@@ -421,7 +420,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="fr">
       <div class="fg" style="flex:0 0 130px"><label class="lb">金額</label><input class="inp" id="e_amt" type="number" placeholder="0.00" step="0.01" min="0"></div>
       <div class="fg"><label class="lb">幣別</label>
-        <div class="cur-row"><div class="cr aud on" id="cur-jpy" onclick="selCur('JPY')">🇯🇵 JPY</div><div class="cr twd" id="cur-twd" onclick="selCur('TWD')">🇹🇼 TWD</div></div>
+        <div class="cur-row" id="cur-row-exp"></div>
       </div>
     </div>
     <div class="fg"><label class="lb">日期</label><input class="inp" id="e_date" type="date"></div>
@@ -466,6 +465,16 @@ const CITIES={
   '札幌':{lat:43.06,lng:141.35},
   '福岡':{lat:33.59,lng:130.40},
 };
+const PRESET_CURRENCIES=[
+  {code:'JPY',flag:'🇯🇵'},{code:'AUD',flag:'🇦🇺'},{code:'USD',flag:'🇺🇸'},
+  {code:'EUR',flag:'🇪🇺'},{code:'TWD',flag:'🇹🇼'},
+];
+function curSym(c){return c==='TWD'?'NT$':c==='JPY'?'¥':c==='EUR'?'€':'$';}
+function renderCurChips(containerId,selected,onSelectFn){
+  document.getElementById(containerId).innerHTML=PRESET_CURRENCIES.map(c=>
+    `<div class="cr ${c.code===selected?'on':''}" onclick="${onSelectFn}('${c.code}')">${c.flag} ${c.code}</div>`
+  ).join('');
+}
 // Map schedule activity type → expense category
 function mapActCat(actCat){
   if(actCat==='food')return'food';
@@ -928,7 +937,7 @@ function renderACGrid(){
   document.getElementById('acGrid').innerHTML=ACTS.map(c=>`<div class="ac-btn ${c.id===curAC?'on':''}" id="ac-${c.id}" onclick="selAC('${c.id}')"><span class="ac-i">${c.ico}</span><span class="ac-n">${c.name}</span></div>`).join('');
 }
 function selAC(id){curAC=id;document.querySelectorAll('.ac-btn').forEach(e=>e.classList.remove('on'));document.getElementById('ac-'+id)?.classList.add('on');document.getElementById('custom-ico-row').style.display=id==='custom'?'':'none';}
-function selACur(c){curACur=c;document.getElementById('acur-jpy').classList.toggle('on',c==='JPY');document.getElementById('acur-twd').classList.toggle('on',c==='TWD');}
+function selACur(c){curACur=c;renderCurChips('cur-row-act',c,'selACur');}
 function selAPayer(i){curAPayer=i;document.getElementById('apb1').classList.toggle('on',i===0);document.getElementById('apb2').classList.toggle('on',i===1);}
 function selASplit(m){curASplit=m;['both','p1','p2'].forEach(x=>document.getElementById('asp-'+x).classList.toggle('on',x===m));}
 
@@ -949,7 +958,7 @@ function renderSched(sched){
     const wChip=wInfo?`<span class="wchip">${wInfo.icon} ${wInfo.temp}°C ${wInfo.desc}</span>`:'';
     const spend=calcDaySpend(lastExps,day.date);
     const sChips=[...spend.entries()].map(([cur,tot])=>{
-      const sym=cur==='JPY'?'¥':'NT$';
+      const sym=curSym(cur);
       const ico='💴';
       return`<span class="schip">${ico} ${sym}${Math.round(tot).toLocaleString('zh-TW')} ${cur}</span>`;
     }).join('');
@@ -969,7 +978,7 @@ function renderSched(sched){
             const ac=ACTM[act.cat]||ACTM.other;
             const actIco=act.cat==='custom'?(act.customIco||'✏️'):ac.ico;
             const mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(act.loc||'');
-            const sym=(act.cost?.cur||'JPY')==='JPY'?'¥':'NT$';
+            const sym=curSym(act.cost?.cur||'JPY');
             const dp=0;
             return `<div class="act-row" draggable="true" data-did="${did}" data-aid="${aid}">
               <div class="act-handle" data-did="${did}" data-aid="${aid}">⠿</div>
@@ -1061,7 +1070,7 @@ function renderCatGrid(){
 function selCat(id){curCat=id;document.querySelectorAll('.cat-btn').forEach(e=>e.classList.remove('on'));document.getElementById('cat-'+id)?.classList.add('on');}
 function selPayer(i){curPayer=i;document.getElementById('pb1').classList.toggle('on',i===0);document.getElementById('pb2').classList.toggle('on',i===1);}
 function selSplit(m){curSplit=m;['both','p1','p2'].forEach(x=>document.getElementById('sp-'+x).classList.toggle('on',x===m));}
-function selCur(c){curCur=c;document.getElementById('cur-jpy').classList.toggle('on',c==='JPY');document.getElementById('cur-twd').classList.toggle('on',c==='TWD');}
+function selCur(c){curCur=c;renderCurChips('cur-row-exp',c,'selCur');}
 
 function openExpM(){
   document.getElementById('m-exp-t').textContent='新增支出';document.getElementById('me-id').value='';
@@ -1160,7 +1169,7 @@ function drawDonut(canvasId,exps,cur){
     angle+=slice;
   });
   ctx.beginPath();ctx.arc(cx,cy,ir,0,2*Math.PI);ctx.fillStyle='#fff';ctx.fill();
-  const sym=(cur==='JPY')?'¥':'NT$',dp=0;
+  const sym=curSym(cur),dp=0;
   const dispTotal=isCombined?total.toFixed(0):total.toFixed(dp);
   ctx.fillStyle='#1A1A2E';ctx.textAlign='center';
   ctx.font='bold 11px sans-serif';ctx.fillText('總計',cx,cy-7);
@@ -1197,7 +1206,7 @@ function renderPie(exps){
   const result=drawDonut('pieCanvas',exps,curPieCur);
   if(!result)return;
   const{entries,total}=result;
-  const sym=(curPieCur==='JPY')?'¥':'NT$',dp=0;
+  const sym=curSym(curPieCur),dp=0;
   document.getElementById('pieLegend').innerHTML=entries.map(([cat,val])=>{
     const c=CATM[cat]||CATM.other;
     const pct=((val/total)*100).toFixed(0);
@@ -1216,7 +1225,7 @@ function switchPie(cur){curPieCur=cur;renderPie(lastExps);}
 function renderStat(exps){
   renderPie(exps);
   const p1=calcPersonSpend(exps,CFG.p1),p2=calcPersonSpend(exps,CFG.p2);
-  const fmtTotals=m=>[...m.entries()].map(([cur,tot])=>`<div style="font-size:20px;font-weight:800">${cur==='JPY'?'¥':'NT$'}${Math.round(tot).toLocaleString('zh-TW')}</div><div style="font-size:11px;color:var(--muted)">${cur}</div>`).join('')||'<div style="color:var(--muted);font-size:13px">無記錄</div>';
+  const fmtTotals=m=>[...m.entries()].map(([cur,tot])=>`<div style="font-size:20px;font-weight:800">${curSym(cur)}${Math.round(tot).toLocaleString('zh-TW')}</div><div style="font-size:11px;color:var(--muted)">${cur}</div>`).join('')||'<div style="color:var(--muted);font-size:13px">無記錄</div>';
   document.getElementById('personSec').innerHTML=`
     <div class="card" style="display:flex;gap:0;padding:0;overflow:hidden;margin-bottom:10px">
       <div style="flex:1;padding:16px;border-right:1px solid var(--border)">
@@ -1242,7 +1251,7 @@ function renderExp(exps){
 
   const balRow=(b,cur,rowCls)=>{
     if(b.total<=0)return'';
-    const sym=cur==='JPY'?'¥':'NT$',dp=0;
+    const sym=curSym(cur),dp=0;
     const sAmt=Math.abs(b.settle);
     const settleHtml=sAmt>0.005
       ?`<span class="bc-settle">${b.settle>0?esc(CFG.p2)+'→'+esc(CFG.p1):esc(CFG.p1)+'→'+esc(CFG.p2)} ${sym}${sAmt.toFixed(dp)}</span>`
@@ -1266,14 +1275,14 @@ function renderExp(exps){
     groups[date].map(([id,e])=>{
       const cat=CATM[e.cat]||CATM.other,isP1=e.paidBy===CFG.p1;
       const slbl=e.split==='both'?'均分':e.split==='p1'?esc(CFG.p1)+'自付':esc(CFG.p2)+'自付';
-      const sym=(e.cur||'JPY')==='JPY'?'¥':'NT$',dp=0;
+      const sym=curSym(e.cur||'JPY'),dp=0;
       return`<div class="er">
         <div class="ei" style="background:${cat.bg}">${cat.ico}</div>
         <div class="einfo">
           <div class="edesc">${esc(e.desc||'')}</div>
           <div class="emeta">
             <span class="bdg ${isP1?'bp1':'bp2'}">${esc(e.paidBy)}</span>
-            <span class="bdg ${(e.cur||'JPY')==='JPY'?'baud':'btwd'}">${e.cur||'JPY'}</span>
+            <span class="bdg bcur">${e.cur||'JPY'}</span>
             ${e.fromAct?'<span class="bdg bact">📅行程</span>':''}
             ${slbl}
           </div>
