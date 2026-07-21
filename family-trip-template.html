@@ -133,6 +133,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .pie-amt{font-size:12px;font-weight:700;text-align:right;white-space:nowrap;}
 .pie-pct{font-size:11px;color:var(--muted);width:32px;text-align:right;flex-shrink:0;}
 .pie-rate{font-size:11px;color:var(--muted);text-align:center;margin-top:8px;}
+.member-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.member-card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.member-name{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;}
 
 /* Expense list */
 .edl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:2px 4px;margin-top:8px;margin-bottom:4px;}
@@ -1114,15 +1117,12 @@ function calcDaySpend(exps,dateStr){
   return totals;
 }
 
-function calcPersonSpend(exps,who){
+function calcMemberSpend(exps,who){
   const totals=new Map();
   Object.values(exps).forEach(e=>{
+    if(e.paidBy!==who)return;
     const cur=e.cur||'JPY',amt=e.amt||0;
-    let myAmt=0;
-    if(e.split==='p1'&&who===CFG.p1)myAmt=amt;
-    else if(e.split==='p2'&&who===CFG.p2)myAmt=amt;
-    else if(e.split==='both')myAmt=amt/2;
-    if(myAmt>0)totals.set(cur,(totals.get(cur)||0)+myAmt);
+    if(amt>0)totals.set(cur,(totals.get(cur)||0)+amt);
   });
   return totals;
 }
@@ -1208,19 +1208,12 @@ function switchPie(cur){curPieCur=cur;renderPie(lastExps);}
 
 function renderStat(exps){
   renderPie(exps);
-  const p1=calcPersonSpend(exps,CFG.p1),p2=calcPersonSpend(exps,CFG.p2);
   const fmtTotals=m=>[...m.entries()].map(([cur,tot])=>`<div style="font-size:20px;font-weight:800">${curSym(cur)}${Math.round(tot).toLocaleString('zh-TW')}</div><div style="font-size:11px;color:var(--muted)">${cur}</div>`).join('')||'<div style="color:var(--muted);font-size:13px">無記錄</div>';
-  document.getElementById('personSec').innerHTML=`
-    <div class="card" style="display:flex;gap:0;padding:0;overflow:hidden;margin-bottom:10px">
-      <div style="flex:1;padding:16px;border-right:1px solid var(--border)">
-        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">${esc(CFG.p1)}</div>
-        ${fmtTotals(p1)}
-      </div>
-      <div style="flex:1;padding:16px">
-        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">${esc(CFG.p2)}</div>
-        ${fmtTotals(p2)}
-      </div>
-    </div>`;
+  document.getElementById('personSec').innerHTML=`<div class="member-grid">${CFG.members.map(name=>`
+    <div class="member-card">
+      <div class="member-name">${esc(name)}</div>
+      ${fmtTotals(calcMemberSpend(exps,name))}
+    </div>`).join('')}</div>`;
 }
 
 function renderExp(exps){
