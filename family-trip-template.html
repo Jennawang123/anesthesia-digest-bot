@@ -489,7 +489,9 @@ let CFG={},DB=null,curTab='sched',curAcc='exp';
 let weatherByDate=new Map();
 let curCat='food',curPayer=0,curSplit='both',curCur='JPY';
 let curAC='sight',curACur='JPY',curAPayer=0,curASplit='both';
-let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},exchRate=null,curActImages=[];
+let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},exchRates={},curActImages=[];
+const FALLBACK_RATES={JPY:0.21,AUD:21,USD:32,EUR:35};
+const _ratesFetching=new Set();
 const DG={on:false,did:null,aid:null,act:null,srcEl:null,ghost:null,timer:null,sx:0,sy:0};
 let curActOrder=0;
 
@@ -511,17 +513,21 @@ function closeM(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.ov').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
 
 // ─── Exchange rate ────────────────────────────────────
-async function fetchRate(){
+async function fetchRateFor(cur){
+  if(cur==='TWD'||exchRates[cur]!=null||_ratesFetching.has(cur))return;
+  _ratesFetching.add(cur);
   try{
-    const r=await fetch('https://open.er-api.com/v6/latest/JPY');
+    const r=await fetch(`https://open.er-api.com/v6/latest/${cur}`);
     const d=await r.json();
-    if(d.result==='success'&&d.rates?.TWD){
-      exchRate=d.rates.TWD;
-      const el=document.getElementById('pieRate');
-      if(el)el.textContent=`即時匯率 1 JPY ≈ NT$${exchRate.toFixed(4)}（台灣銀行參考）`;
-    }
-  }catch(e){exchRate=null;}
+    if(d.result==='success'&&d.rates?.TWD)exchRates[cur]=d.rates.TWD;
+  }catch(e){/* 靜默失敗，drawDonut 會用 FALLBACK_RATES */}
+  _ratesFetching.delete(cur);
 }
+function ensureRatesForExpenses(exps){
+  const used=new Set(Object.values(exps).map(e=>e.cur||'JPY').filter(c=>c!=='TWD'));
+  return Promise.all([...used].map(fetchRateFor));
+}
+function rateFor(cur){return exchRates[cur]??FALLBACK_RATES[cur]??1;}
 
 async function scanReceipt(base64Image,mimeType='image/jpeg'){
   if(!CFG.geminiKey){toast('⚠️ 請先在設定中填寫 Gemini API Key');return null;}
@@ -667,7 +673,7 @@ function bootApp(){
   const ph=document.getElementById('hdrPhoto');
   if(CFG.photo){ph.src=CFG.photo;ph.style.display='';}else{ph.style.display='none';}
   renderCatGrid();renderACGrid();initDnD();initActDnD();
-  fetchRate();
+  // 匯率改成 lazy fetch：由 _fbListen() 收到 expenses 資料後依實際用到的幣別呼叫
   loadFirebase(()=>fetchWeather().finally(()=>connectFB()));
 }
 
@@ -730,6 +736,7 @@ function _fbListen(){
     renderStat(lastExps);
     renderNotes(lastNotes);
     sync(false);
+    ensureRatesForExpenses(lastExps).then(()=>{if(curTab==='exp'&&curAcc==='stat')renderStat(lastExps);});
   },err=>{sync(false);toast('⚠️ Firebase 錯誤：'+err.message);});
 }
 
