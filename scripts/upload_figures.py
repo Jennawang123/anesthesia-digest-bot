@@ -102,12 +102,25 @@ class Notion:
         body = {"children": children}
         if after_block_id:
             body["after"] = after_block_id
-        data = self._check(
+        self._check(
             requests.patch(f"{API}/blocks/{page_id}/children",
                            headers={**self.h, "Content-Type": "application/json"},
                            json=body, timeout=120),
             "插入 image block")
-        return [b["id"] for b in data["results"]]
+
+        # PATCH 的回傳不只包含新建的 block，不能直接拿來當 id 來源。
+        # 重新列出頁面，用圖說比對出實際的 block id。
+        return self.image_ids_by_caption(page_id)
+
+    def image_ids_by_caption(self, page_id):
+        """回傳 {圖說: block_id}，用於確認插入結果。"""
+        out = {}
+        for b in self.children(page_id):
+            if b["type"] != "image":
+                continue
+            cap = "".join(r["plain_text"] for r in b["image"].get("caption", []))
+            out[cap] = b["id"]
+        return out
 
     def add_heading(self, page_id, text):
         data = self._check(
@@ -173,13 +186,19 @@ def main():
             items.append((notion.upload(d / f["png"]), caption_for(f)))
             print("完成")
 
-        block_ids = notion.insert_images(pid, heading, items)
-        for f, bid in zip(figs, block_ids):
-            f["uploaded_block_id"] = bid
+        by_caption = notion.insert_images(pid, heading, items)
+        done = 0
+        for f in figs:
+            bid = by_caption.get(caption_for(f))
+            if bid:
+                f["uploaded_block_id"] = bid
+                done += 1
+            else:
+                print(f"  ⚠ Fig {f['fig_id']} 插入後找不到對應 block，請人工確認")
         # 每篇寫回一次，中途失敗也不會重複上傳已完成的部分
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"  已插入 {len(block_ids)} 張到 {pid[:8]}…")
+        print(f"  已插入 {done}/{len(figs)} 張到 {pid[:8]}…")
 
     print("完成。")
 
