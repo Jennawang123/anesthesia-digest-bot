@@ -35,7 +35,8 @@ p19 rect=(315,57,480,69)    Box 41.1  Modified Bromage Scale
 
 - **只抽 `Fig.`**。Table 維持現行做法重建成 Notion table block（可搜尋、可編輯）；Box 為純文字清單，不圖片化。
 - **回填已完成 13 章**；pending 7 章暫停。
-- **既有文字摘要與表格全部保留**，圖插在其上方，不刪除任何既有內容。理由為風險不對稱：文字可被 Notion 搜尋、圖片不能，且刪除不可復原。
+- **既有文字摘要與表格全部保留**，不刪除任何既有內容。理由為風險不對稱：文字可被 Notion 搜尋、圖片不能，且刪除不可復原。
+- **圖插在「一、內文筆記」對應小節的末尾**，不集中於「二、圖表」。Ch28 實測顯示筆記幾乎不寫圖號（兩篇 sub-page 只有一處），無法靠圖號自動定位，改由 manifest 的 `target_section` 指定歸屬小節。歸屬不明確的圖才落回「二、圖表」。
 - 圖片以 Notion File Upload API 上傳，**存在 Notion 內部**，不用外部 URL，避免來源失效造成破圖。
 
 ## 架構
@@ -71,9 +72,10 @@ manifest.json ──▶ ③ upload_figures.py ──▶ Notion（上傳 + 插入
 
 ### ③ upload_figures.py
 
-- 對 `include: true` 且 `uploaded_block_id` 為 null 的圖：Notion File Upload API 三步（建立 upload → 上傳檔案 → 取得 file_upload id）。
-- 在目標 sub-page 找到「二、圖表」heading block，於其後插入 image block，caption 帶原文圖說 + 書本頁碼。該 heading 不存在時建立之。
-- 寫回 `uploaded_block_id`，作為重跑防重複依據。
+- 對 `include: true` 且 `uploaded_block_id` 為 null 的圖：Notion File Upload API 兩步（建立 upload → 上傳檔案，取得 file_upload id）。
+- 依 `target_section` 找到該小節，算出小節最後一個 block（小節結束於同級或更高級標題）作為插入錨點，於其後插入 image block，caption 帶原文圖說 + 書本頁碼。找不到小節時退回「二、圖表」heading，該 heading 也不存在時建立之。
+- 插入後**重新列出頁面、以圖說比對**取得 block id 寫回 `uploaded_block_id`。不可直接用 PATCH 的回傳：實測回傳 18 筆但只插入 2 張。
+- 重新定位需刪除後重建（Notion API 無 move block）。刪除前比對圖說，只動腳本自己插入的 block。
 
 ### manifest.json 欄位
 
