@@ -165,8 +165,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .cat-btn.on .catn{color:var(--blue);}
 .pr{display:flex;gap:8px;}
 .pb{flex:1;padding:11px;border-radius:10px;border:2px solid var(--border);background:#fff;text-align:center;cursor:pointer;font-size:14px;font-weight:600;transition:all .12s;}
-.pb.p1.on{border-color:#3B82F6;background:#DBEAFE;color:#1D4ED8;}
-.pb.p2.on{border-color:#EC4899;background:#FCE7F3;color:#BE185D;}
+.pb.on{border-color:var(--blue);background:#EDF3F6;color:var(--blue2);}
 .cur-row{display:flex;flex-wrap:wrap;background:var(--bg);border-radius:10px;padding:3px;gap:3px;}
 .cr{flex:1 1 30%;min-width:64px;padding:9px 4px;text-align:center;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);transition:all .15s;}
 .cr.on{background:#fff;color:var(--blue);box-shadow:0 1px 4px rgba(0,0,0,.1);}
@@ -242,8 +241,12 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="fg"><label class="lb">Firebase 資料庫網址</label><input class="inp" id="s_url" type="url" placeholder="https://xxx-default-rtdb.firebaseio.com"></div>
     <div class="fg"><label class="lb">旅遊標題</label><input class="inp" id="s_title" value="岡山倉敷之旅" placeholder="例：東京之旅 🗾"></div>
     <div class="fr">
-      <div class="fg"><label class="lb">旅伴 1</label><input class="inp" id="s_p1" value="瑜" placeholder="Jenna"></div>
-      <div class="fg"><label class="lb">旅伴 2</label><input class="inp" id="s_p2" value="然" placeholder="男友"></div>
+      <div class="fg"><label class="lb">成員 1</label><input class="inp" id="s_m1" placeholder="爸爸"></div>
+      <div class="fg"><label class="lb">成員 2</label><input class="inp" id="s_m2" placeholder="媽媽"></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label class="lb">成員 3（選填）</label><input class="inp" id="s_m3" placeholder="小明"></div>
+      <div class="fg"><label class="lb">成員 4（選填）</label><input class="inp" id="s_m4" placeholder="小美"></div>
     </div>
     <div class="fr">
       <div class="fg"><label class="lb">出發日期</label><input class="inp" id="s_start" type="date" value="2026-06-23"></div>
@@ -312,8 +315,12 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
         <div class="card">
           <div class="fg"><label class="lb">旅遊標題</label><input class="inp" id="c_title"></div>
           <div class="fr">
-            <div class="fg"><label class="lb">旅伴 1</label><input class="inp" id="c_p1"></div>
-            <div class="fg"><label class="lb">旅伴 2</label><input class="inp" id="c_p2"></div>
+            <div class="fg"><label class="lb">成員 1</label><input class="inp" id="c_m1"></div>
+            <div class="fg"><label class="lb">成員 2</label><input class="inp" id="c_m2"></div>
+          </div>
+          <div class="fr">
+            <div class="fg"><label class="lb">成員 3（選填）</label><input class="inp" id="c_m3"></div>
+            <div class="fg"><label class="lb">成員 4（選填）</label><input class="inp" id="c_m4"></div>
           </div>
           <div class="fr">
             <div class="fg"><label class="lb">出發日期</label><input class="inp" id="c_start" type="date"></div>
@@ -401,7 +408,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
           <div class="cur-row" id="cur-row-act"></div>
         </div>
       </div>
-      <div class="fg"><label class="lb">誰付</label><div class="pr"><div class="pb p1" id="apb1" onclick="selAPayer(0)"></div><div class="pb p2" id="apb2" onclick="selAPayer(1)"></div></div></div>
+      <div class="fg"><label class="lb">誰付</label><div class="pr" id="payer-row-act"></div></div>
       <div class="fg" style="margin-bottom:0"><label class="lb">分攤</label>
         <div class="tw"><div class="to on" id="asp-both" onclick="selASplit('both')">均分</div><div class="to" id="asp-p1" onclick="selASplit('p1')"></div><div class="to" id="asp-p2" onclick="selASplit('p2')"></div></div>
       </div>
@@ -424,7 +431,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
       </div>
     </div>
     <div class="fg"><label class="lb">日期</label><input class="inp" id="e_date" type="date"></div>
-    <div class="fg"><label class="lb">誰付錢</label><div class="pr"><div class="pb p1" id="pb1" onclick="selPayer(0)"></div><div class="pb p2" id="pb2" onclick="selPayer(1)"></div></div></div>
+    <div class="fg"><label class="lb">誰付錢</label><div class="pr" id="payer-row-exp"></div></div>
     <div class="fg"><label class="lb">分攤方式</label>
       <div class="tw"><div class="to on" id="sp-both" onclick="selSplit('both')">兩人均分</div><div class="to" id="sp-p1" onclick="selSplit('p1')"></div><div class="to" id="sp-p2" onclick="selSplit('p2')"></div></div>
     </div>
@@ -473,6 +480,11 @@ function curSym(c){return c==='TWD'?'NT$':c==='JPY'?'¥':c==='EUR'?'€':'$';}
 function renderCurChips(containerId,selected,onSelectFn){
   document.getElementById(containerId).innerHTML=PRESET_CURRENCIES.map(c=>
     `<div class="cr ${c.code===selected?'on':''}" onclick="${onSelectFn}('${c.code}')">${c.flag} ${c.code}</div>`
+  ).join('');
+}
+function renderPayerPicker(containerId,selectedIdx,onSelectFn){
+  document.getElementById(containerId).innerHTML=CFG.members.map((name,i)=>
+    `<div class="pb ${i===selectedIdx?'on':''}" onclick="${onSelectFn}(${i})">${esc(name)}</div>`
   ).join('');
 }
 // Map schedule activity type → expense category
@@ -634,11 +646,12 @@ async function fetchWeather(){
 function doSetup(){
   const url=document.getElementById('s_url').value.trim();
   if(!url){alert('請輸入 Firebase 資料庫網址');return;}
+  const members=['s_m1','s_m2','s_m3','s_m4'].map(id=>document.getElementById(id).value.trim()).filter(Boolean);
+  if(members.length<2){alert('請至少填寫 2 位成員');return;}
   const city=document.getElementById('s_city').value||'東京';
   const coords=CITIES[city]||{lat:35.68,lng:139.69};
-  CFG={url,title:document.getElementById('s_title').value.trim()||'岡山倉敷之旅',
-    p1:document.getElementById('s_p1').value.trim()||'瑜',
-    p2:document.getElementById('s_p2').value.trim()||'然',
+  CFG={url,title:document.getElementById('s_title').value.trim()||'家庭旅行',
+    members,
     start:document.getElementById('s_start').value||today(),
     days:parseInt(document.getElementById('s_days').value)||7,
     photo:document.getElementById('s_photo').value.trim(),
@@ -657,14 +670,8 @@ function bootApp(){
   document.getElementById('setup').style.display='none';
   const app=document.getElementById('app');app.style.display='flex';
   document.getElementById('appTitle').textContent=CFG.title;
-  ['pb1','apb1'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=CFG.p1;});
-  ['pb2','apb2'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=CFG.p2;});
-  document.getElementById('sp-p1').textContent=CFG.p1+'自付';
-  document.getElementById('sp-p2').textContent=CFG.p2+'自付';
-  document.getElementById('asp-p1').textContent=CFG.p1+'自付';
-  document.getElementById('asp-p2').textContent=CFG.p2+'自付';
   document.getElementById('c_title').value=CFG.title;
-  document.getElementById('c_p1').value=CFG.p1;document.getElementById('c_p2').value=CFG.p2;
+  [1,2,3,4].forEach(i=>{document.getElementById('c_m'+i).value=CFG.members[i-1]||'';});
   document.getElementById('c_start').value=CFG.start;document.getElementById('c_days').value=CFG.days;
   document.getElementById('c_url').value=CFG.url;
   document.getElementById('c_photo').value=CFG.photo||'';
@@ -933,7 +940,7 @@ function moveAct(fromDid,aid,act,toDid){
     DB.ref('/schedule/'+fromDid+'/acts/'+aid).remove();
     if(act.cost?.amt>0){
       DB.ref('/expenses/actcost_'+fromDid+'_'+aid).remove();
-      DB.ref('/expenses/actcost_'+toDid+'_'+aid).set({desc:act.name,amt:act.cost.amt,cur:act.cost.cur||'JPY',cat:mapActCat(act.cat),paidBy:act.cost.paidBy||CFG.p1,split:act.cost.split||'both',date:newDate,fromAct:true,at:new Date().toISOString()});
+      DB.ref('/expenses/actcost_'+toDid+'_'+aid).set({desc:act.name,amt:act.cost.amt,cur:act.cost.cur||'JPY',cat:mapActCat(act.cat),paidBy:act.cost.paidBy||CFG.members[0],split:act.cost.split||'both',date:newDate,fromAct:true,at:new Date().toISOString()});
     }
     toast('✅ 已移動到 '+toDid.replace('day','Day '));
   });
@@ -945,7 +952,7 @@ function renderACGrid(){
 }
 function selAC(id){curAC=id;document.querySelectorAll('.ac-btn').forEach(e=>e.classList.remove('on'));document.getElementById('ac-'+id)?.classList.add('on');document.getElementById('custom-ico-row').style.display=id==='custom'?'':'none';}
 function selACur(c){curACur=c;renderCurChips('cur-row-act',c,'selACur');}
-function selAPayer(i){curAPayer=i;document.getElementById('apb1').classList.toggle('on',i===0);document.getElementById('apb2').classList.toggle('on',i===1);}
+function selAPayer(i){curAPayer=i;renderPayerPicker('payer-row-act',i,'selAPayer');}
 function selASplit(m){curASplit=m;['both','p1','p2'].forEach(x=>document.getElementById('asp-'+x).classList.toggle('on',x===m));}
 
 function renderSched(sched){
@@ -1038,7 +1045,7 @@ function openActEdit(did,aid){
     document.getElementById('a_custom_ico').value=a.customIco||'';
     document.getElementById('custom-ico-row').style.display=a.cat==='custom'?'':'none';
     curActImages=a.images?[...a.images]:[];renderActImgPreviews();
-    selACur(a.cost?.cur||'JPY');selAPayer(a.cost?.paidBy===CFG.p2?1:0);selASplit(a.cost?.split||'both');
+    selACur(a.cost?.cur||'JPY');selAPayer(Math.max(0,CFG.members.indexOf(a.cost?.paidBy)));selASplit(a.cost?.split||'both');
     curActOrder=a.order||0;
     openM('m-act');
   });
@@ -1058,12 +1065,12 @@ function saveAct(){
       ...(curAC==='custom'&&customIco?{customIco}:{}),
       images:curActImages.length?[...curActImages]:null,
       loc:document.getElementById('a_loc').value.trim(),note:document.getElementById('a_note').value.trim(),
-      cost:hasCost?{amt:costAmt,cur:curACur,paidBy:curAPayer===0?CFG.p1:CFG.p2,split:curASplit}:null,
+      cost:hasCost?{amt:costAmt,cur:curACur,paidBy:CFG.members[curAPayer],split:curASplit}:null,
       order:isNew?(maxOrder+1):curActOrder};
     const id=aid||('a'+uid());
     DB.ref('/schedule/'+did+'/acts/'+id).set(obj);
     const expId='actcost_'+did+'_'+id;
-    if(hasCost){DB.ref('/expenses/'+expId).set({desc:name,amt:costAmt,cur:curACur,cat:mapActCat(curAC),paidBy:curAPayer===0?CFG.p1:CFG.p2,split:curASplit,date:dayData.date||'',fromAct:true,at:new Date().toISOString()});}
+    if(hasCost){DB.ref('/expenses/'+expId).set({desc:name,amt:costAmt,cur:curACur,cat:mapActCat(curAC),paidBy:CFG.members[curAPayer],split:curASplit,date:dayData.date||'',fromAct:true,at:new Date().toISOString()});}
     else{DB.ref('/expenses/'+expId).remove();}
     closeM('m-act');toast('✅ 已儲存');
   });
@@ -1075,7 +1082,7 @@ function renderCatGrid(){
   document.getElementById('catGrid').innerHTML=CATS.map(c=>`<div class="cat-btn ${c.id===curCat?'on':''}" id="cat-${c.id}" onclick="selCat('${c.id}')"><span class="cati">${c.ico}</span><span class="catn">${c.name}</span></div>`).join('');
 }
 function selCat(id){curCat=id;document.querySelectorAll('.cat-btn').forEach(e=>e.classList.remove('on'));document.getElementById('cat-'+id)?.classList.add('on');}
-function selPayer(i){curPayer=i;document.getElementById('pb1').classList.toggle('on',i===0);document.getElementById('pb2').classList.toggle('on',i===1);}
+function selPayer(i){curPayer=i;renderPayerPicker('payer-row-exp',i,'selPayer');}
 function selSplit(m){curSplit=m;['both','p1','p2'].forEach(x=>document.getElementById('sp-'+x).classList.toggle('on',x===m));}
 function selCur(c){curCur=c;renderCurChips('cur-row-exp',c,'selCur');}
 
@@ -1102,7 +1109,7 @@ function openExpEdit(eid){
     const e=snap.val();if(!e)return;
     document.getElementById('m-exp-t').textContent='編輯支出';document.getElementById('me-id').value=eid;
     document.getElementById('e_desc').value=e.desc||'';document.getElementById('e_amt').value=e.amt||'';document.getElementById('e_date').value=e.date||today();
-    curCat=e.cat||'food';renderCatGrid();selPayer(e.paidBy===CFG.p2?1:0);selSplit(e.split||'both');selCur(e.cur||'JPY');
+    curCat=e.cat||'food';renderCatGrid();selPayer(Math.max(0,CFG.members.indexOf(e.paidBy)));selSplit(e.split||'both');selCur(e.cur||'JPY');
     openM('m-exp');
   });
 }
@@ -1111,7 +1118,7 @@ function saveExp(){
   if(!desc){toast('請輸入描述');return;}if(!amtStr||isNaN(amt)||amt<=0){toast('請輸入正確金額');return;}
   const eid=document.getElementById('me-id').value||('e'+uid());
   sync(true);
-  DB.ref('/expenses/'+eid).set({desc,amt,cur:curCur,cat:curCat,paidBy:curPayer===0?CFG.p1:CFG.p2,split:curSplit,date:document.getElementById('e_date').value||today(),at:new Date().toISOString()})
+  DB.ref('/expenses/'+eid).set({desc,amt,cur:curCur,cat:curCat,paidBy:CFG.members[curPayer],split:curSplit,date:document.getElementById('e_date').value||today(),at:new Date().toISOString()})
     .then(()=>{sync(false);closeM('m-exp');toast('✅ 已儲存');}).catch(e=>{sync(false);toast('⚠️ 儲存失敗：'+e.message);});
 }
 function delExp(eid){if(!confirm('確定刪除？'))return;DB.ref('/expenses/'+eid).remove().then(()=>toast('🗑️ 已刪除'));}
@@ -1309,8 +1316,8 @@ function renderExp(exps){
 // ─── Settings ────────────────────────────────────────
 function saveCfg(){
   CFG.title=document.getElementById('c_title').value.trim()||CFG.title;
-  CFG.p1=document.getElementById('c_p1').value.trim()||CFG.p1;
-  CFG.p2=document.getElementById('c_p2').value.trim()||CFG.p2;
+  const newMembers=['c_m1','c_m2','c_m3','c_m4'].map(id=>document.getElementById(id).value.trim()).filter(Boolean);
+  if(newMembers.length<2){toast('⚠️ 至少需要 2 位成員，未更新成員名單');}else{CFG.members=newMembers;}
   const newStart=document.getElementById('c_start').value||CFG.start;
   const dateChanged=newStart!==CFG.start;
   CFG.start=newStart;CFG.days=parseInt(document.getElementById('c_days').value)||CFG.days;
@@ -1322,10 +1329,6 @@ function saveCfg(){
   if(CFG.photo){ph.src=CFG.photo;ph.style.display='';}else{ph.style.display='none';}
   localStorage.setItem('family_trip',JSON.stringify(CFG));
   document.getElementById('appTitle').textContent=CFG.title;
-  ['pb1','apb1'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=CFG.p1;});
-  ['pb2','apb2'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=CFG.p2;});
-  document.getElementById('sp-p1').textContent=CFG.p1+'自付';document.getElementById('sp-p2').textContent=CFG.p2+'自付';
-  document.getElementById('asp-p1').textContent=CFG.p1+'自付';document.getElementById('asp-p2').textContent=CFG.p2+'自付';
   if(dateChanged)fixDates(false);
   toast('✅ 設定已儲存'+(dateChanged?' · 行程日期已更新':''));
 }
