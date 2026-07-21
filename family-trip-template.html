@@ -826,16 +826,28 @@ function initDnD(){
     if(!DG.on)return;
     e.preventDefault();
     if(DG.ghost){DG.ghost.style.left=(t.clientX-110)+'px';DG.ghost.style.top=(t.clientY-22)+'px';}
-    document.querySelectorAll('.day-card').forEach(c=>{
-      const r=c.getBoundingClientRect();
-      c.classList.toggle('drop-over',t.clientY>=r.top&&t.clientY<=r.bottom);
-    });
-    // 同日內高亮目標列
+    {
+      let nearestCard=null,minCardDist=Infinity;
+      document.querySelectorAll('.day-card').forEach(c=>{
+        const r=c.getBoundingClientRect();
+        const dist=t.clientY<r.top?r.top-t.clientY:(t.clientY>r.bottom?t.clientY-r.bottom:0);
+        if(dist<minCardDist){minCardDist=dist;nearestCard=c;}
+      });
+      document.querySelectorAll('.day-card').forEach(c=>c.classList.toggle('drop-over',c===nearestCard));
+    }
+    // 同日內高亮目標列——用「離放開位置最近的列」而非嚴格落在邊界內，
+    // 手指移動時座標常落在列與列的縫隙或超出最後一列，嚴格邊界比對很容易找不到目標
     const dc=document.getElementById('dc-'+DG.did);
-    if(dc)dc.querySelectorAll('.act-row').forEach(r=>{
-      const rr=r.getBoundingClientRect();
-      r.classList.toggle('drag-over-act',r.dataset.aid!==DG.aid&&t.clientY>=rr.top&&t.clientY<=rr.bottom);
-    });
+    if(dc){
+      const candRows=[...dc.querySelectorAll('.act-row')].filter(r=>r.dataset.aid!==DG.aid);
+      let nearest=null,minDist=Infinity;
+      candRows.forEach(r=>{
+        const rr=r.getBoundingClientRect();
+        const dist=Math.abs(t.clientY-(rr.top+rr.bottom)/2);
+        if(dist<minDist){minDist=dist;nearest=r;}
+      });
+      candRows.forEach(r=>r.classList.toggle('drag-over-act',r===nearest));
+    }
   },{passive:false});
   document.addEventListener('touchend',e=>{
     clearTimeout(DG.timer);
@@ -843,19 +855,27 @@ function initDnD(){
     DG.on=false;
     if(DG.ghost){DG.ghost.remove();DG.ghost=null;}
     if(DG.srcEl)DG.srcEl.classList.remove('dragging');
-    const t=e.changedTouches[0];let tgt=null;
+    const t=e.changedTouches[0];let tgt=null,minCardDist=Infinity;
     document.querySelectorAll('.day-card').forEach(c=>{
       const r=c.getBoundingClientRect();
-      if(t.clientY>=r.top&&t.clientY<=r.bottom)tgt=c.id.replace('dc-','');
+      const dist=t.clientY<r.top?r.top-t.clientY:(t.clientY>r.bottom?t.clientY-r.bottom:0);
+      if(dist<minCardDist){minCardDist=dist;tgt=c.id.replace('dc-','');}
       c.classList.remove('droppable','drop-over');
     });
     document.querySelectorAll('.act-row.drag-over-act').forEach(r=>r.classList.remove('drag-over-act'));
     if(!tgt)return;
     if(tgt!==DG.did){moveAct(DG.did,DG.aid,DG.act,tgt);return;}
-    // 同日內排序
+    // 同日內排序——同樣改用「離放開位置最近的列」，跟上面 touchmove 的高亮邏輯一致
     const dc=document.getElementById('dc-'+tgt);
     const actRows=[...dc.querySelectorAll('.act-row')];
-    const tgtRow=actRows.find(r=>{const rr=r.getBoundingClientRect();return r.dataset.aid!==DG.aid&&t.clientY>=rr.top&&t.clientY<=rr.bottom;});
+    if(actRows.length<2)return;
+    let tgtRow=null,minDist=Infinity;
+    actRows.forEach(r=>{
+      if(r.dataset.aid===DG.aid)return;
+      const rr=r.getBoundingClientRect();
+      const dist=Math.abs(t.clientY-(rr.top+rr.bottom)/2);
+      if(dist<minDist){minDist=dist;tgtRow=r;}
+    });
     if(!tgtRow)return;
     const srcIdx=actRows.findIndex(r=>r.dataset.aid===DG.aid);
     const tgtIdx=actRows.findIndex(r=>r.dataset.aid===tgtRow.dataset.aid);
