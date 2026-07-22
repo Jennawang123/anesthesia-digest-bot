@@ -74,15 +74,15 @@ class Notion:
             raise RuntimeError(f"{what} 失敗 {r.status_code}: {r.text[:300]}")
         return r.json()
 
-    def _get(self, url, what, **kw):
-        """GET 加重試。整批跑幾百次呼叫時，偶發的讀取逾時與 429 幾乎必然
-        會出現，一次失敗就中斷整章並不划算。"""
+    def _retry(self, call, what):
+        """整批跑幾百次呼叫時，逾時、SSL 中斷與 429 幾乎必然出現，
+        一次失敗就中斷整章並不划算。call 每次重試都重新建立請求。"""
         delay = 2
         for attempt in range(5):
             try:
-                r = requests.get(url, headers=self.h, timeout=60, **kw)
-                if r.status_code in (429, 502, 503, 504):
-                    raise RuntimeError(f"{r.status_code}")
+                r = call()
+                if r.status_code in (429, 500, 502, 503, 504):
+                    raise RuntimeError(f"HTTP {r.status_code}")
                 return self._check(r, what)
             except (requests.RequestException, RuntimeError) as e:
                 if attempt == 4:
@@ -91,6 +91,10 @@ class Notion:
                       flush=True)
                 time.sleep(delay)
                 delay *= 2
+
+    def _get(self, url, what, **kw):
+        return self._retry(
+            lambda: requests.get(url, headers=self.h, timeout=60, **kw), what)
 
     def children(self, block_id):
         """列出 block 的子項，處理分頁。"""
@@ -137,18 +141,22 @@ class Notion:
 
     def upload(self, path: Path):
         """Notion File Upload API 兩步：建立 upload → 送出檔案。"""
-        created = self._check(
-            requests.post(f"{API}/file_uploads", headers={**self.h,
-                          "Content-Type": "application/json"},
-                          json={"filename": path.name, "content_type": "image/png"},
-                          timeout=60),
+        created = self._retry(
+            lambda: requests.post(
+                f"{API}/file_uploads",
+                headers={**self.h, "Content-Type": "application/json"},
+                json={"filename": path.name, "content_type": "image/png"},
+                timeout=60),
             "建立 file upload")
-        with path.open("rb") as fh:
-            sent = self._check(
-                requests.post(created["upload_url"], headers=self.h,
-                              files={"file": (path.name, fh, "image/png")},
-                              timeout=300),
-                "上傳檔案")
+
+        def send():
+            # 重試要重新開檔，用過的 file handle 已經讀到結尾
+            with path.open("rb") as fh:
+                return requests.post(
+                    created["upload_url"], headers=self.h,
+                    files={"file": (path.name, fh, "image/png")}, timeout=300)
+
+        sent = self._retry(send, "上傳檔案")
         if sent.get("status") != "uploaded":
             raise RuntimeError(f"上傳狀態異常：{sent.get('status')}")
         return sent["id"]
@@ -168,10 +176,11 @@ class Notion:
         body = {"children": children}
         if after_block_id:
             body["after"] = after_block_id
-        self._check(
-            requests.patch(f"{API}/blocks/{page_id}/children",
-                           headers={**self.h, "Content-Type": "application/json"},
-                           json=body, timeout=120),
+        self._retry(
+            lambda: requests.patch(
+                f"{API}/blocks/{page_id}/children",
+                headers={**self.h, "Content-Type": "application/json"},
+                json=body, timeout=120),
             "插入 image block")
 
         # PATCH 的回傳不只包含新建的 block，不能直接拿來當 id 來源。
