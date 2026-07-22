@@ -18,8 +18,12 @@ from pathlib import Path
 
 from upload_figures import Notion, load_token
 
-# 「（PDF pp. 1–12）」，破折號可能是 – 或 -
-PDF_RANGE_RE = re.compile(r"PDF\s*pp?\.\s*(\d+)\s*[–\-]\s*(\d+)")
+# sub-page 標頭有兩種寫法，不同章節是在不同 session 建的：
+#   Ch28 型：… pp. 808–820（PDF pp. 1–12）   → 兩種頁碼都有
+#   Ch41 型：… pp. 1267–1272                → 只有書本頁碼
+# 前者比對 manifest 的 pdf_page，後者比對 book_page。
+PDF_RANGE_RE = re.compile(r"PDF\s*pp?\.\s*(\d+)\s*[–\-—]\s*(\d+)")
+BOOK_RANGE_RE = re.compile(r"pp?\.\s*(\d+)\s*[–\-—]\s*(\d+)")
 
 
 def rich_text(block):
@@ -37,18 +41,24 @@ def subpages(notion, chapter_page_id):
         title = b["child_page"]["title"]
         blocks = notion.children(pid)
 
-        rng = None
+        rng = kind = None
         for blk in blocks[:5]:
-            m = PDF_RANGE_RE.search(rich_text(blk)) if blk["type"] in (
-                "quote", "paragraph", "callout") else None
+            if blk["type"] not in ("quote", "paragraph", "callout"):
+                continue
+            text = rich_text(blk)
+            m = PDF_RANGE_RE.search(text)
             if m:
-                rng = (int(m.group(1)), int(m.group(2)))
+                rng, kind = (int(m.group(1)), int(m.group(2))), "pdf_page"
+                break
+            m = BOOK_RANGE_RE.search(text)
+            if m:
+                rng, kind = (int(m.group(1)), int(m.group(2))), "book_page"
                 break
 
         sections = [rich_text(blk) for blk in blocks
                     if blk["type"] == "heading_3"]
         out.append({"id": pid, "title": title, "range": rng,
-                    "sections": sections})
+                    "key": kind, "sections": sections})
     return out
 
 
@@ -69,7 +79,8 @@ def main():
 
     print(f"=== {len(pages)} 篇 sub-page ===")
     for p in pages:
-        rng = f"PDF pp. {p['range'][0]}–{p['range'][1]}" if p["range"] else "⚠ 標頭讀不到頁碼區間"
+        label = {"pdf_page": "PDF pp.", "book_page": "書 pp."}.get(p["key"], "")
+        rng = f"{label} {p['range'][0]}–{p['range'][1]}" if p["range"] else "⚠ 標頭讀不到頁碼區間"
         print(f"\n[{p['title']}]  {rng}")
         for s in p["sections"]:
             print(f"    - {s}")
@@ -78,8 +89,8 @@ def main():
     for f in manifest:
         if not f.get("include"):
             continue
-        hit = [p for p in pages if p["range"]
-               and p["range"][0] <= f["pdf_page"] <= p["range"][1]]
+        hit = [p for p in pages if p["range"] and f.get(p["key"]) is not None
+               and p["range"][0] <= f[p["key"]] <= p["range"][1]]
         if len(hit) == 1:
             f["target_page_id"] = hit[0]["id"]
         elif len(hit) > 1:

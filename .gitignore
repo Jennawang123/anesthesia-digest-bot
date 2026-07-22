@@ -4,3 +4,4 @@ node_modules/
 netlify-travel-atlas/
 .env
 figures/
+__pycache__/
