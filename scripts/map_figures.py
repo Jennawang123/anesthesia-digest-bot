@@ -18,12 +18,14 @@ from pathlib import Path
 
 from upload_figures import Notion, load_token
 
-# sub-page 標頭有兩種寫法，不同章節是在不同 session 建的：
-#   Ch28 型：… pp. 808–820（PDF pp. 1–12）   → 兩種頁碼都有
-#   Ch41 型：… pp. 1267–1272                → 只有書本頁碼
-# 前者比對 manifest 的 pdf_page，後者比對 book_page。
+# sub-page 標頭有三種寫法，不同章節是在不同 session 建的：
+#   Ch28 型：… pp. 808–820（PDF pp. 1–12）        → PDF 頁碼是分章檔的
+#   Ch41 型：… pp. 1267–1272                     → 只有書本頁碼
+#   Ch72 型：… pp. 2266–2272（PDF pp. 2831–2837）→ PDF 頁碼是整本書的
+# 三種都有書本頁碼，且 PDF 頁碼的意義不一致（Ch72 型拿去比對必然落空），
+# 所以一律用書本頁碼比對，PDF 頁碼只在標頭沒有書本頁碼時才退而求其次。
+BOOK_RANGE_RE = re.compile(r"(?<!PDF )pp?\.\s*(\d+)\s*[–\-—]\s*(\d+)")
 PDF_RANGE_RE = re.compile(r"PDF\s*pp?\.\s*(\d+)\s*[–\-—]\s*(\d+)")
-BOOK_RANGE_RE = re.compile(r"pp?\.\s*(\d+)\s*[–\-—]\s*(\d+)")
 
 
 def rich_text(block):
@@ -46,13 +48,13 @@ def subpages(notion, chapter_page_id):
             if blk["type"] not in ("quote", "paragraph", "callout"):
                 continue
             text = rich_text(blk)
-            m = PDF_RANGE_RE.search(text)
-            if m:
-                rng, kind = (int(m.group(1)), int(m.group(2))), "pdf_page"
-                break
             m = BOOK_RANGE_RE.search(text)
             if m:
                 rng, kind = (int(m.group(1)), int(m.group(2))), "book_page"
+                break
+            m = PDF_RANGE_RE.search(text)
+            if m:
+                rng, kind = (int(m.group(1)), int(m.group(2))), "pdf_page"
                 break
 
         sections = [rich_text(blk) for blk in blocks
@@ -60,6 +62,25 @@ def subpages(notion, chapter_page_id):
         out.append({"id": pid, "title": title, "range": rng,
                     "key": kind, "sections": sections})
     return out
+
+
+def fill_book_pages(manifest):
+    """補上抽不到的 book_page（整頁大圖沒有頁眉頁碼）。
+
+    同一章內 book_page - pdf_page 是固定位移，實測 13 章每章都只有一個值，
+    所以用其他圖推回缺漏的那幾張是確定的，不是估計。位移不唯一時放棄補值。
+    """
+    offsets = {f["book_page"] - f["pdf_page"] for f in manifest
+               if f.get("book_page")}
+    if len(offsets) != 1:
+        return 0
+    off = offsets.pop()
+    n = 0
+    for f in manifest:
+        if not f.get("book_page"):
+            f["book_page"] = f["pdf_page"] + off
+            n += 1
+    return n
 
 
 def main():
@@ -71,6 +92,10 @@ def main():
     d = Path(args.figures_dir)
     mpath = d / "manifest.json"
     manifest = json.loads(mpath.read_text(encoding="utf-8"))
+
+    filled = fill_book_pages(manifest)
+    if filled:
+        print(f"（補上 {filled} 張缺漏的書本頁碼）")
 
     notion = Notion(load_token())
     pages = subpages(notion, args.chapter_page_id)
