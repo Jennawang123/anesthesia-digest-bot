@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 import requests
@@ -73,6 +74,24 @@ class Notion:
             raise RuntimeError(f"{what} 失敗 {r.status_code}: {r.text[:300]}")
         return r.json()
 
+    def _get(self, url, what, **kw):
+        """GET 加重試。整批跑幾百次呼叫時，偶發的讀取逾時與 429 幾乎必然
+        會出現，一次失敗就中斷整章並不划算。"""
+        delay = 2
+        for attempt in range(5):
+            try:
+                r = requests.get(url, headers=self.h, timeout=60, **kw)
+                if r.status_code in (429, 502, 503, 504):
+                    raise RuntimeError(f"{r.status_code}")
+                return self._check(r, what)
+            except (requests.RequestException, RuntimeError) as e:
+                if attempt == 4:
+                    raise
+                print(f"    （{what} 重試 {attempt + 1}/4：{str(e)[:60]}）",
+                      flush=True)
+                time.sleep(delay)
+                delay *= 2
+
     def children(self, block_id):
         """列出 block 的子項，處理分頁。"""
         out, cursor = [], None
@@ -80,10 +99,8 @@ class Notion:
             params = {"page_size": 100}
             if cursor:
                 params["start_cursor"] = cursor
-            data = self._check(
-                requests.get(f"{API}/blocks/{block_id}/children",
-                             headers=self.h, params=params, timeout=30),
-                "列出 blocks")
+            data = self._get(f"{API}/blocks/{block_id}/children",
+                             "列出 blocks", params=params)
             out += data["results"]
             if not data.get("has_more"):
                 return out

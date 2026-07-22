@@ -33,6 +33,17 @@ def rich_text(block):
     return "".join(r["plain_text"] for r in block[t].get("rich_text", []))
 
 
+def subpages_cached(notion, chapter_page_id, cache: Path):
+    """sub-page 的標題與小節清單在指派過程中不會變，但每次列出都要打幾十次
+    API 且會逾時。快取起來，只有加減小節時才需要刪掉重抓。"""
+    if cache.exists():
+        return json.loads(cache.read_text(encoding="utf-8"))
+    pages = subpages(notion, chapter_page_id)
+    cache.write_text(json.dumps(pages, ensure_ascii=False, indent=2),
+                     encoding="utf-8")
+    return pages
+
+
 def subpages(notion, chapter_page_id):
     """回傳章節底下每篇 sub-page 的 id、標題、PDF 頁碼區間、小節清單。"""
     out = []

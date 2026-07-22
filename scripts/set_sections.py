@@ -16,7 +16,7 @@ import json
 import sys
 from pathlib import Path
 
-from map_figures import subpages
+from map_figures import subpages_cached
 from upload_figures import Notion, load_token
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -32,7 +32,9 @@ def main():
     byid = {c["ch"]: c for c in q["chapters"]}
 
     notion = Notion(load_token())
-    pages = {p["id"]: p for p in subpages(notion, byid[ch]["notion_page_id"])}
+    pages = {p["id"]: p for p in
+             subpages_cached(notion, byid[ch]["notion_page_id"],
+                             ROOT / f"figures/ch{ch}/.subpages.json")}
 
     errors = []
     for f in manifest:

@@ -12,7 +12,7 @@ import json
 import sys
 from pathlib import Path
 
-from map_figures import subpages
+from map_figures import subpages_cached
 from upload_figures import Notion, load_token
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -26,7 +26,8 @@ def main():
     for ch in (int(a) for a in sys.argv[1:]):
         manifest = json.loads(
             (ROOT / f"figures/ch{ch}/manifest.json").read_text(encoding="utf-8"))
-        pages = subpages(notion, byid[ch]["notion_page_id"])
+        pages = subpages_cached(notion, byid[ch]["notion_page_id"],
+                                ROOT / f"figures/ch{ch}/.subpages.json")
         print(f"\n{'=' * 70}\nCh{ch} {byid[ch]['title']}\n{'=' * 70}")
         for p in pages:
             figs = [f for f in manifest
