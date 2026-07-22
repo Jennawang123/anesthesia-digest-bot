@@ -35,6 +35,35 @@ def load_token():
     return os.environ.get("NOTION_TOKEN")
 
 
+def block_text(b):
+    t = b["type"]
+    return "".join(r["plain_text"] for r in b[t].get("rich_text", []))
+
+
+def outline(blocks):
+    """回傳 [(索引, 文字, 層級)] 的小節骨架。
+
+    各章筆記寫小標的方式不一致：有的用 heading_3，有的直接用整行粗體的
+    paragraph（Ch43 型）。整行粗體是乾淨的判別方式 —— 內文條列與臨床重點
+    段落都不是粗體。粗體小標視為比 heading_3 更低一級。
+    """
+    out = []
+    for i, b in enumerate(blocks):
+        t = b["type"]
+        if t.startswith("heading_"):
+            out.append((i, block_text(b).strip(), int(t.split("_")[1])))
+        elif t == "paragraph":
+            rt = b["paragraph"]["rich_text"]
+            if rt and all(r["annotations"]["bold"] for r in rt):
+                out.append((i, block_text(b).strip(), 4))
+    return out
+
+
+def section_names(blocks):
+    """可作為圖片歸屬對象的小節名稱（heading_3 與粗體小標）。"""
+    return [text for _, text, lvl in outline(blocks) if lvl >= 3 and text]
+
+
 class Notion:
     def __init__(self, token):
         self.h = {"Authorization": f"Bearer {token}", "Notion-Version": VERSION}
@@ -70,29 +99,20 @@ class Notion:
                 return b["id"]
         return None
 
-    def section_end(self, page_id, heading_text):
+    def section_end(self, page_id, heading_text, blocks=None):
         """回傳該小節最後一個 block 的 id —— 圖要插在這之後，才會落在
-        對應內文的末尾而不是下一節開頭。小節結束於同級或更高級的標題。"""
-        blocks = self.children(page_id)
-        start = None
-        for i, b in enumerate(blocks):
-            if not b["type"].startswith("heading_"):
-                continue
-            plain = "".join(r["plain_text"] for r in b[b["type"]]["rich_text"])
-            if plain.strip() == heading_text:
-                start = i
-                break
-        if start is None:
+        對應內文的末尾而不是下一節開頭。小節結束於同級或更高級的小標。"""
+        if blocks is None:
+            blocks = self.children(page_id)
+        marks = outline(blocks)
+        hit = next((m for m in marks if m[1] == heading_text), None)
+        if hit is None:
             return None
 
-        level = int(blocks[start]["type"].split("_")[1])
-        last = blocks[start]
-        for b in blocks[start + 1:]:
-            if b["type"].startswith("heading_") and \
-                    int(b["type"].split("_")[1]) <= level:
-                break
-            last = b
-        return last["id"]
+        start, _, level = hit
+        end = next((i for i, _, lvl in marks if i > start and lvl <= level),
+                   len(blocks))
+        return blocks[end - 1]["id"]
 
     def delete(self, block_id):
         self._check(requests.delete(f"{API}/blocks/{block_id}",

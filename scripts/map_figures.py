@@ -16,7 +16,7 @@ import re
 import sys
 from pathlib import Path
 
-from upload_figures import Notion, load_token
+from upload_figures import Notion, load_token, section_names
 
 # sub-page 標頭有三種寫法，不同章節是在不同 session 建的：
 #   Ch28 型：… pp. 808–820（PDF pp. 1–12）        → PDF 頁碼是分章檔的
@@ -57,10 +57,8 @@ def subpages(notion, chapter_page_id):
                 rng, kind = (int(m.group(1)), int(m.group(2))), "pdf_page"
                 break
 
-        sections = [rich_text(blk) for blk in blocks
-                    if blk["type"] == "heading_3"]
         out.append({"id": pid, "title": title, "range": rng,
-                    "key": kind, "sections": sections})
+                    "key": kind, "sections": section_names(blocks)})
     return out
 
 
