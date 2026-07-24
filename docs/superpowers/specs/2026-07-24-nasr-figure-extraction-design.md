@@ -5,7 +5,7 @@
 
 ## 目標
 
-把 Nasr《The Pediatric Cardiac Anesthesia Handbook》第二版（2024, Wiley Blackwell）的 140 張 Figure 抽成圖檔，上傳到 Notion，插入「小兒心臟學讀書會（Park's + Pediatric Congenital Cardiology）」系列既有筆記。
+把 Nasr《The Pediatric Cardiac Anesthesia Handbook》第二版（2024, Wiley Blackwell）的 139 張 Figure 抽成圖檔，上傳到 Notion，插入「小兒心臟學讀書會（Park's + Pediatric Congenital Cardiology）」系列既有筆記。
 
 來源 PDF：`~/Desktop/pediatric cardiac handbook TEE.pdf`（360 頁，37 章，Part I Basics 1–11 + Part II Specific Lesions 12–37）
 
@@ -28,16 +28,43 @@
 2. **可以改用 raster 圖框直接裁切。** 全書向量物件為 0，`get_image_rects()` 取得的框就是圖本身的邊界，比任何幾何啟發式都準確，也不需要 Miller 那套「內文字體門檻」判斷。
 3. **頁碼區間比對不適用。** Park's 系列是 lesion-based 頁面，標頭來源行混列 Park's / Nasr / da Cruz / Miller 四本書，沒有單一可比對的頁碼區間。
 
-### caption 與 raster 的配對實測（全書 140 張）
+### caption 的辨識
 
-| 情形 | 頁數 |
+以 `^Figure\s*(\d+)\.(\d+)` 比對 text block 開頭，並沿用 Miller 的 `is_body` 字體過濾——內文交叉引用用的是內文字體（TimesNewRomanPSMT 10pt），真正的圖說不是。實測全書 140 個字面命中中，1 個為內文交叉引用（idx98 的「Figure 8.1. Figures 8.2-8.9 summarize the images obtained during a comprehensive TTE exam.」，真正的 Fig 8.1 圖說在 idx99），過濾後得 **139 張，零誤判**（各章編號連續、無重複）。
+
+**已知缺口：Ch6 的 Fig 6.2 與 6.3 在文字層沒有 caption block**（內文有「Figure 6.2」引用，但圖說本身抓不到，推測已烙進圖檔）。這兩張無法自動抽取，列為人工處理項目，不影響其餘 139 張。
+
+### 書本頁碼
+
+頁眉有兩種寫法：偶數頁「10 The Pediatric Cardiac Anesthesia Handbook」（頁碼在前）、奇數頁「Cardiovascular Development 5」（頁碼在後）。取首個 text block（限 y < 60）的頭尾 token，1–3 位數字即書本頁碼。340 頁中 327 頁適用，其餘為整頁圖或章首頁。
+
+14 張圖所在頁取不到頁碼，以**章內位移**回填：實測每章的 `pdf_page − book_page` 唯一且恆定（Ch1 +16 遞減至 Ch37 −3，因 Part 分隔頁而逐章漂移），故不可全書套單一公式，必須逐章計算。
+
+### caption 與 raster 的配對實測（全書 139 張）
+
+配對規則以整份 PDF 實跑驗證，最終為：
+
+- **下方型**：raster 在 caption 上方，水平重疊 > 兩者**較窄**一方寬度的 30%，且垂直間隙 < 0.6 × 頁高。
+- **旁欄型**：raster 與 caption 垂直重疊 > 較矮一方高度的 30%，且水平不重疊。
+- 每個 raster 只歸給距離最近的 caption（同頁有 2–3 個圖說的有 22 頁）。
+
+重疊門檻必須相對於「較窄一方」，這點踩過兩次：改成相對 caption 寬度時，Fig 15.1 的 6 個 panel（各寬 59–73pt）全數落空；改成要求 raster 落在 caption 跨距內時，換成寬圖配窄圖說的 Fig 9.1、12.1、27.7、31.6 落空。
+
+| 結果 | 張數 |
 |---|---|
-| 1 caption ↔ 1 raster | 48 |
-| 1 caption ↔ 多 raster（multi-panel，需聯集） | 34 |
-| 2–3 caption 同頁（需分派） | 22 |
-| caption 所在頁**無** raster（圖在鄰頁） | 6 |
+| raster 配對成功 | 133 |
+| 該頁無可用 raster，需幾何 fallback | 6 |
+| 配對失敗 | 0 |
 
-無 raster 的 6 張：Fig 7.2、8.1、11.1、11.2、11.4、11.5、11.9。
+多 panel 分布：1 panel 93 張、2 panel 20 張、3–8 panel 20 張（最多 8 panel）。聯集後無任何一張超過頁高 75%，`oversized_union` 實測未觸發。
+
+### 幾何 fallback（推翻先前的排除決定）
+
+Fig 7.2、7.3、11.2、11.4、11.5、11.9 這 6 張所在頁沒有任何可用 raster——它們被烙進整頁尺寸的背景掃描層，無法用圖框隔離。
+
+原先的決定是「不做幾何 fallback，6 張手動處理更快」。實測推翻了前半段但也推翻了後半段的樂觀：重用 `extract_figures.figure_rect()` + `detect_columns()` 只要十餘行就能對這 6 張產出裁切，**但品質不可信**——實測 Fig 11.4 裁出的是整張 State Behavioral Scale 表格加上頁眉，右側還被切掉（Nasr 的欄位偵測在 480pt 窄版面本來就不準）。
+
+結論是兩者都不取，改採第三種：**產出裁切，但標記 `geometric_fallback` 且 `include: false`**。這 6 張會出現在 contact sheet 上供檢視，預設不會進 Notion，使用者認可哪張才把 `include` 改為 `true`。安靜地成功並送出垃圾，比失敗更糟。
 
 ## 範圍決策
 
@@ -72,7 +99,7 @@ manifest.json ──▶ ③ upload_figures.py ──▶ Notion（上傳 + 插入
   - **圖下方**：raster 在 caption 上方，水平重疊 >30% caption 寬，取垂直距離最近者
   - **旁欄同高**：raster 與 caption 垂直重疊 >30%，水平不重疊且位於相鄰欄
 - 同一 caption 配到多個 rect 取聯集（multi-panel 圖）。聯集後寬或高超過版心 1.2 倍標 `oversized_union`。
-- caption 所在頁無 raster 時，往前一頁與後一頁各找一次；仍無則標 `no_raster`，不產圖，僅列入 contact sheet。
+- caption 所在頁無可用 raster 時，退回幾何裁切（重用 `extract_figures.figure_rect()` 與 `detect_columns()`），標記 `geometric_fallback` 並設 `include: false`。實測 6 張，品質不可信，需逐張目視認可。
 - `page.get_pixmap(clip=rect, dpi=200)` 輸出 PNG，四周留 PAD 6pt。
 - Contact sheet 為單一 HTML，縮圖牆排列全部圖，標註 fig_id、PDF 頁碼、書本頁碼、caption、suspect 旗標。
 
@@ -120,9 +147,9 @@ manifest.json ──▶ ③ upload_figures.py ──▶ Notion（上傳 + 插入
 
 ## 章號→Notion 頁對照表
 
-35 個有圖的章，合計 140 張。Ch3（術前評估）與 Ch34（Heart-Lung/Lung Transplantation）在書中無 Figure。
+35 個有圖的章，合計 139 張。Ch3（術前評估）與 Ch34（Heart-Lung/Lung Transplantation）在書中無 Figure。
 
-### Part I Basics（掛 Ch0 母頁下，57 張）
+### Part I Basics（掛 Ch0 母頁下，56 張）
 
 | Nasr ed2 章 | 圖 | Notion 頁 | page id |
 |---|---|---|---|
@@ -132,7 +159,7 @@ manifest.json ──▶ ③ upload_figures.py ──▶ Notion（上傳 + 插入
 | 5 Developmental Hemostasis & PBM | 3 | Developmental Hemostasis 與 PBM | 3a4e77f4-b1f0-81e6-952c-f3e263f5dfb2 |
 | 6 Cardiac Catheterization Data | 5 | 心導管數據判讀 | 3a2e77f4-b1f0-8120-9461-f9fba4666931 |
 | 7 Cardiopulmonary Bypass | 9 | 體外循環 | 3a2e77f4-b1f0-81bc-a7ce-f41fdec3abcf |
-| 8 Echocardiography | 12 | Echocardiography（TEE 完整切面） | 3a4e77f4-b1f0-8137-8413-d0fcd88b23f6 |
+| 8 Echocardiography | 11 | Echocardiography（TEE 完整切面） | 3a4e77f4-b1f0-8137-8413-d0fcd88b23f6 |
 | 9 Risk Scoring Systems | 1 | Risk Scoring Systems | 3a4e77f4-b1f0-8172-be57-f184937d24d3 |
 | 10 Mechanical Circulatory Support | 10 | 機械輔助裝置（ECMO/VAD） | 3a2e77f4-b1f0-81ab-ad38-dac1a21a9d8d |
 | 11 Postoperative CICU Care | 9 | Postoperative CICU Care | 3a4e77f4-b1f0-81e1-b6cd-ce08ac9c7721 |
@@ -181,20 +208,21 @@ manifest.json ──▶ ③ upload_figures.py ──▶ Notion（上傳 + 插入
 
 - **只做插入，不刪除或改寫既有內容。** 本系列頁面含使用者自行上傳的 S3 presigned URL 圖片，整頁重寫會使其失效。全程只用 append，不碰 `replace_content`。最壞情況是多出一張裁切錯誤的圖，刪除該 block 即回復原狀。
 - 裁切錯誤在 contact sheet 階段攔下，不會進到 Notion。
-- `no_raster`（6 張）不產圖，列在 contact sheet 供人工決定是否手動補。
+- `geometric_fallback`（6 張）預設 `include: false`，不會進 Notion，需在 contact sheet 上逐張認可。
+- Ch6 的 Fig 6.2、6.3 文字層無 caption，抽不到，列為人工處理項目。
 - `oversized_union` 在縮圖牆以紅字標示。
 - `uploaded_block_id` 防止分批執行時重複插圖。
 
 ## 驗收方式
 
-先只做 **Ch8 Echocardiography** 一章 12 張。選它的理由：TEE 切面圖多為 multi-panel，是聯集邏輯最容易出錯的一章；且 Fig 8.1 正好是 `no_raster` 案例，兩種失敗模式一次驗證。
+先只做 **Ch8 Echocardiography** 一章 11 張。選它的理由：TEE 切面圖多為 multi-panel，是聯集邏輯最容易出錯的一章；且 Ch8 同時含內文交叉引用誤判（Fig 8.1）與跨頁 caption，字體過濾與配對邏輯一次驗證。
 
 驗收由使用者對成果判斷，不對架構判斷：
 
 1. Contact sheet 縮圖牆 — 裁切是否完整、哪幾張不需要。
 2. Notion 頁面實際插入位置。
 
-Ch8 品質確認後，才推展其餘 34 章；屆時再決定一次跑完或分批。
+Ch8 品質確認後，才推展其餘 34 章共 128 張；屆時再決定一次跑完或分批。
 
 ## 明確排除
 
@@ -203,3 +231,4 @@ Ch8 品質確認後，才推展其餘 34 章；屆時再決定一次跑完或分
 - 不修改 `extract_figures.py`（Miller 專用）與 `upload_figures.py`。
 - 不處理 Notion 有頁但 Nasr 無對應章的頁面。
 - 不建向量檢索層。與 Miller 那輪的決策一致。
+- 不為幾何 fallback 改良欄位偵測。只有 6 張，改良的投入報酬不成比例，改用「預設不納入 + 人工認可」處理。
