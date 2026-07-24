@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from extract_figures_raster import usable_rasters  # noqa: E402
+from extract_figures_raster import find_captions, usable_rasters  # noqa: E402
 
 PAGE = fitz.Rect(0, 0, 480.5, 720)
 
@@ -49,3 +49,41 @@ def test_濾掉過小的碎塊():
 
 def test_沒有可用圖時回傳空清單():
     assert usable_rasters(FakePage([fitz.Rect(0, 0, 480.5, 720)])) == []
+
+
+def block(text, rect, is_body=False):
+    """模擬 extract_figures.text_blocks() 的輸出格式。"""
+    return {"text": text, "rect": fitz.Rect(*rect), "is_body": is_body}
+
+
+def test_抓出圖說並拆出章號與編號():
+    caps = find_captions([
+        block("Figure 8.3 Subxiphoid short-axis sweep.", (54, 301, 445, 330)),
+    ])
+    assert len(caps) == 1
+    assert caps[0]["fig_id"] == "8.3"
+    assert caps[0]["chapter"] == 8
+    assert caps[0]["rect"] == fitz.Rect(54, 301, 445, 330)
+
+
+def test_排除內文字體的交叉引用():
+    caps = find_captions([
+        block("Figure 8.1. Figures 8.2-8.9 summarize the images.",
+              (60, 213, 440, 240), is_body=True),
+        block("Figure 8.1 Transducer locations for standard TTE windows.",
+              (60, 69, 440, 100)),
+    ])
+    assert [c["fig_id"] for c in caps] == ["8.1"]
+    assert caps[0]["rect"].y0 == 69
+
+
+def test_複數形的Figures不算圖說():
+    assert find_captions([block("Figures 2.1 and 2.2 illustrate this.",
+                                (60, 100, 440, 130))]) == []
+
+
+def test_Table與Box不算圖說():
+    assert find_captions([
+        block("Table 1.1 Cardiovascular embryologic structure.", (54, 69, 377, 82)),
+        block("Box 3.2 Preoperative checklist.", (54, 200, 377, 220)),
+    ]) == []
