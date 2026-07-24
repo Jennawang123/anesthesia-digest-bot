@@ -9,9 +9,15 @@
     python3 scripts/extract_figures_raster.py <PDF> <輸出目錄> [--chapters 8 9] [--dpi 200]
 """
 
+import argparse
+import json
 import re
+from pathlib import Path
 
 import fitz
+
+from extract_figures import (body_font, detect_columns, figure_rect, parse_pages,
+                             text_blocks, write_contact_sheet)
 
 # 每頁固定有兩張整頁尺寸的背景層，不是圖
 BG_MIN_W, BG_MIN_H = 440, 640
@@ -33,6 +39,11 @@ PAD = 6
 # 頁眉的 y 上限；超過這個位置的第一個 block 不是頁眉
 HEAD_Y = 60
 PAGE_NUM_RE = re.compile(r"^\d{1,3}$")
+
+# 聯集後超過版心這個倍數視為可疑，可能把鄰圖也吃進來了
+OVERSIZE = 1.2
+# 幾何 fallback 裁出的高度低於這個值視為失敗
+MIN_PLAUSIBLE_HEIGHT = 40
 
 
 def usable_rasters(page):
@@ -163,3 +174,110 @@ def fill_book_pages(figs):
     for f in figs:
         if not f["book_page"] and f["nasr_chapter"] in offset:
             f["book_page"] = f["pdf_page"] - offset[f["nasr_chapter"]]
+
+
+def column_of(page_rect, cap_rect):
+    mid = page_rect.width / 2
+    if cap_rect.width > 0.7 * (page_rect.width - 72):
+        return "span"
+    return "left" if cap_rect.x1 < mid + 20 else "right"
+
+
+def extract(pdf_path, out_dir, dpi, chapters=None):
+    doc = fitz.open(pdf_path)
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    pages = parse_pages(doc)
+    body = body_font(pages)
+    cols = detect_columns(pages, body)
+
+    blocks_by_page = [text_blocks(pages[i], body) for i in range(doc.page_count)]
+    rasters_by_page = [usable_rasters(doc[i]) for i in range(doc.page_count)]
+
+    manifest = []
+    for pno in range(doc.page_count):
+        caps = find_captions(blocks_by_page[pno])
+        if chapters:
+            caps = [c for c in caps if c["chapter"] in chapters]
+        if not caps:
+            continue
+
+        page_rect = doc[pno].rect
+        # 分派時要看該頁「所有」圖說，不能只看 --chapters 篩選後的那些，
+        # 否則同頁另一章的圖會被誤認領。篩選只作用在輸出。
+        assigned = assign_rasters(find_captions(blocks_by_page[pno]),
+                                  rasters_by_page[pno], page_rect.height)
+        for c in caps:
+            rects = assigned[c["fig_id"]]
+            suspect = []
+
+            entry = {
+                "fig_id": c["fig_id"],
+                "nasr_chapter": c["chapter"],
+                "pdf_page": pno,
+                "book_page": book_page(blocks_by_page[pno]),
+                "caption": c["text"],
+                "png": None,
+                "bbox": None,
+                "panels": len(rects),
+                "column": column_of(page_rect, c["rect"]),
+                "suspect": suspect,
+                "include": True,
+                "target_page_id": None,
+                "target_section": None,
+                "uploaded_block_id": None,
+            }
+
+            if rects:
+                box = crop_rect(rects, page_rect)
+                if box.width > OVERSIZE * page_rect.width or \
+                        box.height > OVERSIZE * page_rect.height:
+                    suspect.append("oversized_union")
+            else:
+                # 該頁沒有可用 raster —— 這張圖被烙進整頁尺寸的背景掃描層，
+                # 圖框隔離不出來。退回 Miller 那套 caption 往上裁的幾何法。
+                # 實測品質不可信（Fig 11.4 裁出的是整張表格加頁眉），因此
+                # 一律標記並預設不納入，由使用者在 contact sheet 上逐張認可。
+                box = figure_rect(doc[pno], {"rect": c["rect"]},
+                                  blocks_by_page[pno], cols)
+                suspect.append("geometric_fallback")
+                entry["include"] = False
+                if box.height < MIN_PLAUSIBLE_HEIGHT or box.width <= 0:
+                    suspect.append("crop_failed")
+                    manifest.append(entry)
+                    continue
+
+            name = f"fig-{c['fig_id'].replace('.', '-')}_p{pno}.png"
+            doc[pno].get_pixmap(clip=box, dpi=dpi).save(out_dir / name)
+            entry["png"] = name
+            entry["bbox"] = [round(v, 1) for v in (box.x0, box.y0, box.x1, box.y1)]
+            manifest.append(entry)
+
+    fill_book_pages(manifest)
+    manifest.sort(key=lambda f: (f["nasr_chapter"],
+                                 int(f["fig_id"].split(".")[1])))
+    (out_dir / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # contact sheet 只放實際產出的圖；crop_failed 沒有檔案，只留在 manifest
+    write_contact_sheet(out_dir, [f for f in manifest if f["png"]],
+                        Path(pdf_path).stem)
+    return manifest
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("pdf")
+    ap.add_argument("out_dir")
+    ap.add_argument("--chapters", type=int, nargs="+",
+                    help="只抽指定章號，省略則全書")
+    ap.add_argument("--dpi", type=int, default=200)
+    a = ap.parse_args()
+
+    m = extract(a.pdf, a.out_dir, a.dpi, set(a.chapters) if a.chapters else None)
+    print(f"抽出 {sum(1 for f in m if f['png'])} 張圖 → {a.out_dir}")
+    for f in m:
+        if f["suspect"]:
+            print(f"  ⚠ Fig {f['fig_id']} (PDF idx{f['pdf_page']}): "
+                  f"{' '.join(f['suspect'])}")
