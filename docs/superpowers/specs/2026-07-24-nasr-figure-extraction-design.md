@@ -5,7 +5,7 @@
 
 ## 目標
 
-把 Nasr《The Pediatric Cardiac Anesthesia Handbook》第二版（2024, Wiley Blackwell）的 139 張 Figure 抽成圖檔，上傳到 Notion，插入「小兒心臟學讀書會（Park's + Pediatric Congenital Cardiology）」系列既有筆記。
+把 Nasr《The Pediatric Cardiac Anesthesia Handbook》第二版（2024, Wiley Blackwell）的 145 張 Figure 抽成圖檔，上傳到 Notion，插入「小兒心臟學讀書會（Park's + Pediatric Congenital Cardiology）」系列既有筆記。
 
 來源 PDF：`~/Desktop/pediatric cardiac handbook TEE.pdf`（360 頁，37 章，Part I Basics 1–11 + Part II Specific Lesions 12–37）
 
@@ -31,6 +31,16 @@
 ### caption 的辨識
 
 以 `^Figure\s*(\d+)\.(\d+)` 比對 text block 開頭，並沿用 Miller 的 `is_body` 字體過濾——內文交叉引用用的是內文字體（TimesNewRomanPSMT 10pt），真正的圖說不是。實測全書 140 個字面命中中，1 個為內文交叉引用（idx98 的「Figure 8.1. Figures 8.2-8.9 summarize the images obtained during a comprehensive TTE exam.」，真正的 Fig 8.1 圖說在 idx99），過濾後得 **139 張，零誤判**（各章編號連續、無重複）。
+
+### 範圍圖說（一個圖說涵蓋連號多張）
+
+Ch8 的 28-view comprehensive TEE exam 圖譜用的是複數形範圍圖說「Figures 8.12–8.17 The 28 views included in a comprehensive TEE exam」，橫跨 idx105–110 共 6 頁，每頁是表格的一段（Imaging plane / 3D model / 2D TEE image / Acquisition protocol / Structures imaged），**該圖說在每一頁底部都重複印一次**。
+
+`CAPTION_RE` 不會命中複數形，所以這 6 個圖號原本整組漏掉——這正是使用者最重視的 TEE 內容，且 Notion 頁上早有對應小節「Comprehensive TEE Exam：28 views（Fig 8.12–8.17，ASE 2019 Puchalski）」。2026-07-24 使用者決定納入，做法為**一頁一張**（6 頁對 6 個圖號，保留每列「圖↔探頭角度↔結構」的對照關係）。
+
+處理方式：`RANGE_CAPTION_RE` 另外比對，全書蒐集後依 (章, 起, 迄) 分組，把出現過的頁面排序後依序給連號圖號。**必須先分組再展開**，否則 6 頁各自展開一整組會得到 36 筆。裁切用 `atlas_crop()`：取「非內文字體的 text block」與 raster 的聯集，藉此排除頁眉、圖說本身、與混在頁尾的章節內文（idx107 表格下方就接著內文）。標記 `atlas_page`。
+
+因此全書總數為 **145 張**（139 單張 + 6 圖譜頁），預設納入 139（6 張 `geometric_fallback` 除外）。
 
 **已知缺口：Ch6 的 Fig 6.2 與 6.3 在文字層沒有 caption block**（內文有「Figure 6.2」引用，但圖說本身抓不到，推測已烙進圖檔）。這兩張無法自動抽取，列為人工處理項目，不影響其餘 139 張。
 

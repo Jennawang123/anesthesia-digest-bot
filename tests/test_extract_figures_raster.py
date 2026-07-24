@@ -11,8 +11,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from extract_figures_raster import (assign_rasters, book_page, crop_rect,  # noqa: E402
-                                    fill_book_pages, find_captions, usable_rasters)
+from extract_figures_raster import (assign_rasters, atlas_crop, book_page,  # noqa: E402
+                                    crop_rect, fill_book_pages, find_captions,
+                                    find_range_captions, usable_rasters)
 
 PAGE = fitz.Rect(0, 0, 480.5, 720)
 
@@ -208,3 +209,38 @@ def test_圖說在旁欄時不擴張裁切寬度():
     # idx26 實測：圖在左欄、圖說在右欄同高。用圖說跨距會把整欄內文裁進來。
     got = crop_rect([fitz.Rect(54, 73, 295, 230)], PAGE, fitz.Rect(307, 69, 445, 101))
     assert got == fitz.Rect(48, 67, 301, 236)
+
+
+def test_複數形範圍圖說展開成連號():
+    got = find_range_captions([
+        block("Figures 8.12–8.17 The 28 views included in a comprehensive TEE exam.",
+              (54, 511, 446, 631)),
+    ])
+    assert len(got) == 1
+    assert (got[0]["chapter"], got[0]["first"], got[0]["last"]) == (8, 12, 17)
+
+
+def test_範圍圖說不吃跨章或反向的寫法():
+    assert find_range_captions([
+        block("Figures 8.12–9.2 something", (54, 500, 446, 530)),
+        block("Figures 8.17–8.12 reversed", (54, 540, 446, 570)),
+    ]) == []
+
+
+def test_單數形圖說不被當成範圍():
+    assert find_range_captions([
+        block("Figure 8.10 (A) Terminology used to describe manipulation.",
+              (54, 617, 442, 658)),
+    ]) == []
+
+
+def test_圖譜頁裁切排除頁眉與內文():
+    blocks = [
+        block("92 The Pediatric Cardiac Anesthesia Handbook", (36, 44, 193, 60)),
+        block("Imaging plane 3D model 2D TEE image", (73, 61, 437, 85)),
+        block("1. ME 4-Ch", (68, 96, 97, 103)),
+        block("time of hospital discharge, as determined by TTE.",
+              (54, 560, 244, 600), is_body=True),
+    ]
+    got = atlas_crop(PAGE, blocks, [fitz.Rect(100, 110, 300, 400)])
+    assert got == fitz.Rect(62, 60, 443, 406)

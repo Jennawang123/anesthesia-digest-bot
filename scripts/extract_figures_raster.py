@@ -28,6 +28,12 @@ MIN_RASTER = 20
 # 「Figure」後面接的是 s 而非空白或數字，天然不會命中。
 CAPTION_RE = re.compile(r"^Figure\s*(\d+)\.(\d+)")
 
+# 一個圖說涵蓋連號多張、橫跨連續多頁的圖譜（實測只有 Ch8 的
+# 「Figures 8.12–8.17 The 28 views included in a comprehensive TEE exam」，
+# 28 個 view 排成表格橫跨 6 頁）。這種圖說是複數形加範圍，CAPTION_RE
+# 不會命中，要另外處理成「一頁一張」。
+RANGE_CAPTION_RE = re.compile(r"^Figures\s*(\d+)\.(\d+)\s*[–—-]\s*(\d+)\.(\d+)")
+
 # 配對時要求的最小重疊比例
 MIN_OVERLAP = 0.3
 # 圖與圖說的垂直間隙上限（頁高的比例）。超過就不是同一張圖，
@@ -78,6 +84,54 @@ def find_captions(blocks):
             "text": b["text"],
         })
     return out
+
+
+def find_range_captions(blocks):
+    """找出「Figures 8.12–8.17」這種涵蓋連號多張的圖說。
+
+    只接受同章的連號範圍（8.12–8.17），跨章的寫法必定是內文引用而非圖說。
+    """
+    out = []
+    for b in blocks:
+        m = RANGE_CAPTION_RE.match(b["text"])
+        if not m or b["is_body"]:
+            continue
+        ch, first, ch2, last = (int(g) for g in m.groups())
+        if ch != ch2 or last <= first:
+            continue
+        out.append({
+            "chapter": ch,
+            "first": first,
+            "last": last,
+            "rect": b["rect"],
+            "text": b["text"],
+        })
+    return out
+
+
+def atlas_crop(page_rect, blocks, rasters, skip_rect=None):
+    """圖譜頁的裁切範圍：非內文元素的聯集。
+
+    這種頁面整頁就是圖，沒有單張圖框可依循（實測 idx107 全頁只有 1 個
+    raster）。取「非內文字體的 text block」與 raster 的聯集，藉此排除頁眉、
+    圖說本身、以及混在頁尾的章節內文（idx107 的表格下方就接著內文）。
+    """
+    box = None
+    for b in blocks:
+        r = b["rect"]
+        if r.y0 < HEAD_Y or b["is_body"]:
+            continue
+        if skip_rect is not None and r.intersects(skip_rect) and r.y0 >= skip_rect.y0:
+            continue
+        box = r if box is None else box | r
+    for r in rasters:
+        box = r if box is None else box | r
+    if box is None:
+        return None
+    return fitz.Rect(max(page_rect.x0, box.x0 - PAD),
+                     max(HEAD_Y, box.y0 - PAD),
+                     min(page_rect.x1, box.x1 + PAD),
+                     min(page_rect.y1, box.y1 + PAD))
 
 
 def _overlap(a0, a1, b0, b1):
@@ -204,6 +258,51 @@ def column_of(page_rect, cap_rect):
     return "left" if cap_rect.x1 < mid + 20 else "right"
 
 
+def _atlas_entries(doc, rc, pnos, blocks_by_page, rasters_by_page, out_dir, dpi):
+    """把一個範圍圖說展開成「一頁一張」的 manifest 項目。
+
+    共用圖說在圖譜的每一頁底部都重複印一次，所以頁數就是張數：依頁序
+    給連號的圖號（實測 Figures 8.12–8.17 出現在 idx105–110 六頁，
+    每頁是 28-view 表格的一段，第一頁給 8.12、第六頁給 8.17）。
+    """
+    out = []
+    expected = rc["last"] - rc["first"] + 1
+    for i, p in enumerate(pnos):
+        num = rc["first"] + i
+        page_rect = doc[p].rect
+        box = atlas_crop(page_rect, blocks_by_page[p], rasters_by_page[p],
+                         skip_rect=rc["rect"])
+        fig_id = f"{rc['chapter']}.{num}"
+        entry = {
+            "fig_id": fig_id,
+            "nasr_chapter": rc["chapter"],
+            "pdf_page": p,
+            "book_page": book_page(blocks_by_page[p]),
+            "caption": f"{rc['text']}（第 {i + 1}/{len(pnos)} 頁）",
+            "png": None,
+            "bbox": None,
+            "panels": len(rasters_by_page[p]),
+            "column": "span",
+            "suspect": ["atlas_page"] + (
+                [] if len(pnos) == expected else ["atlas_page_count_mismatch"]),
+            "include": True,
+            "target_page_id": None,
+            "target_section": None,
+            "uploaded_block_id": None,
+        }
+        if box is None or box.height < MIN_PLAUSIBLE_HEIGHT:
+            entry["suspect"].append("crop_failed")
+            entry["include"] = False
+            out.append(entry)
+            continue
+        name = f"fig-{fig_id.replace('.', '-')}_p{p}.png"
+        doc[p].get_pixmap(clip=box, dpi=dpi).save(out_dir / name)
+        entry["png"] = name
+        entry["bbox"] = [round(v, 1) for v in (box.x0, box.y0, box.x1, box.y1)]
+        out.append(entry)
+    return out
+
+
 def extract(pdf_path, out_dir, dpi, chapters=None):
     doc = fitz.open(pdf_path)
     out_dir = Path(out_dir)
@@ -217,6 +316,20 @@ def extract(pdf_path, out_dir, dpi, chapters=None):
     rasters_by_page = [usable_rasters(doc[i]) for i in range(doc.page_count)]
 
     manifest = []
+
+    # 範圍圖說在圖譜的每一頁都重複出現，要先全書蒐集再依 (章, 起, 迄)
+    # 分組，否則每頁都會各自展開一整組，張數會變成頁數的平方倍。
+    groups = {}
+    for pno in range(doc.page_count):
+        for rc in find_range_captions(blocks_by_page[pno]):
+            if chapters and rc["chapter"] not in chapters:
+                continue
+            groups.setdefault((rc["chapter"], rc["first"], rc["last"]),
+                              (rc, []))[1].append(pno)
+    for rc, pnos in groups.values():
+        manifest += _atlas_entries(doc, rc, sorted(pnos), blocks_by_page,
+                                   rasters_by_page, out_dir, dpi)
+
     for pno in range(doc.page_count):
         caps = find_captions(blocks_by_page[pno])
         if chapters:
