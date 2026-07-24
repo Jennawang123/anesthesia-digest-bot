@@ -500,11 +500,23 @@ PAGE_NUM_RE = re.compile(r"^\d{1,3}$")
 在 `assign_rasters` 之後加入：
 
 ```python
-def crop_rect(rects, page_rect):
-    """多個 rect 取聯集，四周加留白，並夾在頁面範圍內。"""
+def crop_rect(rects, page_rect, cap_rect=None):
+    """多個 rect 取聯集，四周加留白，並夾在頁面範圍內。
+
+    圖上的標示文字（「Upper Esophageal (UE)」這類）是疊在圖上的 text
+    block，不屬於任何 raster，單看圖框會把它們切掉（實測 Fig 8.10 右側
+    四個標示框全被切掉）。這本書的圖說是按圖塊寬度排版的，所以圖說在圖
+    正下方時，可以用圖說的跨距補足裁切寬度。
+
+    圖說在旁欄時不適用——那時圖說位於另一欄，用它的跨距會把整欄內文裁
+    進來，所以只在「圖說確實在聯集下方」時才擴張。
+    """
     box = rects[0]
     for r in rects[1:]:
         box = box | r
+    if cap_rect is not None and cap_rect.y0 >= box.y1 - 2:
+        box = fitz.Rect(min(box.x0, cap_rect.x0), box.y0,
+                        max(box.x1, cap_rect.x1), box.y1)
     return fitz.Rect(max(page_rect.x0, box.x0 - PAD),
                      max(page_rect.y0, box.y0 - PAD),
                      min(page_rect.x1, box.x1 + PAD),
@@ -644,7 +656,7 @@ def extract(pdf_path, out_dir, dpi, chapters=None):
             }
 
             if rects:
-                box = crop_rect(rects, page_rect)
+                box = crop_rect(rects, page_rect, c["rect"])
                 if box.width > OVERSIZE * page_rect.width or \
                         box.height > OVERSIZE * page_rect.height:
                     suspect.append("oversized_union")

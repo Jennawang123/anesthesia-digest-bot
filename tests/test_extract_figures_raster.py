@@ -194,3 +194,17 @@ def test_單圖章節借用鄰章位移():
     ]
     fill_book_pages(figs)
     assert [f["book_page"] for f in figs] == [10, 37, 42]
+
+
+def test_圖說在下方時用圖說跨距補足裁切寬度():
+    # idx103 實測：Fig 8.10 的三個 raster 只到 x=353，但圖上的標示文字
+    # 延伸到 x=425，圖說跨距 54-442 才是真正的圖塊寬度。
+    got = crop_rect([fitz.Rect(215, 423, 353, 606), fitz.Rect(60, 415, 205, 512)],
+                    PAGE, fitz.Rect(54, 617, 442, 658))
+    assert got == fitz.Rect(48, 409, 448, 612)
+
+
+def test_圖說在旁欄時不擴張裁切寬度():
+    # idx26 實測：圖在左欄、圖說在右欄同高。用圖說跨距會把整欄內文裁進來。
+    got = crop_rect([fitz.Rect(54, 73, 295, 230)], PAGE, fitz.Rect(307, 69, 445, 101))
+    assert got == fitz.Rect(48, 67, 301, 236)

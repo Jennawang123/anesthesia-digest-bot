@@ -99,6 +99,7 @@ manifest.json ──▶ ③ upload_figures.py ──▶ Notion（上傳 + 插入
   - **圖下方**：raster 在 caption 上方，水平重疊 >30% caption 寬，取垂直距離最近者
   - **旁欄同高**：raster 與 caption 垂直重疊 >30%，水平不重疊且位於相鄰欄
 - 同一 caption 配到多個 rect 取聯集（multi-panel 圖）。聯集後寬或高超過版心 1.2 倍標 `oversized_union`。
+- 圖說在聯集正下方時，裁切寬度再取 raster 聯集與圖說跨距的聯集。圖上的標示文字是疊在圖上的 text block、不屬於任何 raster，只看圖框會被切掉（實測 Fig 8.10 右側四個標示框全被切掉）；這本書的圖說按圖塊寬度排版，可作為圖塊真實寬度的代理。圖說在旁欄時不適用，會把整欄內文裁進來。
 - caption 所在頁無可用 raster 時，退回幾何裁切（重用 `extract_figures.figure_rect()` 與 `detect_columns()`），標記 `geometric_fallback` 並設 `include: false`。實測 6 張，品質不可信，需逐張目視認可。
 - `page.get_pixmap(clip=rect, dpi=200)` 輸出 PNG，四周留 PAD 6pt。
 - Contact sheet 為單一 HTML，縮圖牆排列全部圖，標註 fig_id、PDF 頁碼、書本頁碼、caption、suspect 旗標。
