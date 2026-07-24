@@ -194,6 +194,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .day-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px;}
 .wchip{display:inline-flex;align-items:center;gap:2px;background:#D9E6EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:var(--blue2);}
 .schip{display:inline-flex;align-items:center;gap:2px;background:#EAF5EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:#1E7D32;}
+.cchip{display:inline-flex;align-items:center;gap:2px;background:#F5E7D6;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:#8A5A2B;}
 /* ── Acc sub-toggle ── */
 .acc-toggle{display:flex;background:var(--bg);border-radius:10px;padding:3px;gap:3px;margin-bottom:12px;}
 .acc-opt{flex:1;padding:8px 4px;text-align:center;border-radius:8px;cursor:pointer;font-size:15px;font-weight:600;color:var(--muted);transition:all .15s;}
@@ -370,7 +371,15 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdl"></div><div class="st">編輯天數標題</div>
     <input type="hidden" id="md-id">
     <div class="fg"><label class="lb">標題</label><input class="inp" id="md-lbl" placeholder="Day 1 · 抵達雪梨"></div>
-    <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-day')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveDayLbl()">儲存</button></div>
+    <div class="fg">
+      <label class="lb">本日城市（留空 = 沿用主要城市）</label>
+      <div class="fr" style="align-items:flex-end">
+        <div class="fg" style="margin-bottom:0"><input class="inp" id="md_city" placeholder="例如：Vik、Kyoto"></div>
+        <button type="button" class="btn btn-g" style="flex:0 0 auto;padding:11px 14px" onclick="geoLookup('md')">📍 查詢</button>
+      </div>
+      <p class="hint geo-res" id="md_geo_result" style="text-align:left;margin-top:6px"></p>
+    </div>
+    <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-day')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveDayM()">儲存</button></div>
   </div>
 </div>
 
@@ -615,13 +624,20 @@ async function geoLookup(prefix){
   pendingGeo={queriedFor:name,...geo};
   resultEl.textContent=`📍 已定位：${geo.label} (${geo.lat.toFixed(2)}, ${geo.lng.toFixed(2)})`;
 }
-async function fetchWeather(){
+// 行程期間相對於今天的 past/forecast 天數（Open-Meteo 上限：過去 92 天、未來 16 天）
+function wxRange(){
+  const tripStart=new Date(CFG.start||today());
+  const now=new Date(today());
+  const pastDays=Math.min(92,Math.max(0,Math.floor((now-tripStart)/86400000)));
+  const forecastDays=Math.min(16,Math.max(1,(CFG.days||7)-pastDays+1));
+  return{pastDays,forecastDays};
+}
+// 抓單一座標的每日天氣，回傳 Map<'YYYY-MM-DD',{temp,icon,desc}>；失敗回傳空 Map
+async function fetchWxMap(lat,lng){
+  const out=new Map();
   try{
-    const tripStart=new Date(CFG.start||today());
-    const now=new Date(today());
-    const pastDays=Math.min(92,Math.max(0,Math.floor((now-tripStart)/86400000)));
-    const forecastDays=Math.min(16,Math.max(1,(CFG.days||7)-pastDays+1));
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${CFG.lat||25.03}&longitude=${CFG.lng||121.56}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=${forecastDays}&past_days=${pastDays}`);
+    const{pastDays,forecastDays}=wxRange();
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=${forecastDays}&past_days=${pastDays}`);
     const d=await r.json();
     const times=d.hourly.time,temps=d.hourly.temperature_2m,codes=d.hourly.weathercode;
     // 每天收集所有小時資料，選最接近 12:00 的那筆
@@ -633,12 +649,39 @@ async function fetchWeather(){
       if(!prev||Math.abs(hr-12)<Math.abs(prev.hr-12))
         byDate.set(ds,{hr,temp:Math.round(temps[i]),code:codes[i]});
     });
-    weatherByDate=new Map();
     byDate.forEach((v,ds)=>{
       const{icon,desc}=weatherDesc(v.code);
-      weatherByDate.set(ds,{temp:v.temp,icon,desc});
+      out.set(ds,{temp:v.temp,icon,desc});
     });
-  }catch(e){weatherByDate=new Map();}
+  }catch(e){}
+  return out;
+}
+async function fetchWeather(){
+  weatherByDate=await fetchWxMap(CFG.lat||25.03,CFG.lng||121.56);
+}
+// 有設「本日城市」的日子，用該城市的座標覆蓋掉主要城市的天氣。
+// 只在城市設定真的變動時才重抓（Firebase 的 on('value') 連記一筆帳都會觸發）。
+let dayCityWxKey='';
+async function refreshDayCityWeather(sched){
+  const groups=new Map();
+  Object.values(sched||{}).forEach(day=>{
+    const c=day&&day.city;
+    if(!c||c.lat==null||c.lng==null||!day.date)return;
+    const k=Number(c.lat).toFixed(3)+','+Number(c.lng).toFixed(3);
+    if(!groups.has(k))groups.set(k,{lat:c.lat,lng:c.lng,dates:[]});
+    groups.get(k).dates.push(day.date);
+  });
+  const key=[...groups.entries()].map(([k,g])=>k+':'+[...g.dates].sort().join('|')).sort().join(';');
+  if(key===dayCityWxKey)return false;
+  const firstRun=dayCityWxKey==='';
+  dayCityWxKey=key;
+  if(firstRun&&!groups.size)return false; // 沒人用這功能，完全不多打 API
+  await fetchWeather(); // 重建主要城市的 baseline，這樣把某日城市清空也會正確還原
+  await Promise.all([...groups.values()].map(async g=>{
+    const m=await fetchWxMap(g.lat,g.lng);
+    g.dates.forEach(ds=>{const v=m.get(ds);if(v)weatherByDate.set(ds,v);});
+  }));
+  return true;
 }
 
 // ─── Setup ───────────────────────────────────────────
@@ -745,6 +788,7 @@ function _fbListen(){
     renderStat(lastExps);
     renderNotes(lastNotes);
     sync(false);
+    refreshDayCityWeather(sched).then(changed=>{if(changed)renderSched(lastSched);});
     ensureRatesForExpenses(lastExps).then(()=>{if(curTab==='exp'&&curAcc==='stat')renderStat(lastExps);});
   },err=>{sync(false);toast('⚠️ Firebase 錯誤：'+err.message);});
 }
@@ -1017,11 +1061,12 @@ function renderSched(sched){
       const ico='💴';
       return`<span class="schip">${ico} ${sym}${Math.round(tot).toLocaleString('zh-TW')} ${cur}</span>`;
     }).join('');
-    const metaRow=(wChip||sChips)?`<div class="day-meta">${wChip}${sChips}</div>`:'';
+    const cChip=day.city?`<span class="cchip">📍 ${esc(day.city.q||day.city.label||'')}</span>`:'';
+    const metaRow=(cChip||wChip||sChips)?`<div class="day-meta">${cChip}${wChip}${sChips}</div>`:'';
     return `<div class="day-card" id="dc-${did}">
       <div class="day-hdr" onclick="toggleDay('${did}')">
         <div class="day-info">
-          <div class="day-tit"><span class="day-num">Day ${dayN}</span><span class="day-date-badge">${fmtDayBadge(day.date)}</span><button class="day-eb" onclick="event.stopPropagation();openDayM('${did}','${esc(day.label||'')}')">✎</button></div>
+          <div class="day-tit"><span class="day-num">Day ${dayN}</span><span class="day-date-badge">${fmtDayBadge(day.date)}</span><button class="day-eb" onclick="event.stopPropagation();openDayM('${did}')">✎</button></div>
           ${(day.label&&!/^Day\s*\d+$/i.test(day.label.trim()))?`<div class="day-dt">${esc(day.label)}</div>`:''}
           ${metaRow}
         </div>
@@ -1061,8 +1106,28 @@ function renderSched(sched){
 }
 
 function toggleDay(did){document.getElementById('dc-'+did).classList.toggle('open');}
-function openDayM(did,lbl){document.getElementById('md-id').value=did;document.getElementById('md-lbl').value=lbl;openM('m-day');setTimeout(()=>document.getElementById('md-lbl').focus(),280);}
-function saveDayLbl(){const did=document.getElementById('md-id').value,lbl=document.getElementById('md-lbl').value.trim();if(!lbl){toast('請輸入標題');return;}DB.ref('/schedule/'+did+'/label').set(lbl).then(()=>{closeM('m-day');toast('✅ 已儲存');});}
+function openDayM(did){
+  const day=lastSched[did]||{};
+  document.getElementById('md-id').value=did;
+  document.getElementById('md-lbl').value=day.label||'';
+  document.getElementById('md_city').value=day.city?.q||'';
+  document.getElementById('md_geo_result').textContent=day.city?`📍 目前定位：${day.city.label} (${Number(day.city.lat).toFixed(2)}, ${Number(day.city.lng).toFixed(2)})`:'';
+  pendingGeo=null; // 別讓上一個表單查到的座標被誤用
+  openM('m-day');
+  setTimeout(()=>document.getElementById('md-lbl').focus(),280);
+}
+function saveDayM(){
+  const did=document.getElementById('md-id').value,lbl=document.getElementById('md-lbl').value.trim();
+  if(!lbl){toast('請輸入標題');return;}
+  const cityName=document.getElementById('md_city').value.trim();
+  const cur=(lastSched[did]||{}).city||null;
+  let city;
+  if(!cityName)city=null;                                   // 清空 → 回到沿用主要城市
+  else if(cur&&cur.q===cityName)city=cur;                   // 沒改動 → 沿用已存座標
+  else if(pendingGeo&&pendingGeo.queriedFor===cityName)city={q:cityName,label:pendingGeo.label,lat:pendingGeo.lat,lng:pendingGeo.lng};
+  else{toast('⚠️ 請先點「📍 查詢」確認城市座標');return;}
+  DB.ref('/schedule/'+did).update({label:lbl,city}).then(()=>{closeM('m-day');toast('✅ 已儲存');});
+}
 
 function openActM(did){
   document.getElementById('m-act-t').textContent='新增活動';
