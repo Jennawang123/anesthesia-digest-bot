@@ -725,7 +725,7 @@ print('預設納入', sum(1 for f in m if f['include']))
 print('geometric_fallback', [f['fig_id'] for f in m if 'geometric_fallback' in f['suspect']])
 print('缺書頁碼', [f['fig_id'] for f in m if not f['book_page']])
 print('Ch8 張數', sum(1 for f in m if f['nasr_chapter'] == 8))
-print('panel 分布', collections.Counter(f['panels'] for f in m if f['png']))
+print('panel 分布', collections.Counter(f['panels'] for f in m if f['include']))
 "
 ```
 
@@ -739,6 +739,9 @@ geometric_fallback ['7.2', '7.3', '11.2', '11.4', '11.5', '11.9']
 Ch8 張數 11
 panel 分布 Counter({1: 93, 2: 20, 3: 7, 4: 4, 5: 3, 6: 3, 7: 2, 8: 1})
 ```
+
+（panel 分布要以 `include` 篩選。6 張 `geometric_fallback` 沒有配對到 raster，
+`panels` 為 0，用 `png` 篩選會多出一個 `0: 6`。）
 
 若總筆數不是 139，停下來比對 spec 的「caption 的辨識」一節再排查，不要調參數硬湊。
 

@@ -164,6 +164,10 @@ def fill_book_pages(figs):
 
     pdf_page 與 book_page 的位移逐章漂移（實測 Ch1 +16 遞減到 Ch37 −3，
     因 Part 分隔頁而變動），不能全書套單一公式，但同一章內唯一且恆定。
+
+    只有一張圖、而且那張圖剛好落在沒有頁眉的頁面時，該章拿不出任何位移
+    基準（實測 Ch4 的 Fig 4.1）。這種情況退而求其次，借用章號最接近的
+    那一章的位移——位移是隨章號單調漂移的，鄰章的值誤差最小。
     """
     seen = {}
     for f in figs:
@@ -171,9 +175,14 @@ def fill_book_pages(figs):
             seen.setdefault(f["nasr_chapter"], []).append(
                 f["pdf_page"] - f["book_page"])
     offset = {ch: max(set(v), key=v.count) for ch, v in seen.items()}
+    if not offset:
+        return
     for f in figs:
-        if not f["book_page"] and f["nasr_chapter"] in offset:
-            f["book_page"] = f["pdf_page"] - offset[f["nasr_chapter"]]
+        if f["book_page"]:
+            continue
+        ch = f["nasr_chapter"]
+        near = min(offset, key=lambda k: (abs(k - ch), k))
+        f["book_page"] = f["pdf_page"] - offset.get(ch, offset[near])
 
 
 def column_of(page_rect, cap_rect):

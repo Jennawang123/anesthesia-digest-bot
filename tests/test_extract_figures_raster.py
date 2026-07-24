@@ -182,3 +182,15 @@ def test_以章內位移回填缺漏的書本頁碼():
     ]
     fill_book_pages(figs)
     assert [f["book_page"] for f in figs] == [86, 87, 87, 10]
+
+
+def test_單圖章節借用鄰章位移():
+    # 實測 Ch4 全章只有 Fig 4.1，且該頁無頁眉，章內拿不出位移基準。
+    # 借章號最接近的 Ch5（位移 15），idx52 → 書 p.37，與前後頁頁眉一致。
+    figs = [
+        {"fig_id": "2.1", "nasr_chapter": 2, "pdf_page": 26, "book_page": 10},
+        {"fig_id": "4.1", "nasr_chapter": 4, "pdf_page": 52, "book_page": None},
+        {"fig_id": "5.1", "nasr_chapter": 5, "pdf_page": 57, "book_page": 42},
+    ]
+    fill_book_pages(figs)
+    assert [f["book_page"] for f in figs] == [10, 37, 42]
