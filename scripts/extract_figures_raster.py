@@ -109,25 +109,31 @@ def find_range_captions(blocks):
     return out
 
 
-def atlas_crop(page_rect, blocks, rasters, skip_rect=None):
-    """圖譜頁的裁切範圍：非內文元素的聯集。
+def atlas_crop(page_rect, blocks, rasters, cap_rect=None):
+    """圖譜頁的裁切範圍：非內文元素的聯集，以該頁的圖說為下界。
 
     這種頁面整頁就是圖，沒有單張圖框可依循（實測 idx107 全頁只有 1 個
-    raster）。取「非內文字體的 text block」與 raster 的聯集，藉此排除頁眉、
-    圖說本身、以及混在頁尾的章節內文（idx107 的表格下方就接著內文）。
+    raster）。取「非內文字體的 text block」與 raster 的聯集，藉此排除頁眉
+    與混在頁尾的章節內文（idx107 的表格下方就接著內文）。
+
+    但只靠「非內文」不夠：圖說下方若接著別的表格，表格文字同樣不是內文
+    字體，會被聯集進來（實測 idx110 把整張 Table 8.1 Segmental anatomy
+    吃了進去）。圖說就是圖的結束位置，所以一律以圖說上緣為下界。
     """
+    limit = cap_rect.y0 if cap_rect is not None else page_rect.y1
     box = None
     for b in blocks:
         r = b["rect"]
-        if r.y0 < HEAD_Y or b["is_body"]:
-            continue
-        if skip_rect is not None and r.intersects(skip_rect) and r.y0 >= skip_rect.y0:
+        if r.y0 < HEAD_Y or b["is_body"] or r.y0 >= limit:
             continue
         box = r if box is None else box | r
     for r in rasters:
+        if r.y0 >= limit:
+            continue
         box = r if box is None else box | r
     if box is None:
         return None
+    box = fitz.Rect(box.x0, box.y0, box.x1, min(box.y1, limit))
     return fitz.Rect(max(page_rect.x0, box.x0 - PAD),
                      max(HEAD_Y, box.y0 - PAD),
                      min(page_rect.x1, box.x1 + PAD),
@@ -270,8 +276,11 @@ def _atlas_entries(doc, rc, pnos, blocks_by_page, rasters_by_page, out_dir, dpi)
     for i, p in enumerate(pnos):
         num = rc["first"] + i
         page_rect = doc[p].rect
+        # 圖說在圖譜的每一頁都重複印一次，各頁的位置不同（idx110 的
+        # 在頁面中段，下方還接著 Table 8.1），要用該頁自己那份當下界。
+        here = find_range_captions(blocks_by_page[p])
         box = atlas_crop(page_rect, blocks_by_page[p], rasters_by_page[p],
-                         skip_rect=rc["rect"])
+                         cap_rect=here[0]["rect"] if here else None)
         fig_id = f"{rc['chapter']}.{num}"
         entry = {
             "fig_id": fig_id,

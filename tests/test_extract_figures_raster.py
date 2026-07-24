@@ -244,3 +244,19 @@ def test_圖譜頁裁切排除頁眉與內文():
     ]
     got = atlas_crop(PAGE, blocks, [fitz.Rect(100, 110, 300, 400)])
     assert got == fitz.Rect(62, 60, 443, 406)
+
+
+def test_圖譜頁以圖說為下界不吃下方的表格():
+    # idx110 實測：圖說在頁面中段，下方接著 Table 8.1。表格文字同樣不是
+    # 內文字體，不設下界就會被聯集進來。
+    blocks = [
+        block("26. UE PA", (69, 85, 102, 93)),
+        block("Figures 8.12–8.17 (Continued)", (54, 500, 240, 515)),
+        block("Table 8.1 Segmental anatomy.", (54, 560, 300, 575)),
+        block("Atria RA rightward LA leftward", (54, 600, 400, 640)),
+    ]
+    got = atlas_crop(PAGE, blocks, [fitz.Rect(100, 110, 300, 400)],
+                     cap_rect=fitz.Rect(54, 500, 240, 515))
+    # 下界是上限而非強制值：內容到 y=400 就結束，加留白後 406
+    assert got == fitz.Rect(63, 79, 306, 406)
+    assert got.y1 < 560, "Table 8.1 起始於 y=560，不可被裁進來"
