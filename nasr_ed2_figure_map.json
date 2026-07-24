@@ -1,0 +1,54 @@
+{
+  "description": "Nasr ed2 章號 → 小兒心臟學讀書會 Notion 頁對照表。供 map_nasr_figures.py 查表填 target_page_id。split=true 的章需逐圖分派，由 set_nasr_sections.py 指定。",
+  "source_pdf": "~/Desktop/pediatric cardiac handbook TEE.pdf",
+  "spec": "docs/superpowers/specs/2026-07-24-nasr-figure-extraction-design.md",
+  "chapters": {
+    "1": {"title": "Cardiovascular Development", "figures": 1, "notion_title": "正常心臟解剖", "notion_page_id": "3a1e77f4-b1f0-81d1-bcab-c92324b4098a"},
+    "2": {"title": "Important Concepts in CHD", "figures": 6, "notion_title": "4 types of lesion", "notion_page_id": "3a1e77f4-b1f0-813d-9432-dc883d83a125", "user_edited": true},
+    "4": {"title": "Intraoperative Management", "figures": 1, "notion_title": "術中管理", "notion_page_id": "3a2e77f4-b1f0-810b-aa94-f7ed16a667c9"},
+    "5": {"title": "Developmental Hemostasis and PBM", "figures": 3, "notion_title": "Developmental Hemostasis 與 PBM", "notion_page_id": "3a4e77f4-b1f0-81e6-952c-f3e263f5dfb2"},
+    "6": {"title": "Interpretation of Cardiac Catheterization Data", "figures": 5, "notion_title": "心導管數據判讀", "notion_page_id": "3a2e77f4-b1f0-8120-9461-f9fba4666931"},
+    "7": {"title": "Management of Cardiopulmonary Bypass", "figures": 9, "notion_title": "體外循環", "notion_page_id": "3a2e77f4-b1f0-81bc-a7ce-f41fdec3abcf"},
+    "8": {"title": "Echocardiography", "figures": 11, "notion_title": "Echocardiography（TEE 完整切面與 segmental 判讀）", "notion_page_id": "3a4e77f4-b1f0-8137-8413-d0fcd88b23f6"},
+    "9": {"title": "Risk Scoring Systems", "figures": 1, "notion_title": "Risk Scoring Systems", "notion_page_id": "3a4e77f4-b1f0-8172-be57-f184937d24d3"},
+    "10": {"title": "Mechanical Circulatory Support", "figures": 10, "notion_title": "機械輔助裝置（ECMO/VAD）", "notion_page_id": "3a2e77f4-b1f0-81ab-ad38-dac1a21a9d8d"},
+    "11": {"title": "Postoperative Cardiac Intensive Care Unit Care", "figures": 9, "notion_title": "Postoperative CICU Care", "notion_page_id": "3a4e77f4-b1f0-81e1-b6cd-ce08ac9c7721"},
+    "12": {"title": "Patent Ductus Arteriosus", "figures": 1, "notion_title": "PDA", "notion_page_id": "3a1e77f4-b1f0-817a-9aea-e8105c704aab"},
+    "13": {"title": "Aortopulmonary Window", "figures": 1, "notion_title": "Ch12 AP Window", "notion_page_id": "3a2e77f4-b1f0-81e0-be2d-e0a5a040fd3c"},
+    "14": {"title": "Coarctation of the Aorta", "figures": 4, "notion_title": "CoA", "notion_page_id": "3a1e77f4-b1f0-818f-b6d1-eef636346de0"},
+    "15": {"title": "Atrial Septal Defect", "figures": 4, "notion_title": "ASD", "notion_page_id": "3a1e77f4-b1f0-81a6-bded-f7e00e25be07"},
+    "16": {"title": "Ventricular Septal Defect", "figures": 2, "notion_title": "VSD", "notion_page_id": "3a1e77f4-b1f0-8123-9ff5-f3933527d0a4"},
+    "17": {"title": "Atrioventricular Canal Defects", "figures": 4, "notion_title": "AVSD", "notion_page_id": "3a1e77f4-b1f0-813a-be7d-deeb67c9da57"},
+    "18": {"title": "Double Outlet Right Ventricle", "figures": 4, "notion_title": "Ch10 DORV", "notion_page_id": "3a2e77f4-b1f0-8180-99d4-c4c97d7174e8", "user_edited": true},
+    "19": {"title": "Truncus Arteriosus", "figures": 3, "notion_title": "Ch9 Truncus Arteriosus", "notion_page_id": "3a1e77f4-b1f0-814e-9174-d7b5c83e3f4d"},
+    "20": {"title": "Total Anomalous Pulmonary Venous Return", "figures": 2, "notion_title": "Ch5 TAPVR", "notion_page_id": "3a1e77f4-b1f0-8106-9bf9-fb4c53591116"},
+    "21": {"title": "Left Ventricular Outflow Tract Obstruction", "figures": 2, "notion_title": "AS", "notion_page_id": "3a1e77f4-b1f0-819a-94b1-e24d5843ac59"},
+    "22": {"title": "Mitral Valve", "figures": 2, "notion_title": "Ch13 Mitral Valve Disease", "notion_page_id": "3a2e77f4-b1f0-81b4-908a-c28b8446c577"},
+    "23": {"title": "Pulmonary Atresia/Intact Ventricular Septum", "figures": 2, "notion_title": "PA-IVS", "notion_page_id": "3a1e77f4-b1f0-81ae-b9ca-f4a556ce9acc"},
+    "24": {"title": "Tetralogy of Fallot", "figures": 4, "notion_title": "TOF（典型）", "notion_page_id": "3a1e77f4-b1f0-813b-9c0d-d47118f84f2a"},
+    "25": {"title": "Tetralogy of Fallot with Pulmonary Atresia", "figures": 1, "notion_title": "TOF+PA", "notion_page_id": "3a1e77f4-b1f0-8182-95f6-cd7f157d9121"},
+    "26": {"title": "Tetralogy of Fallot with Absent Pulmonary Valve", "figures": 1, "notion_title": "TOF+AbsentPV", "notion_page_id": "3a1e77f4-b1f0-81f0-8c78-f4344af60ede"},
+    "27": {"title": "Transposition of the Great Arteries", "figures": 7, "split": true, "options": [
+      {"notion_title": "D-TGA", "notion_page_id": "3a1e77f4-b1f0-8199-8de5-ceaab9cbdcb6"},
+      {"notion_title": "L-TGA", "notion_page_id": "3a1e77f4-b1f0-8119-83b1-d050c09cd9d4"}]},
+    "28": {"title": "Single-ventricle Lesions", "figures": 9, "notion_title": "Ch18 Single-Ventricle Lesions 統整框架", "notion_page_id": "3a2e77f4-b1f0-81db-9617-da0fa9331937"},
+    "29": {"title": "Hypoplastic Left Heart Syndrome", "figures": 2, "notion_title": "HLHS 解剖生理手術路徑", "notion_page_id": "3a1e77f4-b1f0-8183-a5e0-c7b24a4598b0", "user_edited": true},
+    "30": {"title": "Interrupted Aortic Arch", "figures": 5, "notion_title": "IAA", "notion_page_id": "3a1e77f4-b1f0-81fe-bd7c-de2ed0e8752f"},
+    "31": {"title": "Vascular Rings", "figures": 6, "notion_title": "Ch14 Vascular Rings", "notion_page_id": "3a2e77f4-b1f0-8168-a60b-cf115b99d028"},
+    "32": {"title": "Tricuspid Atresia", "figures": 3, "notion_title": "Tricuspid Atresia", "notion_page_id": "3a1e77f4-b1f0-819a-b927-cca2b6e179d9"},
+    "33": {"title": "Heart Transplantation", "figures": 3, "notion_title": "Ch16 Heart Transplantation", "notion_page_id": "3a2e77f4-b1f0-8120-8561-ee025c67e349"},
+    "35": {"title": "ALCAPA and AAOCA", "figures": 5, "split": true, "options": [
+      {"notion_title": "ALCAPA (Bland-White-Garland Syndrome)", "notion_page_id": "3a2e77f4-b1f0-81dd-a717-fe812b1b51b5"},
+      {"notion_title": "AAOCA", "notion_page_id": "3a4e77f4-b1f0-8178-8929-f86b05412845"}]},
+    "36": {"title": "Heterotaxy", "figures": 3, "notion_title": "Ch15 Heterotaxy", "notion_page_id": "3a2e77f4-b1f0-8119-9ca8-f6ae27030695"},
+    "37": {"title": "Ebstein Anomaly", "figures": 3, "notion_title": "Ebstein Anomaly 詳細筆記", "notion_page_id": "3a1e77f4-b1f0-8148-afc4-c64ef74032d9"}
+  },
+  "no_figures": {
+    "3": "Preoperative Evaluation — 書中無 Figure",
+    "34": "Heart-Lung and Lung Transplantation — 書中無 Figure"
+  },
+  "known_gaps": {
+    "6.2": "文字層無 caption block，抽不到，需人工處理",
+    "6.3": "文字層無 caption block，抽不到，需人工處理"
+  }
+}
