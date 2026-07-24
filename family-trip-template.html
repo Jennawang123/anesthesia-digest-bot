@@ -17,7 +17,7 @@
   --blue:#D08A4F;--blue2:#B06B35;--cyan:#E8B98C;
   --orange:#C4956A;--green:#8BA888;--red:#B47B7B;--purple:#9B8BAB;
   --bg:#F5F0EB;--card:#FDFAF7;--text:#3D3530;--muted:#9A8F89;--border:#E4DDD7;
-  --tab-h:60px;--safe-b:env(safe-area-inset-bottom,0px);
+  --tab-h:68px;--safe-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
@@ -28,6 +28,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 #setup p{font-size:16px;color:rgba(255,255,255,.8);margin-bottom:26px;text-align:center;}
 .scard{background:#fff;border-radius:20px;padding:22px;width:100%;max-width:420px;}
 .hint{font-size:13px;color:#aaa;margin-top:10px;text-align:center;line-height:1.6;}
+/* 需要 #setup p 以上的 specificity 才蓋得掉上一行的白字 */
+#setup p.geo-res,.geo-res{font-size:16px;font-weight:600;color:var(--text);line-height:1.5;}
+.geo-res:empty{display:none;}
 
 /* App */
 #app{display:none;flex-direction:column;height:100dvh;}
@@ -43,7 +46,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--tab-h) + var(--safe-b) + 8px);}
 .tabbar{position:fixed;bottom:0;left:0;right:0;height:calc(var(--tab-h) + var(--safe-b));padding-bottom:var(--safe-b);background:#fff;border-top:1px solid var(--border);display:flex;z-index:100;}
 .ti{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--muted);user-select:none;transition:color .15s;}
-.ti.on{color:var(--blue);}.ti-i{font-size:22px;line-height:1;}.ti-l{font-size:12px;font-weight:600;}
+.ti.on{color:var(--blue);}.ti-i{font-size:26px;line-height:1;}.ti-l{font-size:15px;font-weight:700;}
 .page{display:none;}.page.on{display:block;}
 .fab{position:fixed;bottom:calc(var(--tab-h) + var(--safe-b) + 14px);right:16px;width:54px;height:54px;border-radius:50%;border:none;cursor:pointer;background:var(--blue);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,119,182,.4);z-index:99;transition:transform .12s,background .2s;}
 .fab:active{transform:scale(.9);}
@@ -87,7 +90,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .day-info{flex:1;min-width:0;}
 .day-tit{font-weight:700;font-size:17px;display:flex;align-items:center;gap:6px;}
 .day-eb{font-size:14px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:5px;}
-.day-dt{font-size:14px;color:var(--muted);margin-top:2px;}
+.day-dt{font-size:16px;color:var(--muted);margin-top:3px;}
 .day-chev{color:var(--muted);font-size:20px;transition:transform .2s;flex-shrink:0;}
 .day-card.open .day-chev{transform:rotate(90deg);}
 .day-body{display:none;border-top:1px solid var(--border);}
@@ -101,11 +104,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .act-row.dragging{opacity:.3;cursor:grabbing;}
 .act-ico{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;margin-top:1px;}
 .act-body{flex:1;min-width:0;}
-.act-time{font-size:14px;color:var(--muted);font-weight:600;}
+.act-time{font-size:16px;color:var(--muted);font-weight:700;}
 .act-name{font-size:17px;font-weight:600;margin-top:1px;}
 .act-loc a{font-size:14px;color:var(--blue);margin-top:2px;display:flex;align-items:center;gap:3px;text-decoration:none;}
 .act-note-t{font-size:14px;color:var(--muted);margin-top:2px;font-style:italic;}
-.act-cost{font-size:14px;font-weight:700;color:var(--green);margin-top:3px;}
+.act-cost{font-size:17px;font-weight:700;color:var(--green);margin-top:4px;}
 .act-btns{display:flex;gap:4px;flex-shrink:0;}
 .day-add{display:flex;align-items:center;gap:8px;padding:12px 16px;color:var(--blue);font-size:16px;font-weight:600;cursor:pointer;}
 
@@ -120,33 +123,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 /* Pie chart */
 .pie-card{background:var(--card);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
 .pie-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.pie-title{font-size:16px;font-weight:700;}
+.pie-title{font-size:19px;font-weight:700;}
 .pie-tabs{display:flex;gap:6px;}
-.pie-tab{padding:4px 12px;border-radius:20px;font-size:14px;font-weight:700;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);}
+.pie-tab{padding:5px 13px;border-radius:20px;font-size:16px;font-weight:700;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);}
 .pie-tab.on{background:var(--blue);color:#fff;border-color:var(--blue);}
 .pie-tab.twd.on{background:var(--purple);border-color:var(--purple);}
 .pie-body{display:flex;align-items:center;gap:12px;}
 .pie-legend{flex:1;min-width:0;}
-.pie-leg-row{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:15px;}
-.pie-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
-.pie-cat{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.pie-amt{font-size:14px;font-weight:700;text-align:right;white-space:nowrap;}
-.pie-pct{font-size:13px;color:var(--muted);width:32px;text-align:right;flex-shrink:0;}
-.pie-rate{font-size:13px;color:var(--muted);text-align:center;margin-top:8px;}
+.pie-leg-row{display:flex;align-items:center;gap:7px;padding:5px 0;font-size:18px;}
+.pie-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+.pie-cat{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
+.pie-amt{font-size:18px;font-weight:700;text-align:right;white-space:nowrap;}
+.pie-pct{font-size:16px;color:var(--muted);width:42px;text-align:right;flex-shrink:0;}
+.pie-rate{font-size:15px;color:var(--muted);text-align:center;margin-top:8px;}
 .member-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
 .member-card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
-.member-name{font-size:14px;font-weight:700;color:var(--muted);margin-bottom:8px;}
+.member-name{font-size:17px;font-weight:700;color:var(--muted);margin-bottom:8px;}
 
 /* Expense list */
-.edl{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:2px 4px;margin-top:8px;margin-bottom:4px;}
+.edl{font-size:16px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:2px 4px;margin-top:8px;margin-bottom:4px;}
 .er{background:var(--card);border-radius:10px;padding:11px 13px;margin-bottom:7px;display:flex;align-items:center;gap:11px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
 .ei{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
 .einfo{flex:1;min-width:0;}
 .edesc{font-weight:600;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.emeta{font-size:14px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+.emeta{font-size:16px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
 .eright{text-align:right;flex-shrink:0;}
-.eamt{font-size:19px;font-weight:700;}
-.bdg{display:inline-block;padding:2px 7px;border-radius:6px;font-size:13px;font-weight:700;}
+.eamt{font-size:23px;font-weight:800;}
+.bdg{display:inline-block;padding:3px 8px;border-radius:6px;font-size:15px;font-weight:700;}
 .bpayer{background:#DBEAFE;color:#1D4ED8;}
 .bcur{background:#E0F2FE;color:#0369A1;}.bact{background:#D1FAE5;color:#065F46;}
 
@@ -168,14 +171,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .nt2{font-size:18px;font-weight:700;flex:1;}
 .na{display:flex;gap:5px;flex-shrink:0;}
 .np{font-size:16px;color:var(--muted);margin-top:6px;line-height:1.5;}
-.nd{font-size:13px;color:var(--muted);margin-top:8px;}
+.nd{font-size:16px;color:var(--muted);margin-top:8px;}
 .nimg{width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:9px;}
 .clr{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;}
 .clc{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .18s;}
 .clc.done{background:var(--green);border-color:var(--green);color:#fff;}
 .clc.done::after{content:'✓';font-size:13px;font-weight:700;}
 .clt{font-size:16px;}.clt.done{text-decoration:line-through;color:var(--muted);}
-.clp{font-size:14px;color:var(--muted);margin-top:3px;}
+.clp{font-size:16px;color:var(--muted);margin-top:3px;}
 .cer{display:flex;align-items:center;gap:8px;padding:3px 0;}
 .cer input{flex:1;border:none;border-bottom:1.5px solid var(--border);padding:6px 0;font-size:17px;outline:none;font-family:inherit;}
 .cer input:focus{border-color:var(--blue);}
@@ -186,11 +189,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .slbl{font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:0 4px;margin-bottom:7px;margin-top:4px;}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;}
 #drag-ghost{position:fixed;z-index:999;background:white;border-radius:10px;padding:10px 16px;box-shadow:0 8px 24px rgba(0,0,0,.3);font-weight:600;font-size:16px;pointer-events:none;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:rotate(-2deg);display:flex;align-items:center;gap:8px;}
-.day-num{font-family:'Noto Serif TC',serif;font-size:17px;font-weight:700;color:#1A3A78;letter-spacing:.2px;}
-.day-date-badge{font-size:12px;font-weight:600;color:#6B8FC4;background:#EBF2FC;border-radius:5px;padding:2px 7px;margin-left:2px;}
+.day-num{font-family:'Noto Serif TC',serif;font-size:19px;font-weight:700;color:#1A3A78;letter-spacing:.2px;}
+.day-date-badge{font-size:15px;font-weight:700;color:#4A72AE;background:#EBF2FC;border-radius:5px;padding:3px 8px;margin-left:2px;}
 .day-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px;}
-.wchip{display:inline-flex;align-items:center;gap:2px;background:#D9E6EA;border-radius:20px;padding:2px 8px;font-size:12px;font-weight:600;color:var(--blue2);}
-.schip{display:inline-flex;align-items:center;gap:2px;background:#EAF5EA;border-radius:20px;padding:2px 8px;font-size:12px;font-weight:600;color:#1E7D32;}
+.wchip{display:inline-flex;align-items:center;gap:2px;background:#D9E6EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:var(--blue2);}
+.schip{display:inline-flex;align-items:center;gap:2px;background:#EAF5EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:#1E7D32;}
 /* ── Acc sub-toggle ── */
 .acc-toggle{display:flex;background:var(--bg);border-radius:10px;padding:3px;gap:3px;margin-bottom:12px;}
 .acc-opt{flex:1;padding:8px 4px;text-align:center;border-radius:8px;cursor:pointer;font-size:15px;font-weight:600;color:var(--muted);transition:all .15s;}
@@ -206,7 +209,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .note-card{margin-bottom:10px;}
 .note-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
 .note-title{font-size:17px;font-weight:700;color:var(--text);}
-.note-preview{font-size:15px;color:var(--muted);line-height:1.5;margin-bottom:6px;}
+.note-preview{font-size:17px;color:var(--muted);line-height:1.55;margin-bottom:6px;}
 .note-thumbs{display:flex;gap:6px;flex-wrap:wrap;}
 /* ── Todo items ── */
 .todo-items{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
@@ -251,7 +254,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
         <div class="fg" style="margin-bottom:0"><input class="inp" id="s_city" placeholder="例如：京都、Rome、Paris"></div>
         <button type="button" class="btn btn-g" style="flex:0 0 auto;padding:11px 14px" onclick="geoLookup('s')">📍 查詢</button>
       </div>
-      <p class="hint" id="s_geo_result" style="text-align:left;margin-top:6px"></p>
+      <p class="hint geo-res" id="s_geo_result" style="text-align:left;margin-top:6px"></p>
     </div>
     <div class="fg"><label class="lb">Gemini API Key</label><input class="inp" id="s_gemini" type="password" placeholder="AIza…"></div>
     <button class="btn btn-b btn-w" onclick="doSetup()">開始使用 →</button>
@@ -322,7 +325,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
               <div class="fg" style="margin-bottom:0"><input class="inp" id="c_city" placeholder="例如：京都、Rome、Paris"></div>
               <button type="button" class="btn btn-g" style="flex:0 0 auto;padding:11px 14px" onclick="geoLookup('c')">📍 查詢</button>
             </div>
-            <p class="hint" id="c_geo_result" style="text-align:left;margin-top:6px"></p>
+            <p class="hint geo-res" id="c_geo_result" style="text-align:left;margin-top:6px"></p>
           </div>
           <div class="fg"><label class="lb">Gemini API Key</label><input class="inp" id="c_gemini" type="password" placeholder="AIza…"></div>
           <button class="btn btn-b btn-w" onclick="saveCfg()">儲存設定</button>
@@ -608,7 +611,7 @@ async function geoLookup(prefix){
   if(!name){resultEl.textContent='';pendingGeo=null;return;}
   resultEl.textContent='🔍 定位中…';
   const geo=await geocodeCity(name);
-  if(!geo){resultEl.textContent='⚠️ 找不到這個地點，請確認拼寫或換個名稱';pendingGeo=null;return;}
+  if(!geo){resultEl.textContent='⚠️ 找不到這個地點，請改用英文名稱（例：Iceland、Kyoto）';pendingGeo=null;return;}
   pendingGeo={queriedFor:name,...geo};
   resultEl.textContent=`📍 已定位：${geo.label} (${geo.lat.toFixed(2)}, ${geo.lng.toFixed(2)})`;
 }
@@ -1262,7 +1265,7 @@ function switchPie(cur){curPieCur=cur;renderPie(lastExps);}
 
 function renderStat(exps){
   renderPie(exps);
-  const fmtTotals=m=>[...m.entries()].map(([cur,tot])=>`<div style="font-size:20px;font-weight:800">${curSym(cur)}${Math.round(tot).toLocaleString('zh-TW')}</div><div style="font-size:13px;color:var(--muted)">${cur}</div>`).join('')||'<div style="color:var(--muted);font-size:15px">無記錄</div>';
+  const fmtTotals=m=>[...m.entries()].map(([cur,tot])=>`<div style="font-size:25px;font-weight:800">${curSym(cur)}${Math.round(tot).toLocaleString('zh-TW')}</div><div style="font-size:15px;color:var(--muted)">${cur}</div>`).join('')||'<div style="color:var(--muted);font-size:17px">無記錄</div>';
   document.getElementById('personSec').innerHTML=`<div class="member-grid">${CFG.members.map(name=>`
     <div class="member-card">
       <div class="member-name">${esc(name)}</div>
@@ -1368,7 +1371,7 @@ function renderNoteCard(nid,n){
     <div class="note-hdr">
       <div class="note-title">✅ ${esc(n.title||'待辦清單')}</div>
       <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:13px;color:var(--muted)">${doneCount}/${total}</span>
+        <span style="font-size:16px;color:var(--muted)">${doneCount}/${total}</span>
         <button class="ib" onclick="openTodoEdit('${nid}')">✎</button>
         <button class="ib" onclick="delNote('${nid}')">✕</button>
       </div>
