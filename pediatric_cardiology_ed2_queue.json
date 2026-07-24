@@ -1,0 +1,99 @@
+{
+  "description": "Nasr《The Pediatric Cardiac Anesthesia Handbook》第二版(2024)補充佇列。第一版已 34/34 merge 完成(見 pediatric_cardiology_queue.json)，本佇列只做第二版真正的增量：4個全新Basics頁 + AAOCA新病灶 + 病灶章零星更新re-merge。範圍由使用者2026-07-21確認。",
+  "source_pdf": "~/Desktop/pediatric cardiac handbook TEE.pdf (360頁, 37章)",
+  "offset_note": "offset會漂移，用章名定位；起始idx已實測",
+  "notion_ch0_parent": "3a1e77f4-b1f0-81a7-96e4-f7d26f6b745a",
+  "merge_rule": "新頁用五段格式(一內文/二圖表/三臨床重點/四易考點/五陷阱)。既有頁re-merge先notion-fetch，有圖片/使用者內容用update_content精準插入，乾淨頁才replace_content。醫學術語保留英文，title不加emoji(放icon欄)。",
+  "category_E_new_basics": [
+    {
+      "title": "Developmental Hemostasis 與 Patient Blood Management",
+      "ed2_source": "Ch5 p41-47 (idx56-64)",
+      "parent": "Ch0 3a1e77f4-b1f0-81a7-96e4-f7d26f6b745a",
+      "icon": "🩸",
+      "status": "done",
+      "notion_page_id": "3a4e77f4-b1f0-81e6-952c-f3e263f5dfb2",
+      "notes": "全新章：凝血cascade(initiation/amplification/propagation/stabilization)、新生兒/嬰兒hemostasis特殊性、cyanosis影響、PBM"
+    },
+    {
+      "title": "Echocardiography（TEE 完整切面）",
+      "ed2_source": "Ch8 p85-101 (idx98-114)",
+      "parent": "Ch0 3a1e77f4-b1f0-81a7-96e4-f7d26f6b745a",
+      "icon": "🔊",
+      "status": "done",
+      "notion_page_id": "3a4e77f4-b1f0-8137-8413-d0fcd88b23f6",
+      "notes": "全新章(檔名重點)：TTE/TEE/epicardial、comprehensive exam的segmental approach、surgical repair評估(patch leak/baffle obstruction/shunt patency)"
+    },
+    {
+      "title": "Risk Scoring Systems（先天性心臟病風險評分）",
+      "ed2_source": "Ch9 p103-108 (idx115-120)",
+      "parent": "Ch0 3a1e77f4-b1f0-81a7-96e4-f7d26f6b745a",
+      "icon": "📊",
+      "status": "done",
+      "notion_page_id": "3a4e77f4-b1f0-8172-be57-f184937d24d3",
+      "notes": "全新章：cardiac surgery(RACHS-1/STAT/Aristotle)、catheterization、noncardiac procedure風險分層"
+    },
+    {
+      "title": "Postoperative CICU Care（術後加護）",
+      "ed2_source": "Ch11 p127-141 (idx138-154)",
+      "parent": "Ch0 3a1e77f4-b1f0-81a7-96e4-f7d26f6b745a",
+      "icon": "🏥",
+      "status": "done",
+      "notion_page_id": "3a4e77f4-b1f0-81e1-b6cd-ce08ac9c7721",
+      "notes": "全新章：OR→CICU hand-off、鎮靜藥(benzo/opioid/propofol/dexmed/ketamine)、Low Cardiac Output Syndrome偵測與治療、機械通氣、ERAS早拔管"
+    }
+  ],
+  "category_F_new_lesion": [
+    {
+      "title": "AAOCA (Anomalous Aortic Origin of Coronary Artery)",
+      "ed2_source": "Ch35 p323-326 (idx319-323)",
+      "action": "merge_into_existing",
+      "target_page": "ALCAPA頁 3a2e77f4-b1f0-81dd-a717-fe812b1b51b5",
+      "status": "done",
+      "notes": "第一版只有ALCAPA+fistula。第二版把ALCAPA與AAOCA合成一章。AAOCA(尤其anomalous origin from opposite sinus/interarterial course)是運動猝死原因，需merge進現有冠狀動脈異常頁",
+      "notion_page_id": "3a4e77f4-b1f0-8178-8929-f86b05412845",
+      "note": "建為 Ch11 冠狀動脈異常母頁下第三個同層子頁（非 merge 進 ALCAPA）"
+    }
+  ],
+  "category_G_lesion_updates": [
+    {
+      "title": "TOF 更新",
+      "ed2_source": "Ch24 p213-223",
+      "target_page": "TOF典型 3a1e77f4-b1f0-813b-9c0d-d47118f84f2a",
+      "status": "done",
+      "notes": "第二版新增：adult TOF patients、PDA stenting、RVOT stenting、postoperative JET段落",
+      "result": "done - merge：PDA/RVOT stenting、adult TOF+TPVR適應症、POJET藥物治療階梯"
+    },
+    {
+      "title": "HLHS 更新",
+      "ed2_source": "Ch29 p269-273",
+      "target_page": "HLHS 3a1e77f4-b1f0-8183-a5e0-c7b24a4598b0",
+      "status": "done",
+      "notes": "第二版新增：borderline left heart、left heart rehabilitation、staged LV recruitment、biventricular conversion",
+      "result": "done - 無新增：既有HLHS頁(從da Cruz Ch102)已完整涵蓋borderline left heart/LV rehab/staged recruitment/bivent conversion"
+    },
+    {
+      "title": "PDA 更新",
+      "ed2_source": "Ch12 p145-147",
+      "target_page": "PDA 3a1e77f4-b1f0-817a-9aea-e8105c704aab",
+      "status": "done",
+      "notes": "檢查postligation cardiac syndrome、catheter intervention是否已涵蓋",
+      "result": "done - merge：Amplatzer Piccolo Occluder(早產兒≥700g)、Postligation Cardiac Syndrome"
+    },
+    {
+      "title": "Single-ventricle 框架更新",
+      "ed2_source": "Ch28 p247-268",
+      "target_page": "Ch18框架 3a2e77f4-b1f0-81db-9617-da0fa9331937",
+      "status": "done",
+      "notes": "第二版Ch28與第一版Ch24對照，檢查Fontan/BDG段落有無新內容",
+      "result": "done - merge：percutaneous PA flow restrictors、Super Glenn、hemi-Fontan/double cavopulmonary"
+    },
+    {
+      "title": "其餘病灶章逐一diff",
+      "ed2_source": "Ch13-27,30-34,36-37",
+      "target_page": "各既有頁",
+      "status": "done",
+      "notes": "低優先，逐章快速diff第二版有無新bullet，有才merge，無則skip",
+      "result": "done - 關鍵字掃描Ch13-27,30-34,36-37：多數stent命中為第一版已涵蓋導管內容。唯一新資料點=Mitral(Ch22) percutaneous transcatheter MVR(Maschietto 2021)已merge進Ch13頁。Heart Tx(Ch33)有2024表但既有Ch16頁已完整。其餘無實質新增。"
+    }
+  ]
+}

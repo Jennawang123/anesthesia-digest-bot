@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "research-guardian": {
+      "source": "htlin222/research-guardian-skill",
+      "sourceType": "github",
+      "skillPath": "research-guardian/SKILL.md",
+      "computedHash": "eb80bbe82dccc5103cb67f80e8c8a23fc127e32494580e53a81461ccdebb3ea9"
+    }
+  }
+}

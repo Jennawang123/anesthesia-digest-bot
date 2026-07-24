@@ -1,0 +1,307 @@
+{
+  "description": "小兒心臟學讀書會總佇列 — 2026-07-19 重建（取代舊版，舊版與實際 Notion 狀態不符）。涵蓋：(A) 既有病灶頁補齊 Nasr 麻醉內容、(B) Nasr 通論 Basics 新頁、(C) 完全缺的新病灶頁、(D) Single-Ventricle 統整框架頁。",
+  "notion_parent": "3a1e77f4-b1f0-81a3-b7e6-d47279d4ca30",
+  "comparison_note": "https://app.notion.com/p/3a2e77f4b1f081f0a4e4f4d09f32817e",
+  "sources": {
+    "parks_pdf": "/Users/wangyingyu/Desktop/Park's The Pediatric Cardiology Handbook, 5th Edition.pdf（503頁，書頁碼=PDF index+11）",
+    "nasr_pdf": "/Users/wangyingyu/Desktop/The Pediatric Cardiac Anesthesia Handbook - 2017 - Nasr.pdf（269頁，書頁碼=PDF index-4，即index=書頁碼+4）",
+    "dacruz_pdf": "/Users/wangyingyu/Desktop/Pediatric and Congenital Cardiology, Cardiac Surgery and Intensive Care.pdf（檔案損毀，pypdf無法讀取，勿嘗試，除非使用者提供乾淨版本）",
+    "miller_pdf": "/Users/wangyingyu/Library/Mobile Documents/com~apple~CloudDocs/Desktop/專科/Miller教科書各章PDF/73-Anesthesia for Pediatric Cardiac Surgery.pdf"
+  },
+  "merge_rule": "補齊既有頁面時：先 notion-fetch 讀出全頁 → 讀 Nasr 對應章節 → 用 replace_content 整頁重寫，把 Nasr 內容融入原本五段架構（一內文筆記/二圖表/三臨床重點/四易考點/五常見陷阱），不要用 insert_content 附加，不要另開獨立大段。詳見 project_pediatric_cardiology_park.md 記憶檔。",
+  "category_A_merge_existing": [
+    {
+      "title": "Ch0 母頁",
+      "notion_page_id": "3a1e77f4-b1f0-81a7-96e4-f7d26f6b745a",
+      "nasr_source": "N/A，純索引頁，實質內容已補在兩個子頁",
+      "status": "skip"
+    },
+    {
+      "title": "正常心臟解剖",
+      "notion_page_id": "3a1e77f4-b1f0-81d1-bcab-c92324b4098a",
+      "nasr_source": "無對應章節，可略過或僅檢查是否有補充空間",
+      "status": "skip"
+    },
+    {
+      "title": "Shunt生理與Qp:Qs框架（Notion現title「4 types of lesion」，使用者已自行加大量內容）",
+      "notion_page_id": "3a1e77f4-b1f0-813d-9432-dc883d83a125",
+      "nasr_source": "Ch2 p9-18 (effective blood flow/simple-complex shunt分類/single-ventricle physiology公式/intercirculatory mixing)",
+      "status": "done",
+      "note": "用update_content插入，非replace_content，保留使用者自己加的表格/圖片/心得"
+    },
+    {
+      "title": "麻醉決策轉譯總論（Notion現title「總論」，使用者已自行加大量內容）",
+      "notion_page_id": "3a1e77f4-b1f0-8164-aaa8-f742933e7778",
+      "nasr_source": "Ch2 p18-22 (新生兒心肌生理7大差異/PVR調控4槓桿/心肌缺血決定因子)",
+      "status": "done",
+      "note": "用update_content插入，非replace_content，保留使用者自己加的表格/圖片/心得"
+    },
+    {
+      "title": "Ch1 母頁",
+      "notion_page_id": "3a1e77f4-b1f0-81c0-9e3f-d92800ee946d",
+      "nasr_source": "N/A (母頁摘要，可不動)",
+      "status": "skip"
+    },
+    {
+      "title": "ASD",
+      "notion_page_id": "3a1e77f4-b1f0-81a6-bded-f7e00e25be07",
+      "nasr_source": "Ch11 p83-87",
+      "status": "done"
+    },
+    {
+      "title": "VSD",
+      "notion_page_id": "3a1e77f4-b1f0-8123-9ff5-f3933527d0a4",
+      "nasr_source": "Ch12 p89-92",
+      "status": "done"
+    },
+    {
+      "title": "PDA",
+      "notion_page_id": "3a1e77f4-b1f0-817a-9aea-e8105c704aab",
+      "nasr_source": "Ch8 p69-71",
+      "status": "done"
+    },
+    {
+      "title": "AVSD",
+      "notion_page_id": "3a1e77f4-b1f0-813a-be7d-deeb67c9da57",
+      "nasr_source": "Ch13 p93-96 (AVC)",
+      "status": "done"
+    },
+    {
+      "title": "Ch2 母頁",
+      "notion_page_id": "3a1e77f4-b1f0-81f9-9609-edd43d8bd568",
+      "nasr_source": "N/A",
+      "status": "skip"
+    },
+    {
+      "title": "PS",
+      "notion_page_id": "3a1e77f4-b1f0-8116-83f2-fe8ff0992098",
+      "nasr_source": "Nasr無獨立PS章節，僅Ch2通論略提；可略過或標註此不對稱性",
+      "status": "skip"
+    },
+    {
+      "title": "AS",
+      "notion_page_id": "3a1e77f4-b1f0-819a-94b1-e24d5843ac59",
+      "nasr_source": "Ch17 LVOTO p113-116 (idx119-122)",
+      "status": "done"
+    },
+    {
+      "title": "CoA",
+      "notion_page_id": "3a1e77f4-b1f0-818f-b6d1-eef636346de0",
+      "nasr_source": "Ch10 p77-82 (idx86-91)",
+      "status": "done"
+    },
+    {
+      "title": "IAA",
+      "notion_page_id": "3a1e77f4-b1f0-81fe-bd7c-de2ed0e8752f",
+      "nasr_source": "Ch26 p187-190 (idx189-192)",
+      "status": "done"
+    },
+    {
+      "title": "Ch3 母頁",
+      "notion_page_id": "3a1e77f4-b1f0-81a9-afd1-da9b8c0419fe",
+      "nasr_source": "N/A",
+      "status": "skip"
+    },
+    {
+      "title": "TOF典型",
+      "notion_page_id": "3a1e77f4-b1f0-813b-9c0d-d47118f84f2a",
+      "nasr_source": "Ch20 p131-140",
+      "status": "done"
+    },
+    {
+      "title": "TOF+PA",
+      "notion_page_id": "3a1e77f4-b1f0-8182-95f6-cd7f157d9121",
+      "nasr_source": "Ch21 p141-144",
+      "status": "done"
+    },
+    {
+      "title": "TOF+AbsentPV",
+      "notion_page_id": "3a1e77f4-b1f0-81f0-8c78-f4344af60ede",
+      "nasr_source": "Ch22 p145-146",
+      "status": "done"
+    },
+    {
+      "title": "Ch4 母頁",
+      "notion_page_id": "3a1e77f4-b1f0-8144-9205-cc285ff119bd",
+      "nasr_source": "N/A",
+      "status": "skip"
+    },
+    {
+      "title": "D-TGA",
+      "notion_page_id": "3a1e77f4-b1f0-8199-8de5-ceaab9cbdcb6",
+      "nasr_source": "Ch23 p147-157",
+      "status": "done"
+    },
+    {
+      "title": "L-TGA",
+      "notion_page_id": "3a1e77f4-b1f0-8119-83b1-d050c09cd9d4",
+      "nasr_source": "Ch23 (C-TGV) p157-160",
+      "status": "done"
+    },
+    {
+      "title": "Ch5 TAPVR",
+      "notion_page_id": "3a1e77f4-b1f0-8106-9bf9-fb4c53591116",
+      "nasr_source": "Ch16 p107-111 (idx114-118)",
+      "status": "done",
+      "note": "實際內容在子頁「TAPVR與Scimitar Syndrome」，母頁只是Key Points索引"
+    },
+    {
+      "title": "Ch6 母頁",
+      "notion_page_id": "3a1e77f4-b1f0-810c-8300-ef5af23e35ec",
+      "nasr_source": "N/A",
+      "status": "skip"
+    },
+    {
+      "title": "Tricuspid Atresia",
+      "notion_page_id": "3a1e77f4-b1f0-819a-b927-cca2b6e179d9",
+      "nasr_source": "Ch28 p195-198 (idx197-200)",
+      "status": "done"
+    },
+    {
+      "title": "PA-IVS",
+      "notion_page_id": "3a1e77f4-b1f0-81ae-b9ca-f4a556ce9acc",
+      "nasr_source": "Ch19 p125-129 (idx130-134)",
+      "status": "done"
+    },
+    {
+      "title": "Ch7 母頁",
+      "notion_page_id": "3a1e77f4-b1f0-81ff-9532-f8f299dd1d5f",
+      "nasr_source": "N/A",
+      "status": "skip"
+    },
+    {
+      "title": "HLHS 解剖生理手術路徑",
+      "notion_page_id": "3a1e77f4-b1f0-8183-a5e0-c7b24a4598b0",
+      "nasr_source": "Ch25 p181-186 (idx184-188)",
+      "status": "done",
+      "note": "頁面含嵌入圖片，用update_content精準插入，勿用replace_content"
+    },
+    {
+      "title": "Ch8 母頁",
+      "notion_page_id": "3a1e77f4-b1f0-81b5-b0fb-e70217d4e532",
+      "nasr_source": "N/A",
+      "status": "skip"
+    },
+    {
+      "title": "Ebstein Anomaly 詳細筆記",
+      "notion_page_id": "3a1e77f4-b1f0-8148-afc4-c64ef74032d9",
+      "nasr_source": "Ch33 p239-242 (idx239-242)",
+      "status": "done"
+    },
+    {
+      "title": "Ch9 Truncus Arteriosus",
+      "notion_page_id": "3a1e77f4-b1f0-814e-9174-d7b5c83e3f4d",
+      "nasr_source": "Ch15 p103-106 (idx110-113)",
+      "status": "done"
+    },
+    {
+      "title": "Ch10 DORV",
+      "notion_page_id": "3a2e77f4-b1f0-8180-99d4-c4c97d7174e8",
+      "nasr_source": "Ch14 p97-101 (idx105-109)",
+      "status": "done"
+    },
+    {
+      "title": "Ch11 母頁",
+      "notion_page_id": "3a2e77f4-b1f0-812b-9eaf-e3716b003927",
+      "nasr_source": "N/A",
+      "status": "skip"
+    },
+    {
+      "title": "ALCAPA",
+      "notion_page_id": "3a2e77f4-b1f0-81dd-a717-fe812b1b51b5",
+      "nasr_source": "Ch31 p231-232 (idx231-232)",
+      "status": "done"
+    },
+    {
+      "title": "Coronary Artery Fistula",
+      "notion_page_id": "3a2e77f4-b1f0-81fa-b87c-ccaf682bded6",
+      "nasr_source": "Nasr無此病灶，略過",
+      "status": "skip"
+    }
+  ],
+  "category_B_new_basics": [
+    {
+      "title": "術前評估 (Preoperative Evaluation)",
+      "nasr_source": "Ch3 p23-30 (idx36-43)",
+      "parent": "Ch0 母頁 3a1e77f4-b1f0-81a7-96e4-f7d26f6b745a",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-8101-911f-eee3faeef4ac"
+    },
+    {
+      "title": "術中管理 (Intraoperative Management)",
+      "nasr_source": "Ch4 p31-37 (idx44-50)",
+      "parent": "Ch0 母頁 3a1e77f4-b1f0-81a7-96e4-f7d26f6b745a",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-810b-aa94-f7ed16a667c9"
+    },
+    {
+      "title": "心導管數據判讀 (Cardiac Catheterization Data)",
+      "nasr_source": "Ch5 p39-50 (idx52-63)",
+      "parent": "Ch0 母頁 3a1e77f4-b1f0-81a7-96e4-f7d26f6b745a",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-8120-9461-f9fba4666931"
+    },
+    {
+      "title": "體外循環 (Cardiopulmonary Bypass)",
+      "nasr_source": "Ch6 p51-58 (idx64-71)",
+      "parent": "Ch0 母頁 3a1e77f4-b1f0-81a7-96e4-f7d26f6b745a",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-81bc-a7ce-f41fdec3abcf"
+    },
+    {
+      "title": "機械輔助裝置 (ECMO/VAD)",
+      "nasr_source": "Ch7 p59-65 (idx72-78)",
+      "parent": "Ch0 母頁 3a1e77f4-b1f0-81a7-96e4-f7d26f6b745a",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-81ab-ad38-dac1a21a9d8d"
+    }
+  ],
+  "category_C_new_lesions": [
+    {
+      "title": "Ch12 Aortopulmonary Window",
+      "nasr_source": "Ch9 p73-75 (idx83-85)",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-81e0-be2d-e0a5a040fd3c"
+    },
+    {
+      "title": "Ch13 Mitral Valve Disease (Stenosis+Regurgitation)",
+      "nasr_source": "Ch18 p117-123 (idx123-129)",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-81b4-908a-c28b8446c577"
+    },
+    {
+      "title": "Ch14 Vascular Rings",
+      "nasr_source": "Ch27 p191-194 (idx193-196)",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-8168-a60b-cf115b99d028"
+    },
+    {
+      "title": "Ch15 Heterotaxy",
+      "nasr_source": "Ch32 p233-238 (idx233-238)",
+      "parks_source": "Park's Ch9-XIV p182-188 (PDF pp.193-199)",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-8119-9ca8-f6ae27030695"
+    },
+    {
+      "title": "Ch16 Heart Transplantation",
+      "nasr_source": "Ch29 p199-216 (idx203-217)",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-8120-8561-ee025c67e349"
+    },
+    {
+      "title": "Ch17 Heart-Lung and Lung Transplantation",
+      "nasr_source": "Ch30 p217-229 (idx218-231)",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-8191-9108-f4c5ac975f22"
+    }
+  ],
+  "category_D_new_framework": [
+    {
+      "title": "Ch18 Single-Ventricle Lesions 統整框架",
+      "nasr_source": "Ch24 p.161-180 (idx164-183)",
+      "note": "跨病灶通用框架：三階段生理目標(初始/BDG/Fontan)，補完後應在 HLHS/Tricuspid Atresia/PA-IVS 三頁加上互相連結的 [[連結]]",
+      "status": "done",
+      "notion_page_id": "3a2e77f4-b1f0-81db-9617-da0fa9331937"
+    }
+  ]
+}

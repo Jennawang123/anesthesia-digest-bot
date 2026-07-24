@@ -5,3 +5,13 @@ netlify-travel-atlas/
 .env
 figures/
 __pycache__/
+
+# 巢狀獨立 repo（各自有 GitHub remote）
+reading-notes-server/
+reading-notes-app/
+
+# 工具產生的暫存
+.playwright-mcp/
+
+# macOS
+.DS_Store

@@ -1,0 +1,27 @@
+{
+  "description": "Miller's Anesthesia 10th ed. — Tier 2 & 3 章節筆記佇列",
+  "notion_parent": "59ce9a1fde8d4cfeba8b1b1e062843c2",
+  "pdf_dir": "/Users/wangyingyu/Library/Mobile Documents/com~apple~CloudDocs/Desktop/專科/Miller教科書各章PDF",
+  "chapters": [
+    {"ch": 28, "file": "28-Preoperative Evaluation.pdf", "title": "術前評估", "tier": 2, "status": "done", "notion_page_id": "381e77f4-b1f0-8156-8be8-e91818c3cb19"},
+    {"ch": 29, "file": "29-Anesthetic Implications of Concurrent Diseases.pdf", "title": "共病麻醉考量", "tier": 2, "status": "done", "notion_page_id": "381e77f4-b1f0-8123-9c19-decbc1905dc4"},
+    {"ch": 41, "file": "41-Spinal, Epidural, and Caudal Anesthesia.pdf", "title": "脊椎、硬脊膜外與尾骨麻醉", "tier": 2, "status": "done", "notion_page_id": "382e77f4-b1f0-81e1-81d6-cbfe9d682f12"},
+    {"ch": 42, "file": "42-Peripheral Nerve Blocks and Ultrasound Guidance for Regional Anesthesia.pdf", "title": "周邊神經阻斷與超音波引導", "tier": 2, "status": "done", "notion_page_id": "382e77f4-b1f0-8131-9c38-cfb2e8efd337"},
+    {"ch": 43, "file": "43-Perioperative Fluid and Electrolyte Therapy.pdf", "title": "術中輸液與電解質", "tier": 2, "status": "done", "notion_page_id": "382e77f4-b1f0-8134-8051-ee949f9415fb"},
+    {"ch": 45, "file": "45-Patient Blood Management_ Transfusion Therapy.pdf", "title": "輸血治療", "tier": 2, "status": "done", "notion_page_id": "383e77f4-b1f0-819e-a99e-e019c603a6a6"},
+    {"ch": 50, "file": "50-Anesthesia for Cardiac Surgical Procedures.pdf", "title": "心臟手術麻醉", "tier": 2, "status": "done", "notion_page_id": "383e77f4-b1f0-814b-b1fd-c1c4b8b89975"},
+    {"ch": 49, "file": "49-Anesthesia for Thoracic Surgery.pdf", "title": "胸腔手術麻醉", "tier": 2, "status": "done", "notion_page_id": "386e77f4-b1f0-81c4-bfd9-dd8a5f50cc99"},
+    {"ch": 53, "file": "53-Anesthesia for Neurologic Surgery and Neurointerventions.pdf", "title": "神經外科麻醉", "tier": 2, "status": "done", "notion_page_id": "386e77f4-b1f0-81f4-8a03-cfe6a1f21282"},
+    {"ch": 58, "file": "58-Anesthesia for Obstetrics.pdf", "title": "產科麻醉", "tier": 2, "status": "done", "notion_page_id": "38ee77f4-b1f0-81b7-bd94-c376f80b31f9"},
+    {"ch": 72, "file": "72-Pediatric Anesthesia.pdf", "title": "小兒麻醉", "tier": 2, "status": "done", "notion_page_id": "376e77f4-b1f0-815e-acfa-d39f1e0281b7"},
+    {"ch": 73, "file": "73-Anesthesia for Pediatric Cardiac Surgery.pdf", "title": "小兒心臟麻醉", "tier": 2, "status": "done", "notion_page_id": "382e77f4-b1f0-8059-b53d-d14948dc7c09"},
+    {"ch": 61, "file": "61-Geriatric Anesthesia.pdf", "title": "老年麻醉", "tier": 2, "status": "done", "notion_page_id": "396e77f4-b1f0-8125-89fd-f865f297cd1b"},
+    {"ch": 77, "file": "77-Acute Postoperative Pain.pdf", "title": "術後急性疼痛", "tier": 3, "status": "pending", "notion_page_id": null},
+    {"ch": 78, "file": "78-Perioperative Neurocognitive Disorders.pdf", "title": "術後認知障礙", "tier": 3, "status": "pending", "notion_page_id": null},
+    {"ch": 76, "file": "76-The Postanesthesia Care Unit.pdf", "title": "PACU 照護", "tier": 3, "status": "pending", "notion_page_id": null},
+    {"ch": 82, "file": "82-Cardiopulmonary Resuscitation and Advanced Cardiac Life Support.pdf", "title": "CPR 與 ACLS", "tier": 3, "status": "pending", "notion_page_id": null},
+    {"ch": 33, "file": "33-Perioperative Echocardiography and Point-of-Care Ultrasound (POCUS).pdf", "title": "術中超音波與 TEE", "tier": 3, "status": "pending", "notion_page_id": null},
+    {"ch": 47, "file": "47-Management of the Patient with Chronic Pain.pdf", "title": "慢性疼痛", "tier": 3, "status": "pending", "notion_page_id": null},
+    {"ch": 62, "file": "62-Anesthesia for Trauma.pdf", "title": "創傷麻醉", "tier": 3, "status": "pending", "notion_page_id": null}
+  ]
+}
