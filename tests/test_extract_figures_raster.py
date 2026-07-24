@@ -11,7 +11,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from extract_figures_raster import assign_rasters, find_captions, usable_rasters  # noqa: E402
+from extract_figures_raster import (assign_rasters, book_page, crop_rect,  # noqa: E402
+                                    fill_book_pages, find_captions, usable_rasters)
 
 PAGE = fitz.Rect(0, 0, 480.5, 720)
 
@@ -145,3 +146,39 @@ def test_同頁兩個caption各自取到自己的圖():
 
 def test_沒有可配對的圖時回傳空清單():
     assert assign_rasters([cap("7.2", (54, 69, 445, 100))], []) == {"7.2": []}
+
+
+def test_聯集後加留白且不超出頁面():
+    got = crop_rect([fitz.Rect(54, 80, 230, 200), fitz.Rect(250, 90, 440, 210)], PAGE)
+    assert got == fitz.Rect(48, 74, 446, 216)
+
+
+def test_留白不會超出頁面邊界():
+    # 加了 PAD 之後 (-4,-4,476,721)，四邊都要夾回頁面範圍內
+    got = crop_rect([fitz.Rect(2, 2, 470, 715)], PAGE)
+    assert got == fitz.Rect(0, 0, 476, 720)
+
+
+def test_偶數頁頁碼在前():
+    assert book_page([block("10 The Pediatric Cardiac Anesthesia Handbook",
+                            (54, 44, 300, 56))]) == 10
+
+
+def test_奇數頁頁碼在後():
+    assert book_page([block("Cardiovascular Development 5", (300, 44, 445, 56))]) == 5
+
+
+def test_頁眉位置過低不算頁碼():
+    # 整頁圖的第一個 block 是圖說，不是頁眉
+    assert book_page([block("Figure 8.3 Subxiphoid sweep.", (54, 301, 445, 330))]) is None
+
+
+def test_以章內位移回填缺漏的書本頁碼():
+    figs = [
+        {"fig_id": "8.2", "nasr_chapter": 8, "pdf_page": 99, "book_page": 86},
+        {"fig_id": "8.3", "nasr_chapter": 8, "pdf_page": 100, "book_page": None},
+        {"fig_id": "8.4", "nasr_chapter": 8, "pdf_page": 100, "book_page": None},
+        {"fig_id": "2.1", "nasr_chapter": 2, "pdf_page": 26, "book_page": 10},
+    ]
+    fill_book_pages(figs)
+    assert [f["book_page"] for f in figs] == [86, 87, 87, 10]

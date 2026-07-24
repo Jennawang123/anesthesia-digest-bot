@@ -28,6 +28,12 @@ MIN_OVERLAP = 0.3
 # 用來擋掉頁頂的裝飾圖示被下方的圖說認領。
 MAX_GAP = 0.6
 
+# 裁切留白。Nasr 的 raster 框已經很貼合，不需要 Miller 那麼寬的 10pt
+PAD = 6
+# 頁眉的 y 上限；超過這個位置的第一個 block 不是頁眉
+HEAD_Y = 60
+PAGE_NUM_RE = re.compile(r"^\d{1,3}$")
+
 
 def usable_rasters(page):
     """回傳頁面上真正屬於圖的 raster 框，濾掉背景層與碎塊。"""
@@ -113,3 +119,47 @@ def assign_rasters(captions, rasters, page_height=720):
         if best is not None:
             out[best].append(r)
     return out
+
+
+def crop_rect(rects, page_rect):
+    """多個 rect 取聯集，四周加留白，並夾在頁面範圍內。"""
+    box = rects[0]
+    for r in rects[1:]:
+        box = box | r
+    return fitz.Rect(max(page_rect.x0, box.x0 - PAD),
+                     max(page_rect.y0, box.y0 - PAD),
+                     min(page_rect.x1, box.x1 + PAD),
+                     min(page_rect.y1, box.y1 + PAD))
+
+
+def book_page(blocks):
+    """從頁眉取印刷頁碼。
+
+    偶數頁是「10 The Pediatric Cardiac Anesthesia Handbook」（頁碼在前），
+    奇數頁是「Cardiovascular Development 5」（頁碼在後）。整頁圖與章首頁
+    沒有頁眉，回傳 None，稍後用章內位移回填。
+    """
+    if not blocks or blocks[0]["rect"].y0 >= HEAD_Y:
+        return None
+    toks = blocks[0]["text"].split()
+    for t in (toks[0], toks[-1]) if toks else ():
+        if PAGE_NUM_RE.match(t):
+            return int(t)
+    return None
+
+
+def fill_book_pages(figs):
+    """用章內位移回填抓不到頁眉的書本頁碼。
+
+    pdf_page 與 book_page 的位移逐章漂移（實測 Ch1 +16 遞減到 Ch37 −3，
+    因 Part 分隔頁而變動），不能全書套單一公式，但同一章內唯一且恆定。
+    """
+    seen = {}
+    for f in figs:
+        if f["book_page"]:
+            seen.setdefault(f["nasr_chapter"], []).append(
+                f["pdf_page"] - f["book_page"])
+    offset = {ch: max(set(v), key=v.count) for ch, v in seen.items()}
+    for f in figs:
+        if not f["book_page"] and f["nasr_chapter"] in offset:
+            f["book_page"] = f["pdf_page"] - offset[f["nasr_chapter"]]
