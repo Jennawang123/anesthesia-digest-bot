@@ -209,12 +209,12 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 /* ── Note cards ── */
 .note-card{margin-bottom:10px;}
 .note-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
-.note-title{font-size:17px;font-weight:700;color:var(--text);}
-.note-preview{font-size:17px;color:var(--muted);line-height:1.55;margin-bottom:6px;}
+.note-title{font-size:20px;font-weight:700;color:var(--text);}
+.note-preview{font-size:19px;color:var(--muted);line-height:1.6;margin-bottom:6px;}
 .note-thumbs{display:flex;gap:6px;flex-wrap:wrap;}
 /* ── Todo items ── */
 .todo-items{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
-.todo-item{padding:6px 2px;border-bottom:1px solid var(--border);font-size:16px;}
+.todo-item{padding:8px 2px;border-bottom:1px solid var(--border);font-size:19px;}
 .todo-item:last-child{border-bottom:none;}
 /* ── Lightbox ── */
 #m-lb{background:rgba(0,0,0,.88);align-items:center;justify-content:center;}
@@ -1400,7 +1400,7 @@ function renderNoteCard(nid,n){
   const items=(n.items||[]).map((item,i)=>`
     <div class="todo-item">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-        <input type="checkbox" ${item.done?'checked':''} onchange="toggleTodoItem('${nid}',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--green)">
+        <input type="checkbox" ${item.done?'checked':''} onchange="toggleTodoItem('${nid}',${i},this.checked)" style="width:22px;height:22px;accent-color:var(--green)">
         <span style="${item.done?'text-decoration:line-through;color:var(--muted)':''}">${esc(item.text||'')}</span>
       </label>
     </div>`).join('');
@@ -1408,7 +1408,7 @@ function renderNoteCard(nid,n){
     <div class="note-hdr">
       <div class="note-title">✅ ${esc(n.title||'待辦清單')}</div>
       <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:16px;color:var(--muted)">${doneCount}/${total}</span>
+        <span style="font-size:18px;font-weight:700;color:var(--muted)">${doneCount}/${total}</span>
         <button class="ib" onclick="openTodoEdit('${nid}')">✎</button>
         <button class="ib" onclick="delNote('${nid}')">✕</button>
       </div>
@@ -1431,7 +1431,7 @@ function renderTodoItemsEdit(){
   const el=document.getElementById('todo-items-edit');if(!el)return;
   el.innerHTML=curTodoItems.map((item,i)=>`
     <div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border)">
-      <span style="flex:1;font-size:16px">${esc(item.text)}</span>
+      <span style="flex:1;font-size:18px">${esc(item.text)}</span>
       <button class="ib" onclick="removeTodoItem(${i})">✕</button>
     </div>`).join('');
 }
