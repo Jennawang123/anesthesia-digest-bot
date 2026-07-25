@@ -13,6 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script type="importmap">
 {
   "imports": {
@@ -171,7 +172,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
   <p>輸入 Firebase Realtime Database 網址與 Storage bucket 開始</p>
   <div class="scard">
     <div class="fg"><label class="lb">Firebase 資料庫網址</label><input class="inp" id="s_url" type="url" placeholder="https://xxx-default-rtdb.firebaseio.com"></div>
-    <div class="fg"><label class="lb">Storage Bucket</label><input class="inp" id="s_bucket" placeholder="例：xxx.appspot.com"></div>
+    <div class="fg"><label class="lb">Storage Bucket</label><input class="inp" id="s_bucket" placeholder="例：xxx.firebasestorage.app"></div>
+    <div class="fg"><label class="lb">API Key（匿名登入用）</label><input class="inp" id="s_key" placeholder="AIza..."></div>
     <button class="btn btn-b btn-w" onclick="doSetup()">開始使用 →</button>
     <p class="hint">Firebase Console → Realtime Database（測試模式）→ 複製網址；Storage → 啟用 → 複製 bucket 名稱</p>
   </div>
@@ -191,6 +193,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
         <div class="card">
           <div class="fg"><label class="lb">資料庫網址</label><input class="inp" id="c_url" type="url"></div>
           <div class="fg"><label class="lb">Storage Bucket</label><input class="inp" id="c_bucket"></div>
+          <div class="fg"><label class="lb">API Key（匿名登入用）</label><input class="inp" id="c_key" placeholder="AIza..."></div>
           <button class="btn btn-g btn-w" onclick="changeFB()">變更 Firebase 連線</button>
         </div>
       </div>
@@ -276,9 +279,10 @@ document.addEventListener('DOMContentLoaded',()=>{
 function doSetup(){
   const url=document.getElementById('s_url').value.trim();
   const bucket=document.getElementById('s_bucket').value.trim();
+  const apiKey=document.getElementById('s_key').value.trim();
   if(!url){alert('請輸入 Firebase 資料庫網址');return;}
   if(!bucket){alert('請輸入 Storage bucket');return;}
-  CFG={url,bucket};
+  CFG={url,bucket,apiKey};
   localStorage.setItem('travel_atlas_cfg',JSON.stringify(CFG));
   bootApp();
 }
@@ -291,22 +295,42 @@ function bootApp(){
   document.getElementById('app').style.display='flex';
   document.getElementById('c_url').value=CFG.url;
   document.getElementById('c_bucket').value=CFG.bucket;
+  document.getElementById('c_key').value=CFG.apiKey||'';
   connectFB();
 }
 function changeFB(){
   const url=document.getElementById('c_url').value.trim();
   const bucket=document.getElementById('c_bucket').value.trim();
+  const apiKey=document.getElementById('c_key').value.trim();
   if(!url||!bucket){toast('⚠️ 網址與 bucket 都要填');return;}
-  CFG={url,bucket};
+  CFG={url,bucket,apiKey};
   localStorage.setItem('travel_atlas_cfg',JSON.stringify(CFG));
   location.reload();
 }
 
 // ─── Firebase ────────────────────────────────────────
-function connectFB(){
+// 有填 API Key 就先做匿名登入，資料庫/Storage 規則才能寫成 auth != null
+// （不必開放給全世界，也不會有測試模式 30 天到期的問題）。API Key 留空時
+// 完全跳過登入，維持舊的開放規則行為——舊的 localStorage 設定沒有 apiKey
+// 欄位，靠這個分支才不會一升級就整個連不上。
+async function connectFB(){
   sync(true);
   try{
-    if(!firebase.apps.length)firebase.initializeApp({databaseURL:CFG.url.trim().replace(/\/$/,''),storageBucket:CFG.bucket.trim()});
+    const conf={databaseURL:CFG.url.trim().replace(/\/$/,''),storageBucket:CFG.bucket.trim()};
+    if(CFG.apiKey)conf.apiKey=CFG.apiKey.trim();
+    if(!firebase.apps.length)firebase.initializeApp(conf);
+    if(CFG.apiKey){
+      try{
+        // 匿名帳號每台裝置各一個且會自動續期，規則只檢查 auth != null，
+        // 所以換裝置或帳號被清掉都不影響既有資料的存取。
+        if(!firebase.auth().currentUser)await firebase.auth().signInAnonymously();
+      }catch(e){
+        sync(false);
+        toast('⚠️ 匿名登入失敗：'+e.message);
+        console.error('signInAnonymously 失敗，請確認 Firebase Console → Authentication 已啟用「匿名」登入方式',e);
+        return;
+      }
+    }
     DB=firebase.database();
     STORAGE=firebase.storage();
     outboxFlush();
