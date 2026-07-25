@@ -107,7 +107,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .act-time{font-size:16px;color:var(--muted);font-weight:700;}
 .act-name{font-size:17px;font-weight:600;margin-top:1px;}
 .act-loc a{font-size:14px;color:var(--blue);margin-top:2px;display:flex;align-items:center;gap:3px;text-decoration:none;}
-.act-note-t{font-size:14px;color:var(--muted);margin-top:2px;font-style:italic;}
+.act-note-t{font-size:16px;color:var(--muted);margin-top:2px;font-style:italic;white-space:pre-wrap;word-break:break-word;}
 .act-cost{font-size:17px;font-weight:700;color:var(--green);margin-top:4px;}
 .act-btns{display:flex;gap:4px;flex-shrink:0;}
 .day-add{display:flex;align-items:center;gap:8px;padding:12px 16px;color:var(--blue);font-size:16px;font-weight:600;cursor:pointer;}
@@ -210,7 +210,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .note-card{margin-bottom:10px;}
 .note-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
 .note-title{font-size:20px;font-weight:700;color:var(--text);}
-.note-preview{font-size:19px;color:var(--muted);line-height:1.6;margin-bottom:6px;}
+.note-preview{font-size:19px;color:var(--muted);line-height:1.6;margin-bottom:6px;white-space:pre-wrap;word-break:break-word;}
 .note-thumbs{display:flex;gap:6px;flex-wrap:wrap;}
 /* ── Todo items ── */
 .todo-items{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
@@ -694,14 +694,17 @@ function applyTripCfg(cfg){
   document.getElementById('appTitle').textContent=CFG.title||'';
   const ph=document.getElementById('hdrPhoto');
   if(CFG.photo){ph.src=CFG.photo;ph.style.display='';}else{ph.style.display='none';}
-  if(curTab==='cfg')return;
-  document.getElementById('c_title').value=CFG.title||'';
-  [1,2,3,4].forEach(i=>{document.getElementById('c_m'+i).value=(CFG.members||[])[i-1]||'';});
-  document.getElementById('c_start').value=CFG.start||'';
-  document.getElementById('c_days').value=CFG.days||'';
-  document.getElementById('c_photo').value=CFG.photo||'';
-  document.getElementById('c_city').value=CFG.cityQuery||'';
-  document.getElementById('c_geo_result').textContent=CFG.city?`📍 目前定位：${CFG.city} (${Number(CFG.lat||0).toFixed(2)}, ${Number(CFG.lng||0).toFixed(2)})`:'';
+  // 在設定頁時不蓋掉「已經有值」的欄位（免得打字打到一半被蓋掉），但空欄位還是要填：
+  // 設定是連上 Firebase 才拿到的，開 app 後馬上切到設定頁的話原本會看到一片空白。
+  const setIf=(id,v)=>{const el=document.getElementById(id);if(!el||(curTab==='cfg'&&el.value!==''))return;el.value=v;};
+  setIf('c_title',CFG.title||'');
+  [1,2,3,4].forEach(i=>setIf('c_m'+i,(CFG.members||[])[i-1]||''));
+  setIf('c_start',CFG.start||'');
+  setIf('c_days',CFG.days||'');
+  setIf('c_photo',CFG.photo||'');
+  setIf('c_city',CFG.cityQuery||'');
+  const gr=document.getElementById('c_geo_result');
+  if(curTab!=='cfg'||!gr.textContent)gr.textContent=CFG.city?`📍 目前定位：${CFG.city} (${Number(CFG.lat||0).toFixed(2)}, ${Number(CFG.lng||0).toFixed(2)})`:'';
 }
 
 // ─── Firebase ────────────────────────────────────────
@@ -750,17 +753,22 @@ function _fbListen(){
     const d=snap.val()||{};
     // 旅程設定一律以 Firebase 為準（本機只留 Firebase 網址）。
     // 舊版資料沒有 /config，就把這台裝置 localStorage 裡的設定寫上去做一次性遷移。
-    if(d.config&&d.config.members&&d.config.members.length)applyTripCfg(d.config);
+    const cfgOK=!!(d.config&&d.config.members&&d.config.members.length);
+    if(cfgOK)applyTripCfg(d.config);
     else if(CFG.members&&CFG.members.length)DB.ref('/config').set(tripCfgFromCFG());
     const sched=d.schedule||{};
     const keys=Object.keys(sched);
-    // 這裡原本會比對 day1.date 與本機 CFG.start，不一致就 fixDates()。
-    // CFG.start 以前是每台裝置各存一份，於是 A 改日期、B 一連上就改回去，兩台無限互踢。
-    // 現在設定統一在 Firebase，日期只在使用者於設定頁按儲存時由 saveCfg() 更新。
-    if(!keys.length&&CFG.days)createFullSchedule();
     lastExps=d.expenses||{};
     lastNotes=d.notes||{};
     lastSched=sched;
+    // 行程日期沒跟上出發日就補正（上次存檔時寫入失敗、離線、或在別台裝置改的都會這樣）。
+    // 注意：比對的兩邊都取自 Firebase（/config.start vs /schedule/dayN/date），不是各裝置本機值——
+    // 當年的互踢 bug 是拿本機 CFG.start 去比，A 改日期、B 一連上就改回去。現在所有裝置算出的
+    // 目標日期完全相同，補到相符就不再寫，不會來回打架。/config 還沒建立時（舊資料遷移中）不動。
+    if(!keys.length&&CFG.days)createFullSchedule();
+    else if(cfgOK&&d.config.start&&d.config.days&&!datesMatchCfg(sched,d.config)){
+      if(!_fixingDates){_fixingDates=true;fixDates(false).then(()=>{_fixingDates=false;},()=>{_fixingDates=false;});}
+    }else{_fixingDates=false;}
     renderSched(sched);
     renderExp(lastExps);
     renderStat(lastExps);
@@ -777,11 +785,32 @@ function createFullSchedule(){
   DB.ref('/').update(u);
 }
 
+let _fixingDates=false;   // 補正寫入還在路上時，別讓後續的 value 事件重複發同一批寫入
+// 行程日期是否已經等於「出發日 + 第 N 天」；cfg 一律傳 Firebase 的 /config，不要傳本機 CFG
+function datesMatchCfg(sched,cfg){
+  for(let i=0;i<cfg.days;i++){
+    const day=sched['day'+(i+1)];
+    if(!day||day.date!==addDays(cfg.start,i))return false;
+  }
+  return true;
+}
+
 // Fix dates only (keep activities intact)
 function fixDates(showToast=false){
+  if(!CFG.start||!CFG.days){if(showToast)toast('⚠️ 請先設定出發日期與天數');return Promise.resolve();}
   const u={};
-  for(let i=0;i<CFG.days;i++)u['/schedule/day'+(i+1)+'/date']=addDays(CFG.start,i);
-  DB.ref('/').update(u).then(()=>{if(showToast)toast('✅ 行程日期已更新');});
+  for(let i=0;i<CFG.days;i++){
+    const did='day'+(i+1);
+    // 天數往上加時，缺的那幾天要整個建起來，只補 date 會生出沒有標題的空日卡
+    if(lastSched[did])u['/schedule/'+did+'/date']=addDays(CFG.start,i);
+    else u['/schedule/'+did]={label:'Day '+(i+1),date:addDays(CFG.start,i),acts:{}};
+  }
+  // 天數往下改時多出來的日子不會自動刪（活動還在裡面），日期一併順延免得殘留舊出發日
+  Object.keys(lastSched||{}).forEach(did=>{
+    const n=parseInt(did.replace(/\D/g,''))||0;
+    if(n>CFG.days)u['/schedule/'+did+'/date']=addDays(CFG.start,n-1);
+  });
+  return DB.ref('/').update(u).then(()=>{if(showToast)toast('✅ 行程日期已更新');});
 }
 
 // ─── Tabs ────────────────────────────────────────────
@@ -1349,8 +1378,9 @@ function saveCfg(){
   const newMembers=['c_m1','c_m2','c_m3','c_m4'].map(id=>document.getElementById(id).value.trim()).filter(Boolean);
   if(newMembers.length<2){toast('⚠️ 至少需要 2 位成員，未更新成員名單');}else{CFG.members=newMembers;}
   const newStart=document.getElementById('c_start').value||CFG.start;
-  const dateChanged=newStart!==CFG.start;
-  CFG.start=newStart;CFG.days=parseInt(document.getElementById('c_days').value)||CFG.days;
+  const newDays=parseInt(document.getElementById('c_days').value)||CFG.days;
+  const dateChanged=newStart!==CFG.start||newDays!==CFG.days;
+  CFG.start=newStart;CFG.days=newDays;
   CFG.photo=document.getElementById('c_photo').value.trim();
   const newCityName=document.getElementById('c_city').value.trim();
   let cityChanged=false;
@@ -1382,7 +1412,9 @@ function renderNotes(notes){
 }
 function renderNoteCard(nid,n){
   if(n.type==='note'){
-    const preview=esc((n.content||'').slice(0,80))+(n.content?.length>80?'…':'');
+    // 換行要留著（CSS 有 white-space:pre-wrap），截斷長度也放寬，不然多行筆記第二行就被切掉
+    const raw=n.content||'';
+    const preview=esc(raw.slice(0,300))+(raw.length>300?'…':'');
     const thumbs=(n.images||[]).map(b=>`<img class="act-img-thumb" src="${b}" onclick="openLightbox('${b}')">`).join('');
     return`<div class="card note-card">
       <div class="note-hdr">
