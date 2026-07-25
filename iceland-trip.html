@@ -234,9 +234,10 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
   <h1>🏠 家庭旅行</h1>
   <p>輸入 Firebase Realtime Database 網址開始</p>
   <div class="scard">
-    <div class="fg"><label class="lb">Firebase 資料庫網址</label><input class="inp" id="s_url" type="url" placeholder="https://xxx-default-rtdb.firebaseio.com"></div>
+    <div class="fg"><label class="lb">Firebase 資料庫網址</label><input class="inp" id="s_url" type="url" placeholder="https://xxx-default-rtdb.asia-southeast1.firebasedatabase.app"></div>
+    <div class="fg"><label class="lb">API Key（匿名登入用）</label><input class="inp" id="s_apikey" placeholder="AIza..."></div>
     <button class="btn btn-b btn-w" id="s_connect_btn" onclick="doConnect()">連線 →</button>
-    <p class="hint" id="s_connect_hint">Firebase Console → Realtime Database → 建立資料庫（測試模式）→ 複製網址<br>已經在別台裝置建立過這趟旅程的話，貼上同一個網址就會直接帶入，不用重填。</p>
+    <p class="hint" id="s_connect_hint">Firebase Console → Realtime Database → 複製網址；API Key 在 專案設定 → 一般 → 您的應用程式。<br>已經在別台裝置建立過這趟旅程的話，貼上同一組就會直接帶入，不用重填。</p>
 
   <div id="setup-trip" style="display:none">
     <p class="hint geo-res" style="text-align:left;margin:2px 0 14px">這個資料庫還沒有行程，請建立：</p>
@@ -342,7 +343,9 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
         <div class="slbl" style="margin-top:8px">Firebase</div>
         <div class="card">
           <div class="fg"><label class="lb">資料庫網址</label><input class="inp" id="c_url" type="url"></div>
-          <button class="btn btn-g btn-w" onclick="changeFB()">變更 Firebase 連線</button>
+          <div class="fg"><label class="lb">API Key（匿名登入用）</label><input class="inp" id="c_apikey" placeholder="AIza..."></div>
+          <button class="btn btn-b btn-w" onclick="saveApiKey()">儲存 API Key</button>
+          <button class="btn btn-g btn-w" style="margin-top:8px" onclick="changeFB()">變更 Firebase 連線</button>
         </div>
         <div class="slbl" style="margin-top:8px">危險操作</div>
         <div class="card"><button class="btn btn-r btn-w" onclick="clearAll()">清空所有資料</button></div>
@@ -622,7 +625,8 @@ function syncWeather(sched){
 // 旅程本身的設定（標題/成員/出發日/天數/照片/主要城市）存在 Firebase /config，
 // 這樣換裝置不用重填，也不會兩台各存一份互相打架。
 const TRIP_KEYS=['title','members','start','days','photo','city','cityQuery','lat','lng'];
-function saveDevice(){localStorage.setItem('iceland_trip',JSON.stringify({url:CFG.url}));}
+// 本機只留連線資訊：Firebase 網址 + API Key（其餘旅程設定一律以 /config 為準）
+function saveDevice(){localStorage.setItem('iceland_trip',JSON.stringify({url:CFG.url,apiKey:CFG.apiKey||''}));}
 function tripCfgFromCFG(){const o={};TRIP_KEYS.forEach(k=>{if(CFG[k]!==undefined)o[k]=CFG[k];});return o;}
 
 // 第一階段：只問網址，連上後看這個資料庫有沒有行程
@@ -630,13 +634,15 @@ async function doConnect(){
   const url=document.getElementById('s_url').value.trim();
   if(!url){alert('請輸入 Firebase 資料庫網址');return;}
   CFG.url=url;
+  CFG.apiKey=document.getElementById('s_apikey').value.trim();
   const btn=document.getElementById('s_connect_btn');
   btn.disabled=true;btn.textContent='連線中…';
   loadFirebase(async()=>{
     try{
       const dbUrl=new URL(url).origin;
-      if(!firebase.apps.length)firebase.initializeApp({databaseURL:dbUrl});
+      if(!firebase.apps.length)fbInit(dbUrl);
       DB=firebase.database();
+      await ensureAuth();
       const snap=await DB.ref('/config').get();
       const cfg=snap.val();
       if(cfg&&cfg.members&&cfg.members.length){
@@ -683,6 +689,7 @@ function bootApp(){
   document.getElementById('setup').style.display='none';
   const app=document.getElementById('app');app.style.display='flex';
   document.getElementById('c_url').value=CFG.url||'';
+  document.getElementById('c_apikey').value=CFG.apiKey||'';
   if(CFG.title)applyTripCfg(CFG); // 已經知道設定就先畫，否則等 /config 進來
   renderCatGrid();renderACGrid();initDnD();initActDnD();
   // 匯率改成 lazy fetch：由 _fbListen() 收到 expenses 資料後依實際用到的幣別呼叫
@@ -708,6 +715,30 @@ function applyTripCfg(cfg){
 }
 
 // ─── Firebase ────────────────────────────────────────
+// API Key 跟資料庫網址一樣存在本機 localStorage，每台裝置各自貼一次，
+// 刻意不寫死在檔案裡（這個 repo 是 public，寫死等於把金鑰放進 Git 歷史）。
+function fbInit(dbUrl){
+  const conf={databaseURL:dbUrl};
+  if(CFG.apiKey)conf.apiKey=CFG.apiKey.trim();
+  firebase.initializeApp(conf);
+}
+// 規則是 auth != null 時，任何資料庫操作前都要先確定已匿名登入。
+// 匿名帳號每台裝置各一個，四個人各自的裝置都會拿到自己的帳號，
+// 因為規則不綁 uid，大家讀寫的仍是同一份資料。
+// 沒填 API Key 就完全跳過登入，維持開放規則的舊行為——現有四個人的
+// localStorage 裡沒有 apiKey 欄位，靠這個分支才不會一升級就連不上。
+function ensureAuth(){
+  if(!CFG.apiKey)return Promise.resolve(null);
+  const u=firebase.auth().currentUser;
+  return u?Promise.resolve(u):firebase.auth().signInAnonymously();
+}
+function authFail(e){
+  sync(false);
+  const m=e?.message||String(e)||'unknown';
+  document.getElementById('fb-err-msg').textContent='匿名登入失敗：'+m;
+  document.getElementById('fb-err-banner').style.display='';
+  console.error('signInAnonymously 失敗，請確認 Firebase Console → Authentication 已啟用「匿名」登入方式',e);
+}
 function loadFirebase(cb){
   if(typeof firebase!=='undefined'){cb();return;}
   sync(true);
@@ -723,7 +754,13 @@ function loadFirebase(cb){
       const s2=document.createElement('script');
       s2.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js';
       s2.onerror=s1.onerror;
-      s2.onload=()=>{document.getElementById('fb-retry-banner').style.display='none';cb();};
+      s2.onload=()=>{
+        const s3=document.createElement('script');
+        s3.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js';
+        s3.onerror=s1.onerror;
+        s3.onload=()=>{document.getElementById('fb-retry-banner').style.display='none';cb();};
+        document.head.appendChild(s3);
+      };
       document.head.appendChild(s2);
     };
     document.head.appendChild(s1);
@@ -736,16 +773,17 @@ function connectFB(){
   try{
     const dbUrl=(()=>{try{return new URL(CFG.url?.trim()||'').origin;}catch{return '';}})();
     if(!dbUrl){sync(false);toast('⚠️ 請先設定 Firebase 資料庫網址');return;}
+    // 監聽一律等匿名登入完成再掛，否則規則會擋下來變成 permission denied
+    const listen=()=>{DB=firebase.database();ensureAuth().then(_fbListen).catch(authFail);};
     if(firebase.apps.length){
       // 若 URL 已變更，刪除舊 app 再重建
       const cur=firebase.apps[0].options.databaseURL;
-      if(cur&&cur!==dbUrl){firebase.apps[0].delete().catch(()=>{}).finally(()=>{firebase.initializeApp({databaseURL:dbUrl});DB=firebase.database();_fbListen();});}
-      else{DB=firebase.database();_fbListen();}
+      if(cur&&cur!==dbUrl){firebase.apps[0].delete().catch(()=>{}).finally(()=>{fbInit(dbUrl);listen();});}
+      else{listen();}
       return;
     }
-    firebase.initializeApp({databaseURL:dbUrl});
-    DB=firebase.database();
-    _fbListen();
+    fbInit(dbUrl);
+    listen();
   }catch(e){sync(false);const m=e?.message||String(e)||'unknown';document.getElementById('fb-err-msg').textContent=m;document.getElementById('fb-err-banner').style.display='';console.error(e);}
 }
 function _fbListen(){
@@ -1424,6 +1462,13 @@ function saveCfg(){
   toast('✅ 設定已儲存'+(dateChanged?' · 行程日期已更新':''));
 }
 function changeFB(){if(!confirm('變更 Firebase 將重新載入，確定？'))return;localStorage.removeItem('iceland_trip');location.reload();}
+// 只更新 API Key（不清掉網址）。重新載入是為了讓連線帶著金鑰重新初始化。
+function saveApiKey(){
+  CFG.apiKey=document.getElementById('c_apikey').value.trim();
+  saveDevice();
+  toast(CFG.apiKey?'✅ 已儲存 API Key，重新載入…':'已清除 API Key，重新載入…');
+  setTimeout(()=>location.reload(),700);
+}
 // 清空行程/記帳/記事本，但保留 /config（不然所有裝置都會退回設定畫面）
 function clearAll(){if(!confirm('⚠️ 確定清空所有資料？'))return;if(!confirm('再次確認：清空全部？'))return;DB.ref('/').update({schedule:{},expenses:{},notes:{}}).then(()=>toast('✅ 已清空'));}
 
