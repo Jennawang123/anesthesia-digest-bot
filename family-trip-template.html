@@ -877,19 +877,44 @@ function datesMatchCfg(sched,cfg){
 // Fix dates only (keep activities intact)
 function fixDates(showToast=false){
   if(!CFG.start||!CFG.days){if(showToast)toast('⚠️ 請先設定出發日期與天數');return Promise.resolve();}
-  const u={};
+  const u={},newDateOf={};
+  const dayNo=did=>parseInt(String(did).replace(/\D/g,''))||0;
   for(let i=0;i<CFG.days;i++){
     const did='day'+(i+1);
+    newDateOf[did]=addDays(CFG.start,i);
     // 天數往上加時，缺的那幾天要整個建起來，只補 date 會生出沒有標題的空日卡
-    if(lastSched[did])u['/schedule/'+did+'/date']=addDays(CFG.start,i);
-    else u['/schedule/'+did]={label:'Day '+(i+1),date:addDays(CFG.start,i),acts:{}};
+    if(lastSched[did])u['/schedule/'+did+'/date']=newDateOf[did];
+    else u['/schedule/'+did]={label:'Day '+(i+1),date:newDateOf[did],acts:{}};
   }
   // 天數往下改時多出來的日子不會自動刪（活動還在裡面），日期一併順延免得殘留舊出發日
   Object.keys(lastSched||{}).forEach(did=>{
-    const n=parseInt(did.replace(/\D/g,''))||0;
-    if(n>CFG.days)u['/schedule/'+did+'/date']=addDays(CFG.start,n-1);
+    const n=dayNo(did);
+    if(n>CFG.days){newDateOf[did]=addDays(CFG.start,n-1);u['/schedule/'+did+'/date']=newDateOf[did];}
   });
-  return DB.ref('/').update(u).then(()=>{if(showToast)toast('✅ 行程日期已更新');});
+  // 記帳與行程只靠日期字串綁定（calcDaySpend 比對 e.date === day.date），日子平移後
+  // 記帳若不跟著走，日卡的金額 chip 會消失、記帳頁還留在舊日期。
+  // 活動產生的 actcost_dayN_xxx：歸屬寫在 id 裡，直接跟著那天走。
+  // 手動記帳：沒有 day 歸屬，只能靠日期回推——剛好等於某天「舊日期」的就跟著那天，
+  // 落在行程區間外的（行前機票、訂金）保持原樣。
+  // 這個對照用的是寫入前的 lastSched，所以補正完再跑一次會是 no-op，不會重複平移。
+  const dayOfOldDate={};
+  Object.keys(lastSched||{}).sort((a,b)=>dayNo(a)-dayNo(b)).forEach(did=>{
+    const od=lastSched[did]&&lastSched[did].date;
+    if(od&&dayOfOldDate[od]===undefined)dayOfOldDate[od]=did;
+  });
+  let moved=0;
+  Object.entries(lastExps||{}).forEach(([eid,e])=>{
+    const m=/^actcost_(day\d+)_/.exec(eid);
+    const did=m?m[1]:dayOfOldDate[e.date||''];
+    if(!did)return;
+    const nd=newDateOf[did];
+    if(nd&&e.date!==nd){u['/expenses/'+eid+'/date']=nd;moved++;}
+  });
+  return DB.ref('/').update(u).then(()=>{
+    // 動到金錢紀錄就講一聲，不要默默改
+    if(moved)toast('✅ 行程日期已更新 · '+moved+' 筆記帳跟著調整');
+    else if(showToast)toast('✅ 行程日期已更新');
+  });
 }
 
 // ─── Tabs ────────────────────────────────────────────
