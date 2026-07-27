@@ -17,7 +17,7 @@
     {"ch": 73, "file": "73-Anesthesia for Pediatric Cardiac Surgery.pdf", "title": "小兒心臟麻醉", "tier": 2, "status": "done", "notion_page_id": "382e77f4-b1f0-8059-b53d-d14948dc7c09"},
     {"ch": 61, "file": "61-Geriatric Anesthesia.pdf", "title": "老年麻醉", "tier": 2, "status": "done", "notion_page_id": "396e77f4-b1f0-8125-89fd-f865f297cd1b"},
     {"ch": 77, "file": "77-Acute Postoperative Pain.pdf", "title": "術後急性疼痛", "tier": 3, "status": "done", "notion_page_id": "3aae77f4-b1f0-81bd-b7a3-f24903e46e3d"},
-    {"ch": 78, "file": "78-Perioperative Neurocognitive Disorders.pdf", "title": "術後認知障礙", "tier": 3, "status": "pending", "notion_page_id": null},
+    {"ch": 78, "file": "78-Perioperative Neurocognitive Disorders.pdf", "title": "術後認知障礙", "tier": 3, "status": "done", "notion_page_id": "3aae77f4-b1f0-81a7-953d-e51b29b31365"},
     {"ch": 76, "file": "76-The Postanesthesia Care Unit.pdf", "title": "PACU 照護", "tier": 3, "status": "pending", "notion_page_id": null},
     {"ch": 82, "file": "82-Cardiopulmonary Resuscitation and Advanced Cardiac Life Support.pdf", "title": "CPR 與 ACLS", "tier": 3, "status": "pending", "notion_page_id": null},
     {"ch": 33, "file": "33-Perioperative Echocardiography and Point-of-Care Ultrasound (POCUS).pdf", "title": "術中超音波與 TEE", "tier": 3, "status": "pending", "notion_page_id": null},
