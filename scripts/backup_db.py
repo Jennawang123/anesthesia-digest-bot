@@ -2,7 +2,13 @@
 """把 Supabase 的所有表倒成本機 CSV。
 
 用法：
-    DATABASE_URL="$(cat ~/.db_url)" python3 scripts/backup_db.py
+    python3 scripts/backup_db.py
+
+連線字串從 macOS Keychain 讀取（service `jenna-supabase-db`），
+所以不需要在硬碟上放明碼檔案。要換字串：
+    security add-generic-password -U -s jenna-supabase-db -a "$USER" \\
+        -T /usr/bin/security -w "$(cat 某個暫存檔)"
+環境變數 DATABASE_URL 若有設會優先採用（方便臨時測試）。
 
 輸出到 ~/Documents/db-backups/YYYY-MM-DD_HHMM/，每張表一個 CSV，
 外加 _manifest.txt 記錄各表筆數。預設保留最近 12 份，更舊的自動刪除。
@@ -13,20 +19,42 @@
 import csv
 import os
 import shutil
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import create_engine, inspect, text
 
-BACKUP_ROOT = Path.home() / "Documents" / "db-backups"
+# 放家目錄根層而非 ~/Documents：後者受 macOS TCC 保護，launchd 排程執行時
+# 檔案寫得進去、os.listdir 卻會 PermissionError（2026-08-02 實測）。
+BACKUP_ROOT = Path.home() / "db-backups"
+KEYCHAIN_SERVICE = "jenna-supabase-db"
 KEEP = 12
 
 
-def main():
+def read_url():
+    """優先用環境變數，否則從 Keychain 取。"""
     url = os.environ.get("DATABASE_URL", "").strip()
+    if url:
+        return url
+    try:
+        out = subprocess.run(
+            ["security", "find-generic-password", "-w", "-s", KEYCHAIN_SERVICE,
+             "-a", os.environ.get("USER", "")],
+            capture_output=True, text=True, timeout=30,
+        )
+    except Exception as e:
+        sys.exit(f"錯誤：讀取 Keychain 失敗：{e}")
+    if out.returncode != 0:
+        sys.exit(f"錯誤：Keychain 裡找不到 {KEYCHAIN_SERVICE}，請先寫入（見檔頭說明）。")
+    return out.stdout.strip()
+
+
+def main():
+    url = read_url()
     if not url:
-        sys.exit("錯誤：沒有 DATABASE_URL。用 DATABASE_URL=\"$(cat ~/.db_url)\" 帶進來。")
+        sys.exit("錯誤：拿到空的連線字串。")
     url = url.replace("postgres://", "postgresql://", 1)
 
     engine = create_engine(url, pool_pre_ping=True)
@@ -64,16 +92,19 @@ def main():
         encoding="utf-8",
     )
 
-    prune()
     print(f"\n完成 → {outdir}")
+    prune()
 
 
 def prune():
-    """只留最近 KEEP 份備份。"""
-    dirs = sorted((d for d in BACKUP_ROOT.iterdir() if d.is_dir()), reverse=True)
-    for d in dirs[KEEP:]:
-        shutil.rmtree(d)
-        print(f"  清除舊備份 {d.name}")
+    """只留最近 KEEP 份備份。清理失敗不該讓已完成的備份被當成失敗。"""
+    try:
+        dirs = sorted((d for d in BACKUP_ROOT.iterdir() if d.is_dir()), reverse=True)
+        for d in dirs[KEEP:]:
+            shutil.rmtree(d)
+            print(f"  清除舊備份 {d.name}")
+    except Exception as e:
+        print(f"  （清理舊備份失敗，不影響本次備份）{e}")
 
 
 if __name__ == "__main__":
