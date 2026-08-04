@@ -7,6 +7,7 @@
 
 import json
 import os
+import random
 import time
 from datetime import datetime, timezone, timedelta
 
@@ -135,13 +136,28 @@ Bad examples (do not write like this):
 
 Output only the quote. No title, no explanation, no quote marks."""
 
+# 心情小語只是裝飾，API 失敗時退回本地清單，不可讓整份日報開天窗
+QUOTE_FALLBACKS = [
+    "不懂就問，這才是住院醫師該做的事。",
+    "今天遇到的陌生情況，就是你來這裡的原因。",
+    "問出好問題，比答對所有問題更難，也更值得。",
+    "You're not expected to know everything — you're expected to grow.",
+    "Every case you haven't seen before is the point — not the problem.",
+    "Don't be afraid to ask 'why' or 'what if.' Curiosity is the job.",
+]
+
+
 def get_daily_quote() -> str:
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=100,
-        messages=[{"role": "user", "content": QUOTE_PROMPT}],
-    )
-    return resp.content[0].text.strip()
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=100,
+            messages=[{"role": "user", "content": QUOTE_PROMPT}],
+        )
+        return resp.content[0].text.strip()
+    except Exception as e:
+        print(f"  ⚠️ 心情小語 API 失敗（{type(e).__name__}: {e}），改用本地語錄")
+        return random.choice(QUOTE_FALLBACKS)
 
 
 # ── 3. Format ─────────────────────────────────────────────────────────────────
@@ -200,6 +216,27 @@ def build_prompt(articles: list[dict], topic: dict, date_str: str, hot_theme: st
 {article_block}"""
 
 
+def plain_message(articles: list[dict], topic: dict, date_str: str, hot_theme: str | None = None) -> str:
+    """不經 LLM 的降級版本：標題＋期刊＋連結，確保 API 掛掉時群組不開天窗。"""
+    number_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
+    hot_line = f"\n🔥 本週熱點：{hot_theme}" if hot_theme else ""
+
+    header = (
+        f"🩺 麻醉科日報 {date_str}（{topic['day']}）\n"
+        f"主題：{topic['name']}{hot_line}\n"
+        "━━━━━━━━━━━━━━━━━━━━"
+    )
+    blocks = [
+        f"{number_emojis[i]} {a['title']}\n\n"
+        f"📍 {a['journal']} | {a.get('pub_date') or '-'}\n\n"
+        f"🔗 {a['url']}"
+        for i, a in enumerate(articles[:len(number_emojis)])
+    ]
+    footer = f"━━━━━━━━━━━━━━━━━━━━\n共 {len(articles)} 篇｜{date_str}\n（摘要生成暫時無法使用，先附上原文連結）"
+
+    return "\n\n".join([header, *blocks, footer])
+
+
 def format_message(articles: list[dict], topic: dict, date_str: str, hot_theme: str | None = None) -> str:
     if not articles:
         return (
@@ -208,12 +245,18 @@ def format_message(articles: list[dict], topic: dict, date_str: str, hot_theme: 
             "本週此領域尚無新文章。"
         )
 
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=3500,
-        messages=[{"role": "user", "content": build_prompt(articles, topic, date_str, hot_theme)}],
-    )
-    return response.content[0].text.strip()
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-5",
+            max_tokens=3500,
+            thinking={"type": "disabled"},
+            output_config={"effort": "low"},
+            messages=[{"role": "user", "content": build_prompt(articles, topic, date_str, hot_theme)}],
+        )
+        return response.content[0].text.strip()
+    except Exception as e:
+        print(f"  ⚠️ 日報格式化 API 失敗（{type(e).__name__}: {e}），改推純文字清單")
+        return plain_message(articles, topic, date_str, hot_theme)
 
 
 # ── 3. Split ──────────────────────────────────────────────────────────────────
