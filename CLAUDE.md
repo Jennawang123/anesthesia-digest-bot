@@ -18,6 +18,8 @@
 
 - 設計會解析外部檔案格式（HTML/CSV/匯出檔等）的功能時，brainstorming 階段不可只憑記憶或猜測假設檔案結構就寫進 spec 與測試 fixture；務必先請使用者提供一份實際樣本檔案，用該檔案驗證解析邏輯後才進入 writing-plans。曾發生假設 HyRead 匯出 HTML 有 `.book-title` 等 class，實際檔案是 inline style 排版，部署後才發現格式完全不同。
 
+- 修改既有的結構化設定檔／資料檔（JSON、YAML 等）時，不可讀進來再整檔重寫（如 `json.load` + `json.dump`）；要以字串取代做最小幅度的修改。整檔重寫會依函式庫預設重排版面並改動結尾換行，把只有一行的實質變更放大成整檔 diff，讓 review 失去意義。曾發生用 `json.dump` 改 `miller_queue.json` 的單一章節狀態，結果把「一章一行」的格式全部重排成縮排、又吃掉結尾換行，diff 從 1 行變成 165 行。
+
 ## 可用 MCP 工具
 
 | 工具 | 能做什麼 |
