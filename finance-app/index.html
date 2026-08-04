@@ -911,14 +911,45 @@ dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');}
 dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');if(e.dataTransfer.files[0])processImage(e.dataTransfer.files[0]);});
 
+// 上傳前先在本機解碼 + 縮圖轉 JPEG。iOS 直接送原始 File 會踩三個坑：
+// iCloud「最佳化儲存空間」的照片只有縮圖在本機、HEIC 後端讀不了、原始截圖數 MB
+// 超過 Anthropic 圖片上限。Claude API 本來就會把長邊縮到 1568px，先縮不損辨識。
+function shrinkImage(file, maxDim=1600, quality=0.85){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      const scale=Math.min(1, maxDim/Math.max(img.width,img.height));
+      const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      cv.toBlob(b=>b?resolve(b):reject(new Error('canvas 轉檔失敗')),'image/jpeg',quality);
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url); reject(new Error('圖片無法解碼'));};
+    img.src=url;
+  });
+}
+
 async function processImage(file){
   const bank=document.getElementById('imp-bank').value;
   const year=document.getElementById('imp-year').value;
-  document.getElementById('imp-status').innerHTML='<span class="spinner"></span>解析中...';
+  const status=document.getElementById('imp-status');
+  status.innerHTML='<span class="spinner"></span>處理圖片...';
   document.getElementById('imp-confirm').style.display='none';
   document.getElementById('imp-preview').innerHTML='';
+
+  let blob;
+  try {
+    blob=await shrinkImage(file);
+  } catch(e){
+    status.innerHTML=`❌ 讀不到這張圖（${e.message}）。若照片存在 iCloud，先到「照片」App 打開它、等它下載完成再回來選；或改用「檔案」App 選取。`;
+    return;
+  }
+
+  status.innerHTML='<span class="spinner"></span>解析中...';
   const fd=new FormData();
-  fd.append('image',file); fd.append('bank',bank); fd.append('year',year);
+  fd.append('image',blob,'statement.jpg'); fd.append('bank',bank); fd.append('year',year);
   try {
     const r=await fetch(API+'/finance/import/screenshot',{method:'POST',headers:{'x-api-key':KEY},body:fd});
     if(!r.ok) throw new Error(await r.text());
@@ -942,7 +973,14 @@ async function processImage(file){
           </div>
         </div>
       </div>`).join('');
-  } catch(e){ document.getElementById('imp-status').innerHTML=`❌ ${e.message}`; }
+  } catch(e){
+    // TypeError = 沒拿到 HTTP 回應（Safari 說 "Load failed"、Chrome 說 "Failed to fetch"），
+    // 跟後端回錯誤碼是兩件事，訊息要分開講才有辦法往下查
+    const net = e instanceof TypeError;
+    status.innerHTML = net
+      ? `❌ 連不上後端（${e.message}）。後端剛睡醒可能要等一下，請再試一次；仍失敗就到設定頁確認 API 網址。`
+      : `❌ ${e.message}`;
+  }
 }
 async function confirmImport(){
   const res=await api('/finance/transactions/batch',{method:'POST',body:JSON.stringify(pendingTxs)});
