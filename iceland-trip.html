@@ -483,7 +483,7 @@ let CFG={},DB=null,curTab='sched',curAcc='exp';
 let weatherByDate=new Map();
 let curCat='food',curPayer=0,curCur='JPY';
 let curAC='sight',curACur='JPY',curAPayer=0;
-let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[];
+let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[],lastSafety={};
 const FALLBACK_RATES={JPY:0.21,AUD:21,USD:32,EUR:35};
 const _ratesFetching=new Set();
 const DG={on:false,did:null,aid:null,act:null,srcEl:null,ghost:null,timer:null,sx:0,sy:0};
@@ -644,6 +644,27 @@ function syncWeather(sched){
 const TRIP_KEYS=['title','members','start','days','photo','city','cityQuery','lat','lng'];
 // 本機只留連線資訊：Firebase 網址 + API Key（其餘旅程設定一律以 /config 為準）
 function saveDevice(){localStorage.setItem('iceland_trip',JSON.stringify({url:CFG.url,apiKey:CFG.apiKey||''}));}
+// ─── 離線快照 ───────────────────────────────────────
+// Firebase RTDB 的 web SDK 沒有磁碟持久化（setPersistenceEnabled 只有 iOS/Android 有），
+// 沒有這層快照，沒訊號時整個 app 是空白的——而安全資訊要用的正是沒訊號的時候。
+const SNAP_KEY='iceland_trip_snap';
+function snapSave(data){
+  try{
+    localStorage.setItem(SNAP_KEY,JSON.stringify({at:new Date().toISOString(),data:stripImages(data)}));
+  }catch(e){
+    // 配額爆了就把快照清掉，不要讓它擋住其他 localStorage 寫入（連線資訊比快照重要）
+    console.warn('快照寫入失敗，已清除：',e.message);
+    try{localStorage.removeItem(SNAP_KEY);}catch(_){}
+  }
+}
+function snapLoad(){
+  try{
+    const raw=localStorage.getItem(SNAP_KEY);
+    if(!raw)return null;
+    const o=JSON.parse(raw);
+    return (o&&o.data)?o:null;
+  }catch(e){return null;}
+}
 function tripCfgFromCFG(){const o={};TRIP_KEYS.forEach(k=>{if(CFG[k]!==undefined)o[k]=CFG[k];});return o;}
 
 // 第一階段：只問網址，連上後看這個資料庫有沒有行程
@@ -710,6 +731,14 @@ function bootApp(){
   if(CFG.title)applyTripCfg(CFG); // 已經知道設定就先畫，否則等 /config 進來
   renderCatGrid();renderACGrid();initDnD();initActDnD();
   // 匯率改成 lazy fetch：由 _fbListen() 收到 expenses 資料後依實際用到的幣別呼叫
+  // 先用上次的快照把畫面畫出來，Firebase 連上後再覆蓋。沒訊號時這就是唯一的資料來源。
+  const snap=snapLoad();
+  if(snap){
+    const d=snap.data;
+    lastSched=d.schedule||{};lastExps=d.expenses||{};lastNotes=d.notes||{};lastSafety=d.safety||{};
+    if(d.config)applyTripCfg(d.config);
+    renderSched(lastSched);renderExp(lastExps);renderStat(lastExps);renderNotes(lastNotes);
+  }
   loadFirebase(()=>connectFB());
 }
 // 把旅程設定套進 CFG 與畫面。使用者正在設定頁編輯時不覆蓋輸入框，免得打字打到一半被蓋掉。
@@ -816,6 +845,7 @@ function _fbListen(){
     lastExps=d.expenses||{};
     lastNotes=d.notes||{};
     lastSched=sched;
+    lastSafety=d.safety||{};
     // 行程日期沒跟上出發日就補正（上次存檔時寫入失敗、離線、或在別台裝置改的都會這樣）。
     // 注意：比對的兩邊都取自 Firebase（/config.start vs /schedule/dayN/date），不是各裝置本機值——
     // 當年的互踢 bug 是拿本機 CFG.start 去比，A 改日期、B 一連上就改回去。現在所有裝置算出的
@@ -828,7 +858,8 @@ function _fbListen(){
     renderExp(lastExps);
     renderStat(lastExps);
     renderNotes(lastNotes);
-    sync(false);
+    snapSave(d);
+    sync('ok');
     if(CFG.lat!=null)syncWeather(sched);
     ensureRatesForExpenses(lastExps).then(()=>{if(curTab==='exp'&&curAcc==='stat')renderStat(lastExps);});
   },err=>{sync(false);toast('⚠️ Firebase 錯誤：'+err.message);});
