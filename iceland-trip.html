@@ -596,6 +596,31 @@ function geoCandidates(raw){
   }
   return out;
 }
+// 距離門檻。冰島一天的行程通常在此範圍內，超過代表查到的是別的地方。
+const GEO_MAX_KM=200;
+// 合理性檢查。地理編碼服務查不到時不會誠實回報，而會給出看似正常實則錯誤的結果：
+//  - Photon 查某公寓會回名稱完全不同的另一家，或回相隔 300km 的同名地物
+//  - Nominatim 限定 countrycodes=is 查「Bergen」會回冰島東部某條街的建築（差 1400km）
+// 所以任何來源的結果都要獨立驗證，不能因為「有回結果」就採信。
+//
+// refs 是當天其他已知座標（[{lat,lng}]），src 是 'nominatim' | 'photon'。
+function sanityCheck(hit,refs,src){
+  if(!hit||typeof hit.lat!=='number'||typeof hit.lng!=='number')return false;
+  // 第一道：國家
+  if(hit.cc&&!['is','no'].includes(String(hit.cc).toLowerCase()))return false;
+  // 第二道：與當天其他座標的距離
+  const pts=(refs||[]).filter(r=>r&&typeof r.lat==='number'&&typeof r.lng==='number');
+  if(!pts.length){
+    // 無參照可比對時，兩種來源的信任度不同：
+    // Nominatim 有 countrycodes 限定範圍，錯誤模式已知且有限，可採用；
+    // Photon 是不可靠來源，沒有第二個座標交叉驗證就不該採信，否則一旦採信了錯誤座標，
+    // 它會成為後續檢查的基準，反而把正確的座標擋掉。
+    return src!=='photon';
+  }
+  const cLat=pts.reduce((s,p)=>s+p.lat,0)/pts.length;
+  const cLng=pts.reduce((s,p)=>s+p.lng,0)/pts.length;
+  return haversine(hit.lat,hit.lng,cLat,cLng)<=GEO_MAX_KM;
+}
 async function geocodeCity(name){
   try{
     const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=zh`);
@@ -1792,6 +1817,27 @@ function _selftest(){
     ok('候選不重複', (()=>{const c=geoCandidates('Blue Lagoon 9.6km');return c.length===new Set(c).size;})());
     ok('空字串回空陣列', geoCandidates('').length===0);
     ok('單一地名不產生多餘候選', geoCandidates('Skógafoss').length===1);
+  }
+
+  // ---- sanityCheck ----
+  {
+    // 南岸東段那天的既有座標（Pakkhús 與 Fjallsárlón）
+    const refs=[{lat:64.2502,lng:-15.2040},{lat:64.0142,lng:-16.3722}];
+    const IS={lat:64.25,lng:-15.21,cc:'is'};
+    const NEAR={lat:64.10,lng:-16.00,cc:'is'};
+    const FAR={lat:64.0945,lng:-21.8925,cc:'is'};   // Photon 誤配的 Garðabær，距離約 300km
+    const NO ={lat:60.3943,lng:5.3259,cc:'no'};     // 挪威 Bergen
+    const DE ={lat:52.52,lng:13.40,cc:'de'};
+
+    ok('同區座標通過', sanityCheck(IS,refs,'nominatim')===true);
+    ok('鄰近座標通過', sanityCheck(NEAR,refs,'nominatim')===true);
+    ok('300km 外的座標被擋', sanityCheck(FAR,refs,'nominatim')===false);
+    ok('非 is/no 國家被擋', sanityCheck(DE,refs,'nominatim')===false);
+    ok('挪威座標本身國家合格', sanityCheck(NO,[],'nominatim')===true);
+    ok('Nominatim 無參照時可採用', sanityCheck(IS,[],'nominatim')===true);
+    ok('Photon 無參照時一律拒絕', sanityCheck(IS,[],'photon')===false);
+    ok('Photon 有參照且合理則通過', sanityCheck(IS,refs,'photon')===true);
+    ok('Photon 有參照但不合理被擋', sanityCheck(FAR,refs,'photon')===false);
   }
 
   console.log(out.join('\n')+`\n\n通過 ${pass} / 失敗 ${fail}`);
