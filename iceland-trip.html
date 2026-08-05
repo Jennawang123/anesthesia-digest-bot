@@ -701,6 +701,60 @@ async function geoResolve(raw,refs){
   if(sawNetwork)return {fail:'network'};
   return {fail:'no-match'};
 }
+
+// 取出某天所有已知座標，供 sanityCheck 當參照
+function dayKnownPoints(day){
+  return Object.values(day?.acts||{})
+    .filter(a=>a.geo&&typeof a.geo.lat==='number')
+    .map(a=>({lat:a.geo.lat,lng:a.geo.lng}));
+}
+let _geoScanning=false;
+// 掃出「有 loc、無 geo、且不是已知查不到」的活動排進佇列。
+// reason:'network' 的失敗視為可重試（服務當下不通，下次開 app 再試）；
+// 'no-match' 與 'sanity-reject' 不自動重試，避免無限打 API——要重查得改 loc 或按「立即更新」。
+async function ensureActGeo(sched,force=false){
+  if(_geoScanning)return;
+  _geoScanning=true;
+  try{
+    for(const [did,day] of Object.entries(sched||{})){
+      const refs=dayKnownPoints(day);
+      const resolved=Object.entries(day.acts||{}).filter(([aid,a])=>a.geo)
+        .map(([aid,a])=>({aid,lat:a.geo.lat,lng:a.geo.lng,loc:a.loc}));
+      for(const [aid,act] of Object.entries(day.acts||{})){
+        if(!act.loc||act.geo)continue;
+        if(!force&&act.geoFail&&act.geoFail.reason!=='network')continue;
+        const res=await geoEnqueue(()=>geoResolve(act.loc,refs));
+        const base='/schedule/'+did+'/acts/'+aid;
+        if(res.fail){
+          await DB.ref(base+'/geoFail').set({at:new Date().toISOString(),tried:geoCandidates(act.loc),reason:res.fail});
+        }else{
+          await DB.ref(base+'/geo').set({lat:res.lat,lng:res.lng,q:res.q,src:res.src,at:new Date().toISOString()});
+          await DB.ref(base+'/geoFail').remove();
+          refs.push({lat:res.lat,lng:res.lng});
+          resolved.push({aid,lat:res.lat,lng:res.lng,loc:act.loc});
+        }
+      }
+      await pruneDayOutliers(did,resolved);
+    }
+  }finally{_geoScanning=false;}
+}
+
+// 當天全部解析完後，用中位中心複查一次。這是為了消除順序依賴：
+// 當天第一筆解析時 refs 必定是空的，sanityCheck 的距離檢查對它形同略過，
+// 若它誤配，就成為當天所有後續判斷的錨點，反而把正確的座標一一擋掉。
+// 用中位數而非平均，離群點才不會把中心拉向自己。
+// 少於 3 筆無法判斷誰是離群（2 筆相距很遠時，沒有依據說哪一筆才是錯的），跳過。
+async function pruneDayOutliers(did,resolved){
+  if(resolved.length<3)return;
+  const med=a=>{const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+  const cLat=med(resolved.map(r=>r.lat)),cLng=med(resolved.map(r=>r.lng));
+  for(const r of resolved){
+    if(haversine(r.lat,r.lng,cLat,cLng)<=GEO_MAX_KM)continue;
+    await DB.ref('/schedule/'+did+'/acts/'+r.aid+'/geo').remove();
+    await DB.ref('/schedule/'+did+'/acts/'+r.aid+'/geoFail')
+      .set({at:new Date().toISOString(),tried:geoCandidates(r.loc||''),reason:'sanity-reject'});
+  }
+}
 async function geocodeCity(name){
   try{
     const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=zh`);
@@ -1015,6 +1069,7 @@ function _fbListen(){
     snapSave(d);
     sync('ok');
     if(CFG.lat!=null)syncWeather(sched);
+    if(navigator.onLine)ensureActGeo(sched);
     ensureRatesForExpenses(lastExps).then(()=>{if(curTab==='exp'&&curAcc==='stat')renderStat(lastExps);});
   },err=>{sync(navigator.onLine?'ok':'offline');toast('⚠️ Firebase 錯誤：'+err.message);});
 }
