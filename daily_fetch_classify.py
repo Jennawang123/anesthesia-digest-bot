@@ -27,15 +27,32 @@ TOPICS = {
 
 ERRATA_KEYWORDS = ("erratum", "correction", "retraction", "corrigendum")
 
+MIN_ARTICLES = 20  # 有來源失敗時，低於此數就不覆蓋既有 week.json
+
 
 # ── 1. Fetch ──────────────────────────────────────────────────────────────────
+
+def _get_with_retry(url: str, params: dict, timeout: int, attempts: int = 3):
+    """NCBI 偶爾會在傳輸中途斷線（ChunkedEncodingError），重試兩次再放棄。"""
+    for i in range(attempts):
+        try:
+            resp = requests.get(url, params=params, timeout=timeout)
+            resp.raise_for_status()
+            return resp
+        except requests.RequestException as e:
+            if i == attempts - 1:
+                raise
+            wait = 2 ** i
+            print(f"    ⚠️ 連線失敗（{type(e).__name__}），{wait}s 後重試（{i + 2}/{attempts}）")
+            time.sleep(wait)
+
 
 def fetch_ncbi(query_term: str, journal_label: str, days_back: int = 30) -> list[dict]:
     today = datetime.now(timezone.utc)
     start = (today - timedelta(days=days_back)).strftime("%Y/%m/%d")
     end   = today.strftime("%Y/%m/%d")
 
-    search = requests.get(
+    search = _get_with_retry(
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
         params={
             "db": "pubmed",
@@ -53,7 +70,7 @@ def fetch_ncbi(query_term: str, journal_label: str, days_back: int = 30) -> list
 
     time.sleep(0.4)
 
-    fetch = requests.get(
+    fetch = _get_with_retry(
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
         params={
             "db": "pubmed",
@@ -292,10 +309,18 @@ def main():
         ("Intensive Care",  "0342-4642 OR 1432-1238"),   # Intensive Care Medicine
         ("AJRCCM",          "1073-449X OR 1535-4970"),   # Am J Respir Crit Care Med
     ]
+    failed_sources: list[str] = []
+
     for journal, issns in ncbi_journals:
         # 多個 ISSN 用 OR 串接
         issn_query = " OR ".join(f"{i.strip()}[ISSN]" for i in issns.split(" OR "))
-        arts = fetch_ncbi(f"({issn_query})", journal)
+        try:
+            arts = fetch_ncbi(f"({issn_query})", journal)
+        except Exception as e:
+            # 單一來源掛掉不該讓整週的抓取全毀，記下來繼續跑
+            print(f"  ❌ {journal} 抓取失敗（{type(e).__name__}: {e}）")
+            failed_sources.append(journal)
+            continue
         print(f"  {journal}: {len(arts)}")
         all_articles.extend(arts)
         time.sleep(0.5)
@@ -306,7 +331,12 @@ def main():
         ("https://jamanetwork.com/rss/site_3/67.xml",                              "JAMA"),
     ]
     for url, name in rss_sources:
-        arts = fetch_rss(url, name)
+        try:
+            arts = fetch_rss(url, name)
+        except Exception as e:
+            print(f"  ❌ {name} 抓取失敗（{type(e).__name__}: {e}）")
+            failed_sources.append(name)
+            continue
         print(f"  {name}: {len(arts)}")
         all_articles.extend(arts)
 
@@ -319,9 +349,18 @@ def main():
             unique.append(a)
 
     print(f"Unique articles: {len(unique)}")
+    if failed_sources:
+        print(f"⚠️ 本次有 {len(failed_sources)} 個來源失敗：{', '.join(failed_sources)}")
     if not unique:
         print("No articles found. Exiting.")
         return
+
+    # 有來源掛掉且文章數明顯偏低時，不要用殘缺結果覆蓋掉上週的 week.json
+    if failed_sources and len(unique) < MIN_ARTICLES:
+        raise SystemExit(
+            f"❌ 只抓到 {len(unique)} 篇（低於 {MIN_ARTICLES} 篇門檻）且有來源失敗，"
+            "不覆蓋 week.json，請稍後重跑 workflow。"
+        )
 
     print("Classifying with Haiku...")
     classified = classify_articles(unique)
