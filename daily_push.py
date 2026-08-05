@@ -164,14 +164,20 @@ def get_daily_quote() -> str:
 
 def build_prompt(articles: list[dict], topic: dict, date_str: str, hot_theme: str | None = None) -> str:
     article_block = "\n\n".join(
-        f"[{i+1}] 《{a['journal']}》\n標題：{a['title']}\n發表日期：{a.get('pub_date') or '未知'}\n摘要：{a['abstract'][:400]}\n連結：{a['url']}"
+        f"[{i+1}] 《{a['journal']}》\n標題：{a['title']}\n發表日期：{a.get('pub_date') or '未知'}\n摘要：{a['abstract'][:500]}\n連結：{a['url']}"
         for i, a in enumerate(articles)
     )
 
     number_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
     n = len(articles)
 
-    hot_line = f"\n🔥 本週熱點：{hot_theme}" if hot_theme else ""
+    # 熱點是「本週該主題跨期刊」層級的訊號，當日入選文章未必涵蓋它，
+    # 因此交給模型判斷是否輸出，避免出現熱點與內文無關的情況
+    hot_line = (
+        f"\n🔥 本週熱點：{hot_theme}"
+        "（僅當下方入選文章至少一篇確實屬於此主題時才輸出這一行，否則整行省略）"
+        if hot_theme else ""
+    )
 
     return f"""你是麻醉科日報編輯，請將以下文章整理成 LINE 推播日報。
 
@@ -208,6 +214,8 @@ def build_prompt(articles: list[dict], topic: dict, date_str: str, hot_theme: st
 - 醫療術語、藥名、術式、縮寫、期刊名全部保留英文，不翻譯
 - 專有名詞若非全科通識（如 NephroCheck、MAKE、TEG 等），首次出現時括號補充一句中文解釋，例如：NephroCheck（尿液 TIMP-2×IGFBP7 biomarker 用於 AKI 預測）
 - 📊 bullet points 用 • 開頭，必須列出具體數值（p value、OR、HR、NNT、%、n 數等）或具體介入內容（例：限制術中 IV fluid ≤3 mL/kg/hr、使用 goal-directed therapy protocol）；禁止使用空洞描述如「有效改善」、「結果顯著」、「策略有效」
+- 提供的摘要若本身沒有具體數據或條文（常見於 guideline update、editorial、correspondence），就**只寫摘要真的講了什麼**，並在最後一點明寫「摘要未列出具體建議條文，需查閱全文」。寧可只有 1 點，也不可以把標題換句話說來湊成 3 點——例如「針對 X 提出更新建議」「強調標準化流程」這種只是複述標題、沒有任何新資訊的句子，一律不准出現
+- 同理，💡 臨床意義若摘要不足以支撐具體建議，就寫清楚「需取得全文才能判斷實務調整方向」，不要生出看似有指引性但其實空洞的句子
 - 🔑 一句話核心發現必須說清楚：誰、做了什麼、結果如何（含數字或方向），例：「HES vs crystalloid 在腹部手術 meta-analysis 中顯示術後 AKI 風險無顯著差異（OR 1.08, 95%CI 0.91–1.28）」
 - 💡 臨床意義必須直接說出結論或建議，不可寫「提供依據」、「有助於重新評估」、「為臨床醫師提供參考」等後設評論；要說清楚：應該怎麼做、用或不用、改變什麼
 - 直接輸出訊息本體，不加任何說明文字
