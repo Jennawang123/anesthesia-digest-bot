@@ -649,6 +649,8 @@ input,select{background:var(--bg-base);color:var(--text-primary);border:1px soli
     <div class="form-label">API Key</div>
     <input id="cfg-key" placeholder="your-api-key">
     <button class="btn" onclick="saveConfig()">儲存</button>
+    <!-- iOS 主畫面 App 的快取很頑固，出問題時要能先確認跑的是哪一版 -->
+    <div style="margin-top:10px;text-align:center;color:var(--text-secondary);font-size:12px">版本 2026-08-05a</div>
     <button class="mclose" onclick="closeOverlay('cfg-overlay')">取消</button>
   </div>
 </div>
