@@ -951,7 +951,16 @@ async function processImage(file){
   const fd=new FormData();
   fd.append('image',blob,'statement.jpg'); fd.append('bank',bank); fd.append('year',year);
   try {
-    const r=await fetch(API+'/finance/import/screenshot',{method:'POST',headers:{'x-api-key':KEY},body:fd});
+    // iOS PWA 叫出系統相簿 picker 會把 app 切到背景，回前景後第一個 fetch 常會
+    // 立刻被拒（TypeError，不是 HTTP 錯誤）。重送一次通常就過，故只對網路層失敗重試。
+    let r;
+    try {
+      r=await fetch(API+'/finance/import/screenshot',{method:'POST',headers:{'x-api-key':KEY},body:fd});
+    } catch(err){
+      if(!(err instanceof TypeError)) throw err;
+      await new Promise(s=>setTimeout(s,800));
+      r=await fetch(API+'/finance/import/screenshot',{method:'POST',headers:{'x-api-key':KEY},body:fd});
+    }
     if(!r.ok) throw new Error(await r.text());
     const data=await r.json();
     pendingTxs=data.transactions;
