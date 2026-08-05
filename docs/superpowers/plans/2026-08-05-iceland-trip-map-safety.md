@@ -580,12 +580,16 @@ git commit -m "feat(iceland): 加入地理編碼合理性檢查，擋掉服務�
 // Nominatim 政策要求以 User-Agent 或 Referer 識別，瀏覽器會自動送 Referer，這是可接受的識別方式。
 const GEO_CC='is,no';
 async function geoNominatim(q){
-  const u=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=${GEO_CC}`;
+  // addressdetails=1 不可省：不帶這個參數，回應裡根本沒有 address 物件，
+  // country_code 永遠取不到，國家檢查會退回預設值而形同虛設（已實測確認）。
+  const u=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&addressdetails=1&countrycodes=${GEO_CC}`;
   const r=await fetch(u);
   if(!r.ok)throw new Error('nominatim '+r.status);
   const d=await r.json();
   if(!d.length)return null;
-  return {lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon),cc:(d[0].address?.country_code)||'is',label:d[0].display_name};
+  const cc=d[0].address?.country_code;
+  if(!cc)return null;   // 拿不到國家就不採信，寧可留白也不猜
+  return {lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon),cc,label:d[0].display_name};
 }
 async function geoPhoton(q){
   const r=await fetch(`https://photon.komoot.io/api?q=${encodeURIComponent(q)}&limit=1`);
@@ -593,8 +597,12 @@ async function geoPhoton(q){
   const d=await r.json();
   const f=d.features?.[0];
   if(!f)return null;
+  const cc=(f.properties?.countrycode||'').toLowerCase();
+  // Photon 是不可靠來源，沒有國家資訊就無法過第一道檢查，直接視為查無。
+  // sanityCheck 的國家檢查對空 cc 是靜默放行的，所以要在這裡先擋掉。
+  if(!cc)return null;
   const c=f.geometry.coordinates;
-  return {lat:c[1],lng:c[0],cc:(f.properties?.countrycode||'').toLowerCase(),label:f.properties?.name||q};
+  return {lat:c[1],lng:c[0],cc,label:f.properties?.name||q};
 }
 
 // 1.1 秒節流的序列佇列。Nominatim 政策要求每秒至多 1 次請求，這條不能省。
@@ -713,6 +721,8 @@ async function ensureActGeo(sched,force=false){
   try{
     for(const [did,day] of Object.entries(sched||{})){
       const refs=dayKnownPoints(day);
+      const resolved=Object.entries(day.acts||{}).filter(([aid,a])=>a.geo)
+        .map(([aid,a])=>({aid,lat:a.geo.lat,lng:a.geo.lng,loc:a.loc}));
       for(const [aid,act] of Object.entries(day.acts||{})){
         if(!act.loc||act.geo)continue;
         if(!force&&act.geoFail&&act.geoFail.reason!=='network')continue;
@@ -724,10 +734,29 @@ async function ensureActGeo(sched,force=false){
           await DB.ref(base+'/geo').set({lat:res.lat,lng:res.lng,q:res.q,src:res.src,at:new Date().toISOString()});
           await DB.ref(base+'/geoFail').remove();
           refs.push({lat:res.lat,lng:res.lng});
+          resolved.push({aid,lat:res.lat,lng:res.lng,loc:act.loc});
         }
       }
+      await pruneDayOutliers(did,resolved);
     }
   }finally{_geoScanning=false;}
+}
+
+// 當天全部解析完後，用中位中心複查一次。這是為了消除順序依賴：
+// 當天第一筆解析時 refs 必定是空的，sanityCheck 的距離檢查對它形同略過，
+// 若它誤配，就成為當天所有後續判斷的錨點，反而把正確的座標一一擋掉。
+// 用中位數而非平均，離群點才不會把中心拉向自己。
+// 少於 3 筆無法判斷誰是離群（2 筆相距很遠時，沒有依據說哪一筆才是錯的），跳過。
+async function pruneDayOutliers(did,resolved){
+  if(resolved.length<3)return;
+  const med=a=>{const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+  const cLat=med(resolved.map(r=>r.lat)),cLng=med(resolved.map(r=>r.lng));
+  for(const r of resolved){
+    if(haversine(r.lat,r.lng,cLat,cLng)<=GEO_MAX_KM)continue;
+    await DB.ref('/schedule/'+did+'/acts/'+r.aid+'/geo').remove();
+    await DB.ref('/schedule/'+did+'/acts/'+r.aid+'/geoFail')
+      .set({at:new Date().toISOString(),tried:geoCandidates(r.loc||''),reason:'sanity-reject'});
+  }
 }
 ```
 
