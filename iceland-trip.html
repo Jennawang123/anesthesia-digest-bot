@@ -192,6 +192,16 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 #drag-ghost{position:fixed;z-index:999;background:white;border-radius:10px;padding:10px 16px;box-shadow:0 8px 24px rgba(0,0,0,.3);font-weight:600;font-size:16px;pointer-events:none;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:rotate(-2deg);display:flex;align-items:center;gap:8px;}
 .day-num{font-family:'Noto Serif TC',serif;font-size:19px;font-weight:700;color:#1A3A78;letter-spacing:.2px;}
 .day-date-badge{font-size:15px;font-weight:700;color:#4A72AE;background:#EBF2FC;border-radius:5px;padding:3px 8px;margin-left:2px;}
+/* ── Day 導覽列 ──
+   直接掛在 #page-sched 底下，不要包進 .bx：sticky 只在「自己的容器」範圍內黏著，
+   包進只有導覽列＋總覽的小容器，捲過總覽就掉出畫面了。 */
+.day-strip{position:sticky;top:0;z-index:50;background:var(--bg);display:flex;gap:8px;overflow-x:auto;padding:10px 16px;margin:0 0 10px;scrollbar-width:none;}
+.day-strip::-webkit-scrollbar{display:none;}
+.ds-chip{flex:0 0 auto;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:8px 14px;text-align:center;cursor:pointer;min-width:74px;transition:all .12s;}
+.ds-chip.on{background:var(--blue);border-color:var(--blue);}
+.ds-chip .ds-n{display:block;font-size:15px;color:var(--muted);font-weight:600;}
+.ds-chip .ds-d{display:block;font-size:18px;font-weight:800;color:var(--text);margin-top:1px;}
+.ds-chip.on .ds-n,.ds-chip.on .ds-d{color:#fff;}
 .day-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px;}
 .wchip{display:inline-flex;align-items:center;gap:2px;background:#D9E6EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:var(--blue2);}
 .schip{display:inline-flex;align-items:center;gap:2px;background:#EAF5EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:#1E7D32;}
@@ -281,6 +291,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
   <div class="content">
 
     <div class="page on" id="page-sched">
+      <div class="day-strip" id="dayStrip"></div>
+      <div id="overviewBox" style="padding:0 16px"></div>
       <div class="bx" id="schedBox">
         <div class="empty"><div class="empty-i">📅</div><div class="empty-h">載入中…</div></div>
       </div>
@@ -1495,8 +1507,68 @@ function renderSched(sched){
     </div>`;
   }).join('');
   openDays.forEach(did=>{const el=document.getElementById('dc-'+did);if(el)el.classList.add('open');});
+  renderDayStrip(sched);
+  renderOverview(sched);
 }
 
+// ─── Day 導覽列 ─────────────────────────────────────
+// 捲動的容器是 .content（body 本身 overflow:hidden，window 不會捲），
+// 所有捲動計算都要對 .content 做，用 window.scrollTo/scrollY 會完全沒反應。
+function schedScroller(){return document.querySelector('.content');}
+function renderDayStrip(sched){
+  const el=document.getElementById('dayStrip');
+  if(!el)return;
+  const days=Object.entries(sched||{}).sort((a,b)=>(parseInt(a[0].replace(/\D/g,''))||0)-(parseInt(b[0].replace(/\D/g,''))||0));
+  const md=d=>{if(!d)return'';const[y,m,dd]=d.split('-');return `${parseInt(m)}/${parseInt(dd)}`;};
+  const wd=d=>{if(!d)return'';return new Date(d+'T12:00:00').toLocaleDateString('zh-TW',{weekday:'short'});};
+  el.innerHTML=
+    `<div class="ds-chip" id="ds-overview" onclick="jumpOverview()"><span class="ds-n">總覽</span><span class="ds-d">${days.length}天</span></div>`+
+    days.map(([did,day])=>
+      `<div class="ds-chip" id="ds-${did}" onclick="jumpDay('${did}')"><span class="ds-n">D${did.replace(/\D/g,'')} ${wd(day.date)}</span><span class="ds-d">${md(day.date)}</span></div>`
+    ).join('');
+  initDaySpy();
+}
+function jumpOverview(){
+  const sc=schedScroller();
+  if(sc)sc.scrollTo({top:0,behavior:'smooth'});
+  setDayChip('overview');
+}
+function jumpDay(did){
+  const card=document.getElementById('dc-'+did);
+  const sc=schedScroller();
+  if(!card||!sc)return;
+  card.classList.add('open');
+  mountDayMap(did);
+  const strip=document.getElementById('dayStrip');
+  const offset=(strip?strip.getBoundingClientRect().height:0)+8;
+  const y=card.getBoundingClientRect().top-sc.getBoundingClientRect().top+sc.scrollTop-offset;
+  sc.scrollTo({top:Math.max(0,y),behavior:'smooth'});
+  setDayChip(did);
+}
+function setDayChip(key){
+  document.querySelectorAll('.ds-chip').forEach(c=>c.classList.remove('on'));
+  const chip=document.getElementById('ds-'+key);
+  if(!chip)return;
+  chip.classList.add('on');
+  chip.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+}
+let _daySpy=null;
+// 捲到哪天就 highlight 哪個 chip。root 指定成 .content（真正在捲的那層），
+// rootMargin 上緣留出 sticky 導覽列的高度，讓「目前這天」的判定跟視覺上看到的一致。
+function initDaySpy(){
+  if(_daySpy)_daySpy.disconnect();
+  const sc=schedScroller();
+  _daySpy=new IntersectionObserver(entries=>{
+    const vis=entries.filter(e=>e.isIntersecting)
+      .sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top)[0];
+    if(vis)setDayChip(vis.target.id.replace('dc-',''));
+  },{root:sc||null,rootMargin:'-80px 0px -70% 0px',threshold:0});
+  document.querySelectorAll('.day-card').forEach(c=>_daySpy.observe(c));
+}
+// 暫時空實作，Task 10 取代
+function renderOverview(){}
+// 暫時空實作，Task 12 取代
+function mountDayMap(){}
 function toggleDay(did){document.getElementById('dc-'+did).classList.toggle('open');}
 function openDayM(did){
   const day=lastSched[did]||{};
