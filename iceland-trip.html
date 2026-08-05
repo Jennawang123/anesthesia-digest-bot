@@ -495,6 +495,23 @@ const japanDate=(d=new Date())=>d.toLocaleDateString('en-CA',{timeZone:'Asia/Tok
 const today=()=>japanDate();
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const fmtD=d=>{if(!d)return'';return new Date(d+'T12:00:00').toLocaleDateString('zh-TW',{month:'short',day:'numeric',weekday:'short'});};
+// 兩點間大圓距離（公里）。安全資訊的 fallback 距離與 sanityCheck 的距離門檻都用它。
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371,rad=d=>d*Math.PI/180;
+  const dLat=rad(lat2-lat1),dLng=rad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+// 深層複製並拿掉所有活動照片。照片是 base64（單張 100-500KB、每活動上限 6 張），
+// localStorage 單一網域只有 5MB，不排除會整個寫入失敗，連行程文字都存不進去。
+function stripImages(data){
+  const c=JSON.parse(JSON.stringify(data||{}));
+  Object.values(c.schedule||{}).forEach(day=>{
+    Object.values(day.acts||{}).forEach(act=>{delete act.images;});
+  });
+  Object.values(c.notes||{}).forEach(n=>{delete n.images;});
+  return c;
+}
 const fmtDt=iso=>{const d=new Date(iso);return d.toLocaleDateString('zh-TW',{month:'short',day:'numeric'})+' '+d.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});};
 const fmtDayBadge=d=>{if(!d)return'';const dt=new Date(d+'T12:00:00');const w=['日','一','二','三','四','五','六'][dt.getDay()];return`${dt.getMonth()+1}月${dt.getDate()}日（${w}）`;};
 // Pure UTC date arithmetic – no timezone drift
@@ -1658,6 +1675,36 @@ function openLightbox(src){
   document.getElementById('lb-img').src=src;
   openM('m-lb');
 }
+
+// ─── 自我測試（開發用，在 console 執行 _selftest()）─────────────
+function _selftest(){
+  const out=[];let pass=0,fail=0;
+  const ok=(name,cond,extra='')=>{cond?pass++:fail++;out.push(`${cond?'✅':'❌'} ${name}${extra&&!cond?'  → '+extra:''}`);};
+  const near=(a,b,tol)=>Math.abs(a-b)<=tol;
+
+  // ---- stripImages ----
+  {
+    const src={config:{title:'x'},schedule:{day1:{date:'2026-09-14',acts:{a1:{name:'溫泉',loc:'Blue Lagoon',images:['data:image/jpeg;base64,AAAA']}}}}};
+    const r=stripImages(src);
+    ok('stripImages 移除 images', r.schedule.day1.acts.a1.images===undefined);
+    ok('stripImages 保留其他欄位', r.schedule.day1.acts.a1.loc==='Blue Lagoon');
+    ok('stripImages 保留 config', r.config.title==='x');
+    ok('stripImages 不改動原物件', src.schedule.day1.acts.a1.images.length===1);
+  }
+
+  // ---- haversine（實測座標）----
+  {
+    ok('haversine 冰川湖→東南城鎮 62.4km', near(haversine(64.0142,-16.3722,64.2539,-15.2082),62.4,1.0),
+       String(haversine(64.0142,-16.3722,64.2539,-15.2082)));
+    ok('haversine 溫泉→首都 38.1km', near(haversine(63.8792,-22.4443,64.1360,-21.9270),38.1,1.0),
+       String(haversine(63.8792,-22.4443,64.1360,-21.9270)));
+    ok('haversine 同點為 0', haversine(64,-19,64,-19)===0);
+  }
+
+  console.log(out.join('\n')+`\n\n通過 ${pass} / 失敗 ${fail}`);
+  return fail===0;
+}
+window._selftest=_selftest;
 </script>
 
 <!-- Lightbox -->
