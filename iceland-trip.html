@@ -800,6 +800,106 @@ async function pruneDayOutliers(did,resolved){
       .set({at:new Date().toISOString(),tried:geoCandidates(r.loc||''),reason:'sanity-reject'});
   }
 }
+
+// ─── 安全資訊：定位基準與查詢 ───────────────────────
+// 依序：當日住宿 → 當日所有座標的中心 → 前一日住宿。三者皆無則該日不顯示安全資訊。
+function dayBaseLatLng(day,prevHotel){
+  const acts=Object.values(day?.acts||{});
+  const hotel=acts.find(a=>a.cat==='hotel'&&a.geo&&typeof a.geo.lat==='number');
+  if(hotel)return {lat:hotel.geo.lat,lng:hotel.geo.lng,from:'hotel',label:hotel.name||hotel.loc||'住宿'};
+  const pts=acts.filter(a=>a.geo&&typeof a.geo.lat==='number').map(a=>a.geo);
+  if(pts.length){
+    return {lat:pts.reduce((s,p)=>s+p.lat,0)/pts.length,
+            lng:pts.reduce((s,p)=>s+p.lng,0)/pts.length,
+            from:'center',label:'當日行程'};
+  }
+  if(prevHotel)return {lat:prevHotel.lat,lng:prevHotel.lng,from:'prevHotel',label:prevHotel.label||'前一日住宿'};
+  return null;
+}
+
+const OVERPASS_URL='https://overpass-api.de/api/interpreter';
+const OSRM_URL='https://router.project-osrm.org/route/v1/driving/';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+// 冰島鄉下資料很稀疏（實測某東南部城鎮半徑 50km 內只有 2 筆），所以半徑要漸進放大。
+// clinic 不能省：鄉下常常只有 heilsugæsla 診所而沒有 hospital。
+async function overpassAround(lat,lng,radius){
+  const q=`[out:json][timeout:25];(
+node[amenity=police](around:${radius},${lat},${lng});
+node[amenity=hospital](around:${radius},${lat},${lng});
+node[amenity=clinic](around:${radius},${lat},${lng});
+way[amenity=police](around:${radius},${lat},${lng});
+way[amenity=hospital](around:${radius},${lat},${lng});
+way[amenity=clinic](around:${radius},${lat},${lng});
+);out center tags;`;
+  const r=await fetch(OVERPASS_URL,{method:'POST',body:q});
+  if(!r.ok)throw new Error('overpass '+r.status);
+  const d=await r.json();
+  return (d.elements||[]).map(e=>{
+    const lat2=e.lat??e.center?.lat, lng2=e.lon??e.center?.lon;
+    if(lat2==null||lng2==null)return null;
+    const t=e.tags||{};
+    return {amenity:t.amenity,name:t.name||'',emergency:t.emergency||'',
+            lat:lat2,lng:lng2,km:haversine(lat,lng,lat2,lng2)};
+  }).filter(Boolean);
+}
+// 車程。直線距離在冰島會嚴重低估（實測 1.15-1.24x），而且「62 公里」不會讓人知道那是一小時的路。
+async function osrmDrive(fromLat,fromLng,toLat,toLng){
+  try{
+    const r=await fetch(`${OSRM_URL}${fromLng},${fromLat};${toLng},${toLat}?overview=false`);
+    if(!r.ok)return null;
+    const d=await r.json();
+    if(d.code!=='Ok'||!d.routes?.length)return null;
+    return {km:+(d.routes[0].distance/1000).toFixed(1),min:Math.round(d.routes[0].duration/60)};
+  }catch(e){return null;}
+}
+async function fetchSafety(base){
+  let els=[];
+  for(const radius of [10000,30000,100000]){
+    try{els=await overpassAround(base.lat,base.lng,radius);}
+    catch(e){await sleep(2000);els=await overpassAround(base.lat,base.lng,radius);}
+    if(els.length)break;
+    await sleep(2000);
+  }
+  const pick=pred=>els.filter(pred).sort((a,b)=>a.km-b.km).slice(0,3);
+  const police=pick(e=>e.amenity==='police');
+  const hosp  =pick(e=>e.amenity==='hospital'||e.amenity==='clinic');
+  for(const e of [...police,...hosp]){
+    e.km=+e.km.toFixed(1);
+    const d=await osrmDrive(base.lat,base.lng,e.lat,e.lng);
+    if(d)e.drive=d;
+    await sleep(1000);
+  }
+  return {base,police,hospital:hosp,at:new Date().toISOString()};
+}
+
+let _safetyScanning=false;
+// base 位移超過 1km 才重抓：from:'center' 的中心點會隨每次新增/刪除活動漂移，
+// 沒有門檻的話每編輯一次行程就重打一輪 Overpass + OSRM，而幾百公尺不會改變最近的警局是哪間。
+const SAFETY_MOVE_KM=1;
+async function ensureSafety(sched,force=false){
+  if(_safetyScanning||!navigator.onLine)return;
+  _safetyScanning=true;
+  try{
+    const days=Object.entries(sched||{}).sort((a,b)=>(parseInt(a[0].replace(/\D/g,''))||0)-(parseInt(b[0].replace(/\D/g,''))||0));
+    let prevHotel=null;
+    for(const [did,day] of days){
+      const base=dayBaseLatLng(day,prevHotel);
+      if(base&&base.from==='hotel')prevHotel={lat:base.lat,lng:base.lng,label:base.label};
+      if(!base)continue;
+      const old=lastSafety?.[did];
+      if(!force&&old?.base&&haversine(base.lat,base.lng,old.base.lat,old.base.lng)<=SAFETY_MOVE_KM)continue;
+      try{
+        const res=await fetchSafety(base);
+        await DB.ref('/safety/'+did).set(res);
+      }catch(e){
+        // 查不到就保留舊快取不覆蓋——舊資料比沒資料有用
+        console.warn('safety '+did+' 失敗：',e.message);
+      }
+      await sleep(2000);
+    }
+  }finally{_safetyScanning=false;}
+}
 // ─── 設定頁：離線資料狀態 ───────────────────────────
 // 純渲染，不打網路也不寫 Firebase；資料一律取自已同步到本機的 lastSched / lastSafety。
 function renderOfflineStat(){
@@ -836,8 +936,6 @@ async function refreshOfflineData(){
   renderOfflineStat();
   toast('✅ 離線資料已更新');
 }
-// 暫時空實作，Task 11 取代
-async function ensureSafety(){}
 
 async function geocodeCity(name){
   try{
@@ -1153,7 +1251,7 @@ function _fbListen(){
     snapSave(d);
     sync('ok');
     if(CFG.lat!=null)syncWeather(sched);
-    if(navigator.onLine)ensureActGeo(sched);
+    if(navigator.onLine)ensureActGeo(sched).then(()=>ensureSafety(lastSched));
     renderOfflineStat();
     ensureRatesForExpenses(lastExps).then(()=>{if(curTab==='exp'&&curAcc==='stat')renderStat(lastExps);});
   },err=>{sync(navigator.onLine?'ok':'offline');toast('⚠️ Firebase 錯誤：'+err.message);});
@@ -2146,6 +2244,20 @@ function _selftest(){
     ok('Photon 無參照時一律拒絕', sanityCheck(IS,[],'photon')===false);
     ok('Photon 有參照且合理則通過', sanityCheck(IS,refs,'photon')===true);
     ok('Photon 有參照但不合理被擋', sanityCheck(FAR,refs,'photon')===false);
+  }
+
+  // ---- dayBaseLatLng ----
+  {
+    const hotelDay={acts:{a:{cat:'hotel',geo:{lat:64.13,lng:-21.93}},b:{cat:'sight',geo:{lat:63.61,lng:-19.98}}}};
+    const noHotel  ={acts:{a:{cat:'sight',geo:{lat:64.00,lng:-16.00}},b:{cat:'sight',geo:{lat:64.20,lng:-16.40}}}};
+    const empty    ={acts:{}};
+    const h=dayBaseLatLng(hotelDay,null);
+    ok('住宿優先', h&&h.from==='hotel'&&near(h.lat,64.13,0.001));
+    const c=dayBaseLatLng(noHotel,null);
+    ok('無住宿退回當日中心', c&&c.from==='center'&&near(c.lat,64.10,0.001)&&near(c.lng,-16.20,0.001));
+    const p=dayBaseLatLng(empty,{lat:64.25,lng:-15.20});
+    ok('無座標退回前一日住宿', p&&p.from==='prevHotel'&&near(p.lat,64.25,0.001));
+    ok('全無則回 null', dayBaseLatLng(empty,null)===null);
   }
 
   console.log(out.join('\n')+`\n\n通過 ${pass} / 失敗 ${fail}`);
