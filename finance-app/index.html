@@ -650,7 +650,7 @@ input,select{background:var(--bg-base);color:var(--text-primary);border:1px soli
     <input id="cfg-key" placeholder="your-api-key">
     <button class="btn" onclick="saveConfig()">儲存</button>
     <!-- iOS 主畫面 App 的快取很頑固，出問題時要能先確認跑的是哪一版 -->
-    <div style="margin-top:10px;text-align:center;color:var(--text-secondary);font-size:12px">版本 2026-08-05a</div>
+    <div style="margin-top:10px;text-align:center;color:var(--text-secondary);font-size:12px">版本 2026-08-05b</div>
     <button class="mclose" onclick="closeOverlay('cfg-overlay')">取消</button>
   </div>
 </div>
@@ -963,7 +963,12 @@ async function processImage(file){
       await new Promise(s=>setTimeout(s,800));
       r=await fetch(API+'/finance/import/screenshot',{method:'POST',headers:{'x-api-key':KEY},body:fd});
     }
-    if(!r.ok) throw new Error(await r.text());
+    if(!r.ok){
+      // 後端錯誤是 {"detail":"..."} 格式，整串 JSON 丟到畫面上看不懂，只取 detail
+      const raw=await r.text();
+      let msg=raw; try{ msg=JSON.parse(raw).detail||raw; }catch(_){}
+      throw new Error(msg);
+    }
     const data=await r.json();
     pendingTxs=data.transactions;
     document.getElementById('imp-status').innerHTML=`✅ 解析到 <b>${data.count}</b> 筆，請確認類別：`;
