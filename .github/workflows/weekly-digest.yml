@@ -1,9 +1,9 @@
 name: 麻醉科週報
 
 on:
-  schedule:
-    # 週一 07:00 台灣時間 = 週日 23:00 UTC
-    - cron: "0 23 * * 0"
+  # 2026-08-05 停用排程：實際在用的週報改由對話 session 手工產出（走訂閱額度），
+  # 這支只會重複產 Notion 頁並消耗 Anthropic API 額度。需要時手動觸發即可。
+  # 原排程：週一 07:00 台灣時間 = 週日 23:00 UTC（cron: "0 23 * * 0"）
   workflow_dispatch: # 允許手動觸發
 
 jobs:
