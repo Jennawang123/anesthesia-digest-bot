@@ -566,6 +566,36 @@ function weatherDesc(code){
   return{icon:'☁️',desc:'陰'};
 }
 let pendingGeo=null;
+// ─── 地理編碼：候選查詢字串 ─────────────────────────
+// 不是用一套正規化規則去猜，而是產生一串候選依序實查，第一個通過檢查的就採用。
+// 這四條規則全部來自 2026-08-05 對使用者真實 loc 的實測，不是想像出來的。
+const GEO_GENERIC=['glacier','walk','tour','restaurant','cafe','hotel','apartment','apartments',
+  'wholesale','masjid','museum','centre','center','on','the','of','and','iceland','norway'];
+function geoCandidates(raw){
+  const s=String(raw||'').trim();
+  if(!s)return [];
+  const out=[s];
+  const push=v=>{v=String(v||'').trim();if(v&&v.length>1&&!out.includes(v))out.push(v);};
+
+  // 1) 去掉尾端的距離標記：「Blue Lagoon 9.6km」
+  push(s.replace(/[\s,]+\d+(\.\d+)?\s*(km|公里|m|公尺)\s*$/i,''));
+
+  // 2) 破折號／連字號取前段：「Reykjavík Natura - Berjaya Iceland Hotels」
+  const dash=s.split(/\s+[-–—]\s+/)[0];
+  if(dash!==s)push(dash);
+
+  // 3) 去掉通用詞後的剩餘：「Fjaðrárgljúfur Masjid」→「Fjaðrárgljúfur」
+  const toks=s.replace(/[,()]/g,' ').split(/\s+/).filter(Boolean);
+  const kept=toks.filter(t=>!GEO_GENERIC.includes(t.toLowerCase().replace(/[^\p{L}]/gu,'')));
+  if(kept.length&&kept.length<toks.length)push(kept.join(' '));
+
+  // 4) 最長的非通用詞：「Glacier Walk on Solheimajokull Glacier」→「Solheimajokull」
+  if(kept.length>1){
+    const longest=kept.slice().sort((a,b)=>b.length-a.length)[0];
+    push(longest);
+  }
+  return out;
+}
 async function geocodeCity(name){
   try{
     const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=zh`);
@@ -1749,6 +1779,19 @@ function _selftest(){
     ok('haversine 溫泉→首都 38.1km', near(haversine(63.8792,-22.4443,64.1360,-21.9270),38.1,1.0),
        String(haversine(63.8792,-22.4443,64.1360,-21.9270)));
     ok('haversine 同點為 0', haversine(64,-19,64,-19)===0);
+  }
+
+  // ---- geoCandidates（全部取自使用者真實資料的實測結果）----
+  {
+    const has=(raw,want)=>geoCandidates(raw).includes(want);
+    ok('去尾端距離標記', has('Blue Lagoon 9.6km','Blue Lagoon'));
+    ok('破折號取前段', has('Reykjavík Natura - Berjaya Iceland Hotels','Reykjavík Natura'));
+    ok('去尾端雜訊詞', has('Fjaðrárgljúfur Masjid','Fjaðrárgljúfur'));
+    ok('取最長非通用詞', has('Glacier Walk on Solheimajokull Glacier','Solheimajokull'));
+    ok('原字串一定是第一個候選', geoCandidates('Seljalandsfoss')[0]==='Seljalandsfoss');
+    ok('候選不重複', (()=>{const c=geoCandidates('Blue Lagoon 9.6km');return c.length===new Set(c).size;})());
+    ok('空字串回空陣列', geoCandidates('').length===0);
+    ok('單一地名不產生多餘候選', geoCandidates('Skógafoss').length===1);
   }
 
   console.log(out.join('\n')+`\n\n通過 ${pass} / 失敗 ${fail}`);
