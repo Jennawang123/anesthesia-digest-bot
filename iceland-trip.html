@@ -631,10 +631,19 @@ function sanityCheck(hit,refs,src){
 // 注意：fetch 不能設 User-Agent（規範禁止，設了會被忽略還會噴 console 警告）。
 // Nominatim 政策要求以 User-Agent 或 Referer 識別，瀏覽器會自動送 Referer，這是可接受的識別方式。
 const GEO_CC='is,no';
+// 節流閘門套在「請求」層而不是「活動」層。一次 geoResolve 內部會對每個候選字串各打一次，
+// 閘門若只擋在外層，同一個活動的 2-3 個候選會背靠背發出去，直接違反每秒 1 次的政策。
+let _geoLast=0;
+async function geoGate(){
+  const wait=_geoLast+1100-Date.now();
+  if(wait>0)await new Promise(r=>setTimeout(r,wait));
+  _geoLast=Date.now();
+}
 async function geoNominatim(q){
   // addressdetails=1 不可省：不帶這個參數，回應裡根本沒有 address 物件，
   // country_code 永遠取不到，國家檢查會退回預設值而形同虛設（已實測確認）。
   const u=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&addressdetails=1&countrycodes=${GEO_CC}`;
+  await geoGate();
   const r=await fetch(u);
   if(!r.ok)throw new Error('nominatim '+r.status);
   const d=await r.json();
@@ -644,6 +653,7 @@ async function geoNominatim(q){
   return {lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon),cc,label:d[0].display_name};
 }
 async function geoPhoton(q){
+  await geoGate();
   const r=await fetch(`https://photon.komoot.io/api?q=${encodeURIComponent(q)}&limit=1`);
   if(!r.ok)throw new Error('photon '+r.status);
   const d=await r.json();
@@ -657,7 +667,9 @@ async function geoPhoton(q){
   return {lat:c[1],lng:c[0],cc,label:f.properties?.name||q};
 }
 
-// 1.1 秒節流的序列佇列。Nominatim 政策要求每秒至多 1 次請求，這條不能省。
+// 序列佇列：確保同時間只有一件解析工作在跑（避免多處同時觸發時交錯發請求）。
+// 請求之間的 1.1 秒間隔由 geoGate() 在請求層負責，這裡不再另外 sleep，
+// 否則每個活動之間會多等一次，總時間白白翻倍。
 const geoQueue={q:[],running:false};
 function geoEnqueue(fn){
   return new Promise((res,rej)=>{
@@ -670,7 +682,6 @@ async function geoRun(){
   while(geoQueue.q.length){
     const {fn,res,rej}=geoQueue.q.shift();
     try{res(await fn());}catch(e){rej(e);}
-    await new Promise(r=>setTimeout(r,1100));
   }
   geoQueue.running=false;
 }
@@ -721,7 +732,10 @@ async function ensureActGeo(sched,force=false){
       const resolved=Object.entries(day.acts||{}).filter(([aid,a])=>a.geo)
         .map(([aid,a])=>({aid,lat:a.geo.lat,lng:a.geo.lng,loc:a.loc}));
       for(const [aid,act] of Object.entries(day.acts||{})){
-        if(!act.loc||act.geo)continue;
+        if(!act.loc)continue;
+        // 已有座標時平常跳過；但「立即更新」是使用者主動要求重查，
+        // 必須連已成功的也重跑——通過檢查但其實錯的座標，正是這條管線最擔心的錯誤模式。
+        if(act.geo&&!force)continue;
         if(!force&&act.geoFail&&act.geoFail.reason!=='network')continue;
         const res=await geoEnqueue(()=>geoResolve(act.loc,refs));
         const base='/schedule/'+did+'/acts/'+aid;
@@ -744,12 +758,17 @@ async function ensureActGeo(sched,force=false){
 // 若它誤配，就成為當天所有後續判斷的錨點，反而把正確的座標一一擋掉。
 // 用中位數而非平均，離群點才不會把中心拉向自己。
 // 少於 3 筆無法判斷誰是離群（2 筆相距很遠時，沒有依據說哪一筆才是錯的），跳過。
+//
+// 門檻刻意比 GEO_MAX_KM 寬：這一關要抓的是「跨區誤配」（挪威城市配到冰島、
+// 首都圈公寓配到東南部），不是「當天開很遠」。冰島南岸長程日端到端可達 400km，
+// 用 200km 會把正當座標誤刪——而 sanity-reject 不自動重試，等於永久掉座標。
+const GEO_PRUNE_KM=400;
 async function pruneDayOutliers(did,resolved){
   if(resolved.length<3)return;
   const med=a=>{const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
   const cLat=med(resolved.map(r=>r.lat)),cLng=med(resolved.map(r=>r.lng));
   for(const r of resolved){
-    if(haversine(r.lat,r.lng,cLat,cLng)<=GEO_MAX_KM)continue;
+    if(haversine(r.lat,r.lng,cLat,cLng)<=GEO_PRUNE_KM)continue;
     await DB.ref('/schedule/'+did+'/acts/'+r.aid+'/geo').remove();
     await DB.ref('/schedule/'+did+'/acts/'+r.aid+'/geoFail')
       .set({at:new Date().toISOString(),tried:geoCandidates(r.loc||''),reason:'sanity-reject'});
