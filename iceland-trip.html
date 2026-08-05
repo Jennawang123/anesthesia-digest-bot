@@ -571,6 +571,8 @@ let pendingGeo=null;
 // 這四條規則全部來自 2026-08-05 對使用者真實 loc 的實測，不是想像出來的。
 const GEO_GENERIC=['glacier','walk','tour','restaurant','cafe','hotel','apartment','apartments',
   'wholesale','masjid','museum','centre','center','on','the','of','and','iceland','norway'];
+// 規則 4「取最長詞」的長度下限，見該處註解。
+const GEO_MIN_TOKEN=8;
 function geoCandidates(raw){
   const s=String(raw||'').trim();
   if(!s)return [];
@@ -590,9 +592,12 @@ function geoCandidates(raw){
   if(kept.length&&kept.length<toks.length)push(kept.join(' '));
 
   // 4) 最長的非通用詞：「Glacier Walk on Solheimajokull Glacier」→「Solheimajokull」
+  // 長度門檻 8 字元：短詞太容易命中無關地物（「Blue Lagoon 9.6km」的最長詞是
+  // 「Lagoon」，拿去查會命中冰島任何一座潟湖）。冰島／挪威的專有地名多半夠長，
+  // 擋掉短詞的代價遠小於採信一個錯誤座標。
   if(kept.length>1){
     const longest=kept.slice().sort((a,b)=>b.length-a.length)[0];
-    push(longest);
+    if(longest.length>=GEO_MIN_TOKEN)push(longest);
   }
   return out;
 }
