@@ -202,6 +202,15 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .ds-chip .ds-n{display:block;font-size:15px;color:var(--muted);font-weight:600;}
 .ds-chip .ds-d{display:block;font-size:18px;font-weight:800;color:var(--text);margin-top:1px;}
 .ds-chip.on .ds-n,.ds-chip.on .ds-d{color:#fff;}
+/* ── 總覽區塊 ── */
+.ov-card{background:var(--card);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.ov-h{font-size:19px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+.ov-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
+.ov-row:last-child{border-bottom:none;}
+.ov-date{flex:0 0 auto;font-size:17px;font-weight:800;color:var(--blue2);min-width:52px;}
+.ov-name{font-size:18px;font-weight:700;line-height:1.4;}
+.ov-loc{font-size:16px;color:var(--muted);margin-top:2px;white-space:pre-wrap;word-break:break-word;}
+.ov-nav{flex:0 0 auto;background:#E8EFF3;color:var(--blue2);border:none;border-radius:9px;padding:7px 11px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;}
 .day-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px;}
 .wchip{display:inline-flex;align-items:center;gap:2px;background:#D9E6EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:var(--blue2);}
 .schip{display:inline-flex;align-items:center;gap:2px;background:#EAF5EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:#1E7D32;}
@@ -1511,6 +1520,36 @@ function renderSched(sched){
   renderOverview(sched);
 }
 
+// ─── 總覽：住宿總整理 ───────────────────────────────
+function navUrl(lat,lng,label){
+  if(typeof lat==='number'&&typeof lng==='number')
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(label||'')}`;
+}
+function renderOverview(sched){
+  const el=document.getElementById('overviewBox');
+  if(!el)return;
+  const days=Object.entries(sched||{}).sort((a,b)=>(parseInt(a[0].replace(/\D/g,''))||0)-(parseInt(b[0].replace(/\D/g,''))||0));
+  const rows=[];
+  days.forEach(([did,day])=>{
+    Object.values(day.acts||{}).filter(a=>a.cat==='hotel').forEach(a=>{
+      rows.push({date:day.date,name:a.name||'住宿',loc:a.loc||'',geo:a.geo});
+    });
+  });
+  if(!rows.length){el.innerHTML='';return;}
+  const md=d=>{if(!d)return'';const[y,m,dd]=d.split('-');return `${parseInt(m)}/${parseInt(dd)}`;};
+  el.innerHTML=`<div class="ov-card">
+    <div class="ov-h">🛏️ 住宿總整理</div>
+    ${rows.map(r=>`<div class="ov-row">
+      <div class="ov-date">${md(r.date)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="ov-name">${esc(r.name)}</div>
+        ${r.loc?`<div class="ov-loc">${esc(r.loc)}</div>`:''}
+      </div>
+      ${(r.geo||r.loc)?`<a class="ov-nav" href="${navUrl(r.geo?.lat,r.geo?.lng,r.loc||r.name)}" target="_blank">導航</a>`:''}
+    </div>`).join('')}
+  </div>`;
+}
 // ─── Day 導覽列 ─────────────────────────────────────
 // 捲動的容器是 .content（body 本身 overflow:hidden，window 不會捲），
 // 所有捲動計算都要對 .content 做，用 window.scrollTo/scrollY 會完全沒反應。
@@ -1565,8 +1604,6 @@ function initDaySpy(){
   },{root:sc||null,rootMargin:'-80px 0px -70% 0px',threshold:0});
   document.querySelectorAll('.day-card').forEach(c=>_daySpy.observe(c));
 }
-// 暫時空實作，Task 10 取代
-function renderOverview(){}
 // 暫時空實作，Task 12 取代
 function mountDayMap(){}
 function toggleDay(did){document.getElementById('dc-'+did).classList.toggle('open');}
