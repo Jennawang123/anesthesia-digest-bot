@@ -171,10 +171,13 @@ Fixed topics:
 Evidence hierarchy score (1–10):
 10: RCT, Phase 3 trial
 8–9: Meta-analysis, systematic review
+7–8: Clinical practice guideline or consensus statement from a major society
+     (ASA, ESAIC, Association of Anaesthetists, DAS, SCA, SOAP, ESRA, ATS/SCCM …)
+     — these change practice directly and are high-value for residents
 7: Phase 2 RCT, large prospective cohort (n>500)
 5–6: Retrospective cohort, registry study, prospective cohort (n<500)
 3–4: Cross-sectional, case-control, genetic association
-1–2: Case series, case report, narrative review, expert opinion
+1–2: Case series, case report, narrative review, expert opinion, editorial, correspondence
 
 Articles (indices {start_idx}–{end_idx}):
 {numbered}
@@ -308,6 +311,12 @@ def main():
         ("Lancet Resp Med", "2213-2600 OR 2213-2619"),   # Lancet Respiratory Medicine
         ("Intensive Care",  "0342-4642 OR 1432-1238"),   # Intensive Care Medicine
         ("AJRCCM",          "1073-449X OR 1535-4970"),   # Am J Respir Crit Care Med
+        # 2026-08-05 補進來的來源：週三（一般麻醉／神經麻醉）與週五（心臟麻醉）
+        # 候選池長期見底，這四本直接補這兩個主題
+        ("Anesth Analg",    "0003-2999 OR 1526-7598"),   # Anesthesia & Analgesia
+        ("Eur J Anaesth",   "0265-0215 OR 1365-2346"),   # European Journal of Anaesthesiology
+        ("J Neurosurg Anes","0898-4921 OR 1537-1921"),   # J Neurosurgical Anesthesiology
+        ("J Cardiothor Vasc Anes", "1053-0770 OR 1532-8422"),  # J Cardiothoracic & Vascular Anesthesia
     ]
     failed_sources: list[str] = []
 

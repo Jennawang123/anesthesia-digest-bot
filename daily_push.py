@@ -28,6 +28,8 @@ TOPICS = {
 
 MAX_CHARS = 4800  # LINE 上限 5000，留 200 buffer
 
+MIN_TOP_SCORE = 5  # 當日最高分低於此值就只推清單，不做摘要（避免無材料硬湊）
+
 
 # ── 1. Data ───────────────────────────────────────────────────────────────────
 
@@ -224,8 +226,14 @@ def build_prompt(articles: list[dict], topic: dict, date_str: str, hot_theme: st
 {article_block}"""
 
 
-def plain_message(articles: list[dict], topic: dict, date_str: str, hot_theme: str | None = None) -> str:
-    """不經 LLM 的降級版本：標題＋期刊＋連結，確保 API 掛掉時群組不開天窗。"""
+def plain_message(
+    articles: list[dict],
+    topic: dict,
+    date_str: str,
+    hot_theme: str | None = None,
+    note: str = "（摘要生成暫時無法使用，先附上原文連結）",
+) -> str:
+    """不經 LLM 的精簡版本：標題＋期刊＋連結。用於 API 失敗，或當日文獻不值得做完整摘要。"""
     number_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
     hot_line = f"\n🔥 本週熱點：{hot_theme}" if hot_theme else ""
 
@@ -240,7 +248,7 @@ def plain_message(articles: list[dict], topic: dict, date_str: str, hot_theme: s
         f"🔗 {a['url']}"
         for i, a in enumerate(articles[:len(number_emojis)])
     ]
-    footer = f"━━━━━━━━━━━━━━━━━━━━\n共 {len(articles)} 篇｜{date_str}\n（摘要生成暫時無法使用，先附上原文連結）"
+    footer = f"━━━━━━━━━━━━━━━━━━━━\n共 {len(articles)} 篇｜{date_str}\n{note}"
 
     return "\n\n".join([header, *blocks, footer])
 
@@ -251,6 +259,17 @@ def format_message(articles: list[dict], topic: dict, date_str: str, hot_theme: 
             f"🩺 麻醉科日報 {date_str}（{topic['day']}）\n"
             f"主題：{topic['name']}\n\n"
             "本週此領域尚無新文章。"
+        )
+
+    # 當日候選全是低分文獻（常見於候選池被已推送文章耗盡時），
+    # 與其讓模型從沒有數據的 abstract 硬擠出摘要，不如誠實給清單
+    top_score = max((a.get("score", 0) for a in articles), default=0)
+    if top_score < MIN_TOP_SCORE:
+        print(f"  ℹ️ 當日最高分僅 {top_score}（門檻 {MIN_TOP_SCORE}），改推精簡清單，不做摘要")
+        # 這條路徑沒有模型可判斷熱點是否切題，直接不印，免得又出現熱點與內文無關
+        return plain_message(
+            articles, topic, date_str, hot_theme=None,
+            note="（今日無達到報導門檻的新文獻，僅列標題與連結供快速掃描）",
         )
 
     try:
