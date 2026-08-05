@@ -341,6 +341,11 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
           <p style="font-size:15px;color:var(--muted);margin-bottom:12px">如果行程顯示日期錯誤，點此重新套用設定的出發日期（活動不會消失）</p>
           <button class="btn btn-b btn-w" onclick="fixDates(true)">重新套用行程日期</button>
         </div>
+        <div class="slbl" style="margin-top:8px">離線資料</div>
+        <div class="card">
+          <div id="offlineStat" style="font-size:17px;line-height:1.9"></div>
+          <button class="btn btn-b btn-w" style="margin-top:12px" onclick="refreshOfflineData()">立即更新</button>
+        </div>
         <div class="slbl" style="margin-top:8px">Firebase</div>
         <div class="card">
           <div class="fg"><label class="lb">資料庫網址</label><input class="inp" id="c_url" type="url"></div>
@@ -774,6 +779,45 @@ async function pruneDayOutliers(did,resolved){
       .set({at:new Date().toISOString(),tried:geoCandidates(r.loc||''),reason:'sanity-reject'});
   }
 }
+// ─── 設定頁：離線資料狀態 ───────────────────────────
+// 純渲染，不打網路也不寫 Firebase；資料一律取自已同步到本機的 lastSched / lastSafety。
+function renderOfflineStat(){
+  const el=document.getElementById('offlineStat');
+  if(!el)return;
+  const days=Object.entries(lastSched||{});
+  let total=0,done=0;
+  const failed=[],rejected=[];
+  days.forEach(([did,day])=>{
+    Object.values(day.acts||{}).forEach(a=>{
+      if(!a.loc)return;
+      total++;
+      if(a.geo)done++;
+      else if(a.geoFail?.reason==='sanity-reject')rejected.push(a.loc);
+      else if(a.geoFail)failed.push(a.loc);
+    });
+  });
+  const safeReady=days.filter(([did])=>lastSafety&&lastSafety[did]).length;
+  const snap=snapLoad();
+  const rows=[
+    `地點定位　<b>${done} / ${total}</b> 已完成`,
+    `安全資訊　<b>${safeReady} / ${days.length}</b> 天已就緒`,
+  ];
+  if(failed.length)rows.push(`<span style="color:var(--muted)">查不到座標：${failed.map(esc).join('、')}</span>`);
+  if(rejected.length)rows.push(`<span style="color:var(--orange)">位置可疑已略過：${rejected.map(esc).join('、')}</span>`);
+  if(snap)rows.push(`<span style="color:var(--muted);font-size:15px">快照更新於 ${new Date(snap.at).toLocaleString('zh-TW')}</span>`);
+  el.innerHTML=rows.join('<br>');
+}
+async function refreshOfflineData(){
+  if(!navigator.onLine){toast('⚠️ 目前離線，請連上網路再更新');return;}
+  toast('🔄 更新中…');
+  await ensureActGeo(lastSched,true);
+  await ensureSafety(lastSched,true);
+  renderOfflineStat();
+  toast('✅ 離線資料已更新');
+}
+// 暫時空實作，Task 11 取代
+async function ensureSafety(){}
+
 async function geocodeCity(name){
   try{
     const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=zh`);
@@ -1089,6 +1133,7 @@ function _fbListen(){
     sync('ok');
     if(CFG.lat!=null)syncWeather(sched);
     if(navigator.onLine)ensureActGeo(sched);
+    renderOfflineStat();
     ensureRatesForExpenses(lastExps).then(()=>{if(curTab==='exp'&&curAcc==='stat')renderStat(lastExps);});
   },err=>{sync(navigator.onLine?'ok':'offline');toast('⚠️ Firebase 錯誤：'+err.message);});
 }
