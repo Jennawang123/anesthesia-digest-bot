@@ -211,6 +211,15 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .ov-name{font-size:18px;font-weight:700;line-height:1.4;}
 .ov-loc{font-size:16px;color:var(--muted);margin-top:2px;white-space:pre-wrap;word-break:break-word;}
 .ov-nav{flex:0 0 auto;background:#E8EFF3;color:var(--blue2);border:none;border-radius:9px;padding:7px 11px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;}
+/* ── 每日地圖（離線時降級成 .day-map-ph 地點清單）── */
+.day-map{height:220px;margin:0;background:#DCE6EA;position:relative;}
+.day-map-ph{padding:14px 16px;background:var(--card);}
+.dm-row{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border);}
+.dm-row:last-child{border-bottom:none;}
+.dm-n{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+.dm-name{font-size:17px;font-weight:700;}
+.dm-co{font-size:15px;color:var(--muted);}
+.leaflet-marker-num{background:var(--blue);color:#fff;border-radius:50%;width:26px;height:26px;line-height:26px;text-align:center;font-weight:800;font-size:14px;box-shadow:0 1px 4px rgba(0,0,0,.4);}
 .day-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px;}
 .wchip{display:inline-flex;align-items:center;gap:2px;background:#D9E6EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:var(--blue2);}
 .schip{display:inline-flex;align-items:center;gap:2px;background:#EAF5EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:#1E7D32;}
@@ -1554,8 +1563,22 @@ function selAPayer(i){curAPayer=i;renderPayerPicker('payer-row-act',i,'selAPayer
 function renderSched(sched){
   const box=document.getElementById('schedBox');
   const openDays=new Set([...document.querySelectorAll('.day-card.open')].map(el=>el.id.replace('dc-','')));
+  // 把已掛載的地圖節點摘下暫存，重畫後再放回原位。Leaflet 實例在 detach 期間仍然有效，
+  // 直接讓 innerHTML 沖掉會留下殭屍實例，而且每記一筆帳畫面就閃一次。
+  dayMapEls.clear();
+  dayMaps.forEach((m,did)=>{
+    const el=document.getElementById('dmap-'+did);
+    if(el&&el.parentNode){el.parentNode.removeChild(el);dayMapEls.set(did,el);}
+  });
   const days=Object.entries(sched).sort((a,b)=>(parseInt(a[0].replace(/\D/g,''))||0)-(parseInt(b[0].replace(/\D/g,''))||0));
-  if(!days.length){box.innerHTML='<div class="empty"><div class="empty-i">📅</div><div class="empty-h">尚無行程</div></div>';return;}
+  // 行程被清空時同樣要收尾：摘下的節點已經沒有位置可以放回去，
+  // 不主動銷毀的話 dayMaps 會永遠留著指向脫離節點的實例。
+  if(!days.length){
+    box.innerHTML='<div class="empty"><div class="empty-i">📅</div><div class="empty-h">尚無行程</div></div>';
+    [...dayMaps.keys()].forEach(unmountDayMap);
+    dayMapEls.clear();
+    return;
+  }
   box.innerHTML=days.map(([did,day])=>{
     const acts=Object.entries(day.acts||{}).sort((a,b)=>{
       const oa=a[1].order!=null?a[1].order:999999;
@@ -1584,6 +1607,7 @@ function renderSched(sched){
         <div class="day-chev">›</div>
       </div>
       <div class="day-body">
+        ${dayGeoActs(day).length?`<div id="dmap-${did}"></div>`:''}
         ${!acts.length?'<div style="padding:14px 16px;color:var(--muted);font-size:16px;text-align:center">尚無活動</div>':
           acts.map(([aid,act])=>{
             const ac=ACTM[act.cat]||ACTM.other;
@@ -1614,8 +1638,96 @@ function renderSched(sched){
     </div>`;
   }).join('');
   openDays.forEach(did=>{const el=document.getElementById('dc-'+did);if(el)el.classList.add('open');});
+  // 把暫存的地圖節點放回去；已經不存在的日子（活動被刪光）就順手銷毀實例
+  dayMapEls.forEach((el,did)=>{
+    const ph=document.getElementById('dmap-'+did);
+    if(ph&&ph.parentNode){ph.parentNode.replaceChild(el,ph);const m=dayMaps.get(did);if(m)setTimeout(()=>m.invalidateSize(),60);}
+    else unmountDayMap(did);
+  });
+  dayMapEls.clear();
+  openDays.forEach(did=>mountDayMap(did));
   renderDayStrip(sched);
   renderOverview(sched);
+}
+
+// ─── 每日地圖 ───────────────────────────────────────
+let _leafletLoading=null;
+function loadLeaflet(){
+  if(window.L)return Promise.resolve(true);
+  if(_leafletLoading)return _leafletLoading;
+  _leafletLoading=new Promise(res=>{
+    const css=document.createElement('link');
+    css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(css);
+    const s=document.createElement('script');
+    s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    s.onload=()=>res(true);
+    s.onerror=()=>res(false);   // CDN 掛掉就走降級路徑，不讓整頁卡住
+    document.head.appendChild(s);
+  });
+  return _leafletLoading;
+}
+// 當天有座標的活動，依 order 排序
+function dayGeoActs(day){
+  return Object.entries(day?.acts||{})
+    .filter(([aid,a])=>a.geo&&typeof a.geo.lat==='number')
+    .sort((a,b)=>{
+      const oa=a[1].order!=null?a[1].order:999999, ob=b[1].order!=null?b[1].order:999999;
+      if(oa!==ob)return oa-ob;
+      return (a[1].time||'').localeCompare(b[1].time||'');
+    })
+    .map(([aid,a])=>({aid,name:a.name||'',lat:a.geo.lat,lng:a.geo.lng}));
+}
+const dayMaps=new Map();      // did → L.map 實例
+const dayMapEls=new Map();    // did → 地圖容器 DOM（renderSched 重畫時暫存）
+
+// 離線或 CDN 失敗時的降級：地點清單 + 座標 + 導航連結。
+function dayMapFallbackHtml(pts){
+  return `<div class="day-map-ph">${pts.map((p,i)=>`<div class="dm-row">
+    <div class="dm-n">${i+1}</div>
+    <div style="flex:1;min-width:0">
+      <div class="dm-name">${esc(p.name)}</div>
+      <div class="dm-co">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</div>
+    </div>
+    <a class="ov-nav" href="${navUrl(p.lat,p.lng,p.name)}" target="_blank">導航</a>
+  </div>`).join('')}</div>`;
+}
+async function mountDayMap(did){
+  const host=document.getElementById('dmap-'+did);
+  if(!host||host.dataset.mounted==='1')return;
+  const day=lastSched[did];
+  const pts=dayGeoActs(day);
+  if(!pts.length)return;
+  host.dataset.mounted='1';
+  const okL=navigator.onLine?await loadLeaflet():false;
+  // 等 CDN 的這段期間 renderSched 可能已經整頁重畫，host 已經脫離文件。
+  // 此時 dayMaps 還沒有這一天，摘下暫存那段救不到它，繼續建圖只會留下永遠回收不掉的殭屍實例。
+  // 直接放棄即可——重畫後的新節點會由 renderSched 結尾的 mountDayMap 重新掛載。
+  if(!host.isConnected)return;
+  if(!okL){
+    host.innerHTML=dayMapFallbackHtml(pts);
+    return;
+  }
+  host.classList.add('day-map');
+  const map=L.map(host,{zoomControl:false,attributionControl:true});
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
+  pts.forEach((p,i)=>{
+    L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:`<div class="leaflet-marker-num">${i+1}</div>`,iconSize:[26,26],iconAnchor:[13,13]})})
+      .addTo(map).bindPopup(esc(p.name));
+  });
+  if(pts.length>1){
+    L.polyline(pts.map(p=>[p.lat,p.lng]),{color:'#0077B6',weight:2,dashArray:'6,6',opacity:.8}).addTo(map);
+    map.fitBounds(pts.map(p=>[p.lat,p.lng]),{padding:[28,28]});
+  }else{
+    map.setView([pts[0].lat,pts[0].lng],13);
+  }
+  dayMaps.set(did,map);
+  setTimeout(()=>map.invalidateSize(),60);
+}
+function unmountDayMap(did){
+  const m=dayMaps.get(did);
+  if(m){m.remove();dayMaps.delete(did);}
+  dayMapEls.delete(did);
 }
 
 // ─── 總覽：住宿總整理 ───────────────────────────────
@@ -1702,9 +1814,11 @@ function initDaySpy(){
   },{root:sc||null,rootMargin:'-80px 0px -70% 0px',threshold:0});
   document.querySelectorAll('.day-card').forEach(c=>_daySpy.observe(c));
 }
-// 暫時空實作，Task 12 取代
-function mountDayMap(){}
-function toggleDay(did){document.getElementById('dc-'+did).classList.toggle('open');}
+function toggleDay(did){
+  const card=document.getElementById('dc-'+did);
+  card.classList.toggle('open');
+  if(card.classList.contains('open'))mountDayMap(did);
+}
 function openDayM(did){
   const day=lastSched[did]||{};
   document.getElementById('md-id').value=did;
