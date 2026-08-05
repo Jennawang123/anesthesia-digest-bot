@@ -626,6 +626,81 @@ function sanityCheck(hit,refs,src){
   const cLng=pts.reduce((s,p)=>s+p.lng,0)/pts.length;
   return haversine(hit.lat,hit.lng,cLat,cLng)<=GEO_MAX_KM;
 }
+
+// ─── 地理編碼：查詢與節流佇列 ───────────────────────
+// 注意：fetch 不能設 User-Agent（規範禁止，設了會被忽略還會噴 console 警告）。
+// Nominatim 政策要求以 User-Agent 或 Referer 識別，瀏覽器會自動送 Referer，這是可接受的識別方式。
+const GEO_CC='is,no';
+async function geoNominatim(q){
+  // addressdetails=1 不可省：不帶這個參數，回應裡根本沒有 address 物件，
+  // country_code 永遠取不到，國家檢查會退回預設值而形同虛設（已實測確認）。
+  const u=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&addressdetails=1&countrycodes=${GEO_CC}`;
+  const r=await fetch(u);
+  if(!r.ok)throw new Error('nominatim '+r.status);
+  const d=await r.json();
+  if(!d.length)return null;
+  const cc=d[0].address?.country_code;
+  if(!cc)return null;   // 拿不到國家就不採信，寧可留白也不猜
+  return {lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon),cc,label:d[0].display_name};
+}
+async function geoPhoton(q){
+  const r=await fetch(`https://photon.komoot.io/api?q=${encodeURIComponent(q)}&limit=1`);
+  if(!r.ok)throw new Error('photon '+r.status);
+  const d=await r.json();
+  const f=d.features?.[0];
+  if(!f)return null;
+  const cc=(f.properties?.countrycode||'').toLowerCase();
+  // Photon 是不可靠來源，沒有國家資訊就無法過第一道檢查，直接視為查無。
+  // sanityCheck 的國家檢查對空 cc 是靜默放行的，所以要在這裡先擋掉。
+  if(!cc)return null;
+  const c=f.geometry.coordinates;
+  return {lat:c[1],lng:c[0],cc,label:f.properties?.name||q};
+}
+
+// 1.1 秒節流的序列佇列。Nominatim 政策要求每秒至多 1 次請求，這條不能省。
+const geoQueue={q:[],running:false};
+function geoEnqueue(fn){
+  return new Promise((res,rej)=>{
+    geoQueue.q.push({fn,res,rej});
+    if(!geoQueue.running)geoRun();
+  });
+}
+async function geoRun(){
+  geoQueue.running=true;
+  while(geoQueue.q.length){
+    const {fn,res,rej}=geoQueue.q.shift();
+    try{res(await fn());}catch(e){rej(e);}
+    await new Promise(r=>setTimeout(r,1100));
+  }
+  geoQueue.running=false;
+}
+
+// 解析單一地點。回傳 {lat,lng,src,q} 或 {fail:reason}
+async function geoResolve(raw,refs){
+  const cands=geoCandidates(raw);
+  if(!cands.length)return {fail:'no-match'};
+  let sawNetwork=false,sawReject=false;
+  for(const c of cands){
+    let hit=null;
+    try{hit=await geoNominatim(c);}
+    catch(e){sawNetwork=true;continue;}
+    if(!hit)continue;
+    if(sanityCheck(hit,refs,'nominatim'))return {lat:hit.lat,lng:hit.lng,src:'nominatim',q:c};
+    sawReject=true;
+  }
+  // Nominatim 全數失敗才試 Photon，且套用同一套檢查（它最會編答案）
+  for(const c of cands){
+    let hit=null;
+    try{hit=await geoPhoton(c);}
+    catch(e){sawNetwork=true;continue;}
+    if(!hit)continue;
+    if(sanityCheck(hit,refs,'photon'))return {lat:hit.lat,lng:hit.lng,src:'photon',q:c};
+    sawReject=true;
+  }
+  if(sawReject)return {fail:'sanity-reject'};
+  if(sawNetwork)return {fail:'network'};
+  return {fail:'no-match'};
+}
 async function geocodeCity(name){
   try{
     const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=zh`);
