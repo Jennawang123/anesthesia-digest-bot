@@ -445,6 +445,14 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="fg"><label class="lb">活動名稱 *</label><input class="inp" id="a_name" placeholder="例：淺草寺參觀"></div>
     <div class="fg" id="move-day-row" style="display:none"><label class="lb">移到哪一天</label><select class="inp" id="a_move_day"></select></div>
     <div class="fg"><label class="lb">地點（自動生成 Google Maps 連結）</label><input class="inp" id="a_loc" placeholder="例：Sydney Opera House"></div>
+    <div class="fg">
+      <label class="lb">定位用地名（選填）</label>
+      <div class="fr" style="align-items:flex-end">
+        <div class="fg" style="margin-bottom:0"><input class="inp" id="a_geoq" placeholder="地圖上找不到時，改填附近城鎮，例：Höfn"></div>
+        <button type="button" class="btn btn-g" style="flex:0 0 auto;padding:11px 14px" onclick="tryActGeo()">📍 試查</button>
+      </div>
+      <p class="hint" id="a_geo_result" style="text-align:left;margin-top:6px;font-size:15px"></p>
+    </div>
     <div class="fg"><label class="lb">備註</label><textarea class="ta" id="a_note" placeholder="訂位資訊、注意事項…"></textarea></div>
     <div class="fg">
       <label class="lb">圖片（最多 6 張）</label>
@@ -765,6 +773,26 @@ async function geoResolve(raw,refs){
   return {fail:'no-match'};
 }
 
+// 拿哪個字串去查座標：小型民宿、公寓這類 OSM 沒收錄的地方，查它的名字永遠查不到
+// （實測某公寓的各種寫法全滅），這時填一個附近城鎮當定位地名即可，
+// 顯示用的 loc 保持原樣，地圖與安全資訊都用得到座標。
+function geoQueryOf(act){return (act.geoQ||act.loc||'').trim();}
+// 讓使用者在編輯活動時就能確認查得到什麼，不必存檔後回設定頁看狀態面板
+async function tryActGeo(){
+  const el=document.getElementById('a_geo_result');
+  const q=(document.getElementById('a_geoq').value||document.getElementById('a_loc').value||'').trim();
+  if(!q){el.textContent='請先填地點或定位用地名';return;}
+  el.textContent='🔍 查詢中…';
+  const did=document.getElementById('ma-did').value;
+  const res=await geoResolve(q,dayKnownPoints(lastSched[did]||{}));
+  if(res.fail){
+    el.innerHTML=res.fail==='sanity-reject'
+      ? '⛔ 查到的位置離當天行程太遠，已略過。請改填更明確的地名'
+      : '❌ 查不到。冰島的小型民宿多半不在地圖資料裡，改填附近城鎮（例：Höfn、Vík）';
+  }else{
+    el.innerHTML=`✅ 已定位：${esc(res.q)}（${res.lat.toFixed(3)}, ${res.lng.toFixed(3)}）`;
+  }
+}
 // 取出某天所有已知座標，供 sanityCheck 當參照
 function dayKnownPoints(day){
   return Object.values(day?.acts||{})
@@ -784,15 +812,16 @@ async function ensureActGeo(sched,force=false){
       const resolved=Object.entries(day.acts||{}).filter(([aid,a])=>a.geo)
         .map(([aid,a])=>({aid,lat:a.geo.lat,lng:a.geo.lng,loc:a.loc}));
       for(const [aid,act] of Object.entries(day.acts||{})){
-        if(!act.loc)continue;
+        const q=geoQueryOf(act);
+        if(!q)continue;
         // 已有座標時平常跳過；但「立即更新」是使用者主動要求重查，
         // 必須連已成功的也重跑——通過檢查但其實錯的座標，正是這條管線最擔心的錯誤模式。
         if(act.geo&&!force)continue;
         if(!force&&act.geoFail&&act.geoFail.reason!=='network')continue;
-        const res=await geoEnqueue(()=>geoResolve(act.loc,refs));
+        const res=await geoEnqueue(()=>geoResolve(q,refs));
         const base='/schedule/'+did+'/acts/'+aid;
         if(res.fail){
-          await DB.ref(base+'/geoFail').set({at:new Date().toISOString(),tried:geoCandidates(act.loc),reason:res.fail});
+          await DB.ref(base+'/geoFail').set({at:new Date().toISOString(),tried:geoCandidates(q),reason:res.fail});
         }else{
           await DB.ref(base+'/geo').set({lat:res.lat,lng:res.lng,q:res.q,src:res.src,at:new Date().toISOString()});
           await DB.ref(base+'/geoFail').remove();
@@ -2040,6 +2069,7 @@ function openActM(did){
   document.getElementById('ma-did').value=did;document.getElementById('ma-aid').value='';
   document.getElementById('a_name').value='';
   document.getElementById('a_loc').value='';document.getElementById('a_note').value='';document.getElementById('a_cost').value='';
+  document.getElementById('a_geoq').value='';document.getElementById('a_geo_result').textContent='';
   document.getElementById('a_custom_ico').value='';document.getElementById('custom-ico-row').style.display='none';
   curActImages=[];renderActImgPreviews();
   curAC='sight';renderACGrid();selAPayer(0);selACur('JPY');
@@ -2053,6 +2083,10 @@ function openActEdit(did,aid){
     document.getElementById('ma-did').value=did;document.getElementById('ma-aid').value=aid;
     document.getElementById('a_name').value=a.name||'';
     document.getElementById('a_loc').value=a.loc||'';document.getElementById('a_note').value=a.note||'';
+    document.getElementById('a_geoq').value=a.geoQ||'';
+    document.getElementById('a_geo_result').innerHTML=a.geo
+      ? `✅ 已定位：${esc(a.geo.q||'')}（${a.geo.lat.toFixed(3)}, ${a.geo.lng.toFixed(3)}）`
+      : (a.geoFail?'❌ 目前查不到座標，可填上方的定位用地名再按試查':'');
     document.getElementById('a_cost').value=a.cost?.amt||'';
     curAC=a.cat||'sight';renderACGrid();
     document.getElementById('a_custom_ico').value=a.customIco||'';
@@ -2081,13 +2115,23 @@ function saveAct(){
     const maxOrder=existingActs.length?Math.max(...existingActs.map(a=>a.order||0)):0;
     const isNew=!aid;
     const customIco=document.getElementById('a_custom_ico').value.trim();
+    const geoQ=document.getElementById('a_geoq').value.trim();
     const obj={cat:curAC,name,
       ...(curAC==='custom'&&customIco?{customIco}:{}),
       images:curActImages.length?[...curActImages]:null,
       loc:document.getElementById('a_loc').value.trim(),note:document.getElementById('a_note').value.trim(),
+      ...(geoQ?{geoQ}:{}),
       cost:hasCost?{amt:costAmt,cur:curACur,paidBy:CFG.members[curAPayer]}:null,
       order:isNew?(maxOrder+1):curActOrder};
     const id=aid||('a'+uid());
+    // 這裡是整筆 set，obj 沒有 geo 欄位，所以不特別處理的話「改個備註」都會把
+    // 已經查好的座標洗掉、下次開 app 再跑一次地理編碼。定位字串沒變就把座標帶回來；
+    // 變了才讓它重查，這也正是使用者填「定位用地名」之後期待發生的事。
+    const prev=(dayData.acts||{})[id];
+    if(prev&&geoQueryOf(prev)===geoQueryOf(obj)){
+      if(prev.geo)obj.geo=prev.geo;
+      if(prev.geoFail)obj.geoFail=prev.geoFail;
+    }
     DB.ref('/schedule/'+did+'/acts/'+id).set(obj);
     const expId='actcost_'+did+'_'+id;
     if(hasCost){DB.ref('/expenses/'+expId).set({desc:name,amt:costAmt,cur:curACur,cat:mapActCat(curAC),paidBy:CFG.members[curAPayer],date:dayData.date||'',fromAct:true,at:new Date().toISOString()});}
@@ -2568,6 +2612,15 @@ function _selftest(){
     ok('Photon 無參照時一律拒絕', sanityCheck(IS,[],'photon')===false);
     ok('Photon 有參照且合理則通過', sanityCheck(IS,refs,'photon')===true);
     ok('Photon 有參照但不合理被擋', sanityCheck(FAR,refs,'photon')===false);
+  }
+
+  // ---- geoQueryOf ----
+  {
+    ok('沒有 geoQ 時用 loc', geoQueryOf({loc:'Seljalandsfoss'})==='Seljalandsfoss');
+    ok('有 geoQ 時優先用 geoQ', geoQueryOf({loc:'Sigurhæð Apartment',geoQ:'Höfn'})==='Höfn');
+    ok('geoQ 空字串退回 loc', geoQueryOf({loc:'Skógafoss',geoQ:''})==='Skógafoss');
+    ok('兩者皆無回空字串', geoQueryOf({})==='');
+    ok('前後空白會被去掉', geoQueryOf({loc:'  Vík  '})==='Vík');
   }
 
   // ---- dayBaseLatLng ----
