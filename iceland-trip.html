@@ -316,7 +316,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0807</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0807b</span></div>
     </div>
   </div>
   <div class="content">
@@ -895,9 +895,10 @@ async function overpassPost(q){
     // 掛掉的站可能是連線被拒（快），也可能是一直不回應（慢）。沒有逾時的話，
     // 20 天 × 3 個實例會把整個掃描拖到天荒地老。
     const ctl=new AbortController();
-    // 逾時要放很寬。實測同一個查詢：主站順利時 9 秒，但備援的兩個鏡像要 78 秒與 87 秒
-    // 才回得來——設 60 秒的話，主站一忙就會把還在正常運作的鏡像也一起判死。
-    const timer=setTimeout(()=>ctl.abort(),120000);
+    // 45 秒是折衷。備援鏡像實測要 78-87 秒才回得來，設短了等於放棄它們；
+    // 但設長了，一輪三個實例就要等好幾分鐘，而使用者在等的是畫面上的資料。
+    // 主要區域的清單本來就該離線預抓好灌進 /facilities，這條路徑只是補漏。
+    const timer=setTimeout(()=>ctl.abort(),45000);
     try{
       // 兩個都不能省：
       // (1) form-encoded 的 data=<query> 是 Overpass 的標準介面，直接送字串 body 會帶
@@ -976,6 +977,7 @@ async function fetchTile(t){
 }
 // Firebase key 不能含 . $ # [ ] /，所以把座標的小數點與負號去掉
 function tileKey(t){return 't'+t.map(v=>v.toFixed(2).replace('-','n').replace('.','')).join('_');}
+function bboxCovers(a,b){return Array.isArray(a)&&Array.isArray(b)&&a[0]<=b[0]&&a[1]<=b[1]&&a[2]>=b[2]&&a[3]>=b[3];}
 let _facScanning=false;
 async function ensureFacilities(sched,force=false){
   if(_facScanning||!navigator.onLine||!DB)return;
@@ -991,9 +993,18 @@ async function ensureFacilities(sched,force=false){
     // 下次就得把已經成功的也重跑一遍，永遠補不齊。分開存之後，每次開 app 只補還缺的。
     const tiles=[];
     clusterPoints(pts).forEach(g=>splitBbox(bboxOf(g)).forEach(t=>tiles.push(t)));
+    // 已經有涵蓋這塊的資料就不必再查。冰島全境的清單是離線預抓後直接灌進
+    // /facilities/iceland 的（bbox 記整個國家），所以正常情況下這裡一塊都不會查——
+    // 公共 Overpass 從瀏覽器打的成功率實在太低，不值得讓使用者等。
+    const covered=t=>Object.values(lastFacilities||{}).some(g=>bboxCovers(g.bbox,t));
+    let done=0;
     for(const t of tiles){
       const key=tileKey(t);
-      if(!force&&lastFacilities?.[key])continue;
+      if(!force&&(lastFacilities?.[key]||covered(t)))continue;
+      // 一次最多補三塊：每塊最壞要試三個實例，不設上限的話光是掃描就會跑掉幾十分鐘，
+      // 期間「立即更新」會一直被旗標擋住。剩下的下次開 app 再補。
+      if(done>=3)break;
+      done++;
       try{
         const items=await fetchTile(t);
         // 成功回應就寫入，即使是 0 筆——清單裡只剩全球性實例，回 0 代表這一塊
