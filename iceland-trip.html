@@ -532,7 +532,7 @@ let CFG={},DB=null,curTab='sched',curAcc='exp';
 let weatherByDate=new Map();
 let curCat='food',curPayer=0,curCur='JPY';
 let curAC='sight',curACur='JPY',curAPayer=0;
-let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[],lastSafety={};
+let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[],lastSafety={},lastFacilities={};
 const FALLBACK_RATES={JPY:0.21,AUD:21,USD:32,EUR:35};
 const _ratesFetching=new Set();
 const DG={on:false,did:null,aid:null,act:null,srcEl:null,ghost:null,timer:null,sx:0,sy:0};
@@ -839,31 +839,145 @@ function dayBaseLatLng(day,prevHotel){
   return null;
 }
 
-const OVERPASS_URL='https://overpass-api.de/api/interpreter';
 const OSRM_URL='https://router.project-osrm.org/route/v1/driving/';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-// 冰島鄉下資料很稀疏（實測某東南部城鎮半徑 50km 內只有 2 筆），所以半徑要漸進放大。
-// clinic 不能省：鄉下常常只有 heilsugæsla 診所而沒有 hospital。
-async function overpassAround(lat,lng,radius){
-  const q=`[out:json][timeout:25];(
-node[amenity=police](around:${radius},${lat},${lng});
-node[amenity=hospital](around:${radius},${lat},${lng});
-node[amenity=clinic](around:${radius},${lat},${lng});
-way[amenity=police](around:${radius},${lat},${lng});
-way[amenity=hospital](around:${radius},${lat},${lng});
-way[amenity=clinic](around:${radius},${lat},${lng});
-);out center tags;`;
-  const r=await fetch(OVERPASS_URL,{method:'POST',body:q});
-  if(!r.ok)throw new Error('overpass '+r.status);
-  const d=await r.json();
-  return (d.elements||[]).map(e=>{
-    const lat2=e.lat??e.center?.lat, lng2=e.lon??e.center?.lon;
-    if(lat2==null||lng2==null)return null;
-    const t=e.tags||{};
-    return {amenity:t.amenity,name:t.name||'',emergency:t.emergency||'',
-            lat:lat2,lng:lng2,km:haversine(lat,lng,lat2,lng2)};
+// 公共 Overpass 實例會整站掛掉，不是只會限流——2026-08-06 實測主站連 TCP 都拒接，
+// 導致安全資訊一整天都寫不進去。單一 endpoint 沒有備援，等於這個功能隨時可能整個消失，
+// 而它存在的理由正是「出事的時候要有」。所以依序試多個實例，並記住哪一個是通的。
+// 只放**全球**資料的實例。區域性實例（例如 overpass.osm.ch 只有瑞士周邊）比掛掉更危險：
+// 它會回 HTTP 200 加空清單，看起來像「這附近真的沒有警局」，於是空資料被寫進快取、
+// 不再重試，安全資訊就永久是空的。已實測 osm.ch 查冰島回 0 筆，故排除。
+// overpass.osm.jp 的 TLS 憑證已過期，也不能放。
+const OVERPASS_URLS=[
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+];
+let _overpassIdx=0;
+async function overpassPost(q){
+  let lastErr=null;
+  for(let i=0;i<OVERPASS_URLS.length;i++){
+    const idx=(_overpassIdx+i)%OVERPASS_URLS.length;
+    // 掛掉的站可能是連線被拒（快），也可能是一直不回應（慢）。沒有逾時的話，
+    // 20 天 × 3 個實例會把整個掃描拖到天荒地老。
+    const ctl=new AbortController();
+    // 逾時要放很寬。實測同一個查詢：主站順利時 9 秒，但備援的兩個鏡像要 78 秒與 87 秒
+    // 才回得來——設 60 秒的話，主站一忙就會把還在正常運作的鏡像也一起判死。
+    const timer=setTimeout(()=>ctl.abort(),120000);
+    try{
+      // 兩個都不能省：
+      // (1) form-encoded 的 data=<query> 是 Overpass 的標準介面，直接送字串 body 會帶
+      //     Content-Type: text/plain，主站不吃。
+      // (2) encodeURIComponent 不會編碼 ( ) ! * ' 這幾個字元，而查詢裡的正則帶括號，
+      //     主站的 Apache 會對未編碼的括號回 406。curl 之所以一直沒事，是因為它的
+      //     --data-urlencode 會把括號編成 %28 %29。
+      const r=await fetch(OVERPASS_URLS[idx],{
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'data='+encodeURIComponent(q).replace(/[!'()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase()),
+        signal:ctl.signal});
+      if(!r.ok)throw new Error('overpass '+r.status);
+      const d=await r.json();
+      _overpassIdx=idx;   // 這個是通的，下次從它開始試
+      return d;
+    }catch(e){
+      lastErr=e;
+    }finally{clearTimeout(timer);}
+  }
+  throw lastErr||new Error('overpass 全部實例都不通');
+}
+// ─── 設施清單：一次查完整個行程範圍，之後只從清單算最近的 ───────────
+//
+// 原本每天用 around 查一次，實測完全行不通：around 在大半徑要掃全球資料庫，
+// 30km 以上一律 504（10km 就要 9.8 秒）；而冰島鄉下 50km 內常常只有 2 筆設施，
+// 半徑放不大就等於查不到東西。改用 bbox（有空間索引）一次抓整片區域：
+// 實測全冰島 104 筆（28 警局 / 32 醫院 / 44 診所）只要 8 秒、36KB。
+//
+// 一次查完還有第二個好處：公共 Overpass 實例本來就不穩（同一個查詢這次 8 秒成功、
+// 下次 504），每天查 20 次等於失敗 20 次機會；查一次存起來，成功一次就夠了。
+//
+// clinic 不能省：冰島鄉下常常只有 heilsugæsla 診所而沒有 hospital。
+function clusterPoints(pts,maxKm=350){
+  const groups=[];
+  pts.forEach(p=>{
+    const g=groups.find(g=>g.some(q=>haversine(p.lat,p.lng,q.lat,q.lng)<=maxKm));
+    if(g)g.push(p); else groups.push([p]);
+  });
+  return groups;
+}
+// 分群是為了避免行程跨國時 bbox 涵蓋整片海洋——挪威全國實測要 85 秒、1.75MB，
+// 冰島只要 8 秒、36KB，兩國各自查遠比框一個大方框划算。
+function bboxOf(group,padKm=80){
+  const lats=group.map(p=>p.lat),lngs=group.map(p=>p.lng);
+  const midLat=(Math.min(...lats)+Math.max(...lats))/2;
+  const dLat=padKm/111;
+  const dLng=padKm/(111*Math.max(0.2,Math.cos(midLat*Math.PI/180)));
+  return [Math.min(...lats)-dLat,Math.min(...lngs)-dLng,
+          Math.max(...lats)+dLat,Math.max(...lngs)+dLng].map(v=>+v.toFixed(4));
+}
+// 一個大 bbox 查不動：實測整個行程範圍一次查，主站不是 504 就是 406（都是「太忙」的
+// 不同表現），連 curl 也一樣。切成小塊分別查則穩定成功（實測 3 塊各 7-11 秒全部 200）。
+// 2 度見方是實測下來還算穩的大小。再大就開始出現 504（同一個塊時好時壞），
+// 再小則塊數暴增、每塊之間還要留 3 秒禮貌間隔，整體反而更久。
+function splitBbox(bbox,maxSpanDeg=2){
+  const [s,w,n,e]=bbox;
+  const rows=Math.max(1,Math.ceil((n-s)/maxSpanDeg));
+  const cols=Math.max(1,Math.ceil((e-w)/maxSpanDeg));
+  const out=[];
+  for(let i=0;i<rows;i++)for(let j=0;j<cols;j++){
+    out.push([+(s+(n-s)*i/rows).toFixed(4), +(w+(e-w)*j/cols).toFixed(4),
+              +(s+(n-s)*(i+1)/rows).toFixed(4), +(w+(e-w)*(j+1)/cols).toFixed(4)]);
+  }
+  return out;
+}
+async function fetchTile(t){
+  const d=await overpassPost(`[out:json][timeout:50];nwr[amenity~"^(police|hospital|clinic)$"](${t.join(',')});out center tags;`);
+  return (d.elements||[]).map(el=>{
+    const y=el.lat??el.center?.lat, x=el.lon??el.center?.lon;
+    if(y==null||x==null)return null;
+    const tg=el.tags||{};
+    // 欄位名刻意用單字母：這份清單會整個進 localStorage 快照
+    return {a:tg.amenity,n:tg.name||'',y:+y.toFixed(5),x:+x.toFixed(5),e:tg.emergency==='yes'?1:0};
   }).filter(Boolean);
+}
+// Firebase key 不能含 . $ # [ ] /，所以把座標的小數點與負號去掉
+function tileKey(t){return 't'+t.map(v=>v.toFixed(2).replace('-','n').replace('.','')).join('_');}
+let _facScanning=false;
+async function ensureFacilities(sched,force=false){
+  if(_facScanning||!navigator.onLine||!DB)return;
+  const pts=[];
+  Object.values(sched||{}).forEach(day=>Object.values(day.acts||{}).forEach(a=>{
+    if(a.geo&&typeof a.geo.lat==='number')pts.push({lat:a.geo.lat,lng:a.geo.lng});
+  }));
+  if(!pts.length)return;
+  _facScanning=true;
+  try{
+    // 每個小塊各自是一個快取單位。公共 Overpass 的成功與否是隨機的——實測同一個塊
+    // 這次 200、下次 504——所以不能把一整片區域當成一次成敗：那樣只要有一塊失敗，
+    // 下次就得把已經成功的也重跑一遍，永遠補不齊。分開存之後，每次開 app 只補還缺的。
+    const tiles=[];
+    clusterPoints(pts).forEach(g=>splitBbox(bboxOf(g)).forEach(t=>tiles.push(t)));
+    for(const t of tiles){
+      const key=tileKey(t);
+      if(!force&&lastFacilities?.[key])continue;
+      try{
+        const items=await fetchTile(t);
+        // 成功回應就寫入，即使是 0 筆——清單裡只剩全球性實例，回 0 代表這一塊
+        // （海面、內陸荒原）真的沒有設施，是可信的。只有請求失敗才不寫、留待重試。
+        await DB.ref('/facilities/'+key).set({at:new Date().toISOString(),bbox:t,items});
+      }catch(e){console.warn('facilities tile 失敗',t.join(','),e.message);}
+      await sleep(3000);
+    }
+  }finally{_facScanning=false;}
+}
+// 從已快取的設施清單算最近的。純計算、不打網路，所以離線也能算。
+function nearestFacilities(base){
+  const all=[];
+  Object.values(lastFacilities||{}).forEach(g=>(g.items||[]).forEach(it=>all.push(it)));
+  const withKm=all.map(it=>({...it,km:haversine(base.lat,base.lng,it.y,it.x)}));
+  const pick=pred=>withKm.filter(pred).sort((a,b)=>a.km-b.km).slice(0,3);
+  return {police:pick(i=>i.a==='police'),hospital:pick(i=>i.a==='hospital'||i.a==='clinic')};
 }
 // 車程。直線距離在冰島會嚴重低估（實測 1.15-1.24x），而且「62 公里」不會讓人知道那是一小時的路。
 async function osrmDrive(fromLat,fromLng,toLat,toLng){
@@ -876,23 +990,18 @@ async function osrmDrive(fromLat,fromLng,toLat,toLng){
   }catch(e){return null;}
 }
 async function fetchSafety(base){
-  let els=[];
-  for(const radius of [10000,30000,100000]){
-    try{els=await overpassAround(base.lat,base.lng,radius);}
-    catch(e){await sleep(2000);els=await overpassAround(base.lat,base.lng,radius);}
-    if(els.length)break;
-    await sleep(2000);
+  const near=nearestFacilities(base);
+  const out={base,police:[],hospital:[],at:new Date().toISOString()};
+  for(const key of ['police','hospital']){
+    for(const it of near[key]){
+      const e={name:it.n,lat:it.y,lng:it.x,km:+it.km.toFixed(1),emergency:it.e?'yes':''};
+      const d=await osrmDrive(base.lat,base.lng,it.y,it.x);
+      if(d)e.drive=d;   // 算不出車程就留著直線距離當 fallback，UI 會標示是直線
+      out[key].push(e);
+      await sleep(1000);
+    }
   }
-  const pick=pred=>els.filter(pred).sort((a,b)=>a.km-b.km).slice(0,3);
-  const police=pick(e=>e.amenity==='police');
-  const hosp  =pick(e=>e.amenity==='hospital'||e.amenity==='clinic');
-  for(const e of [...police,...hosp]){
-    e.km=+e.km.toFixed(1);
-    const d=await osrmDrive(base.lat,base.lng,e.lat,e.lng);
-    if(d)e.drive=d;
-    await sleep(1000);
-  }
-  return {base,police,hospital:hosp,at:new Date().toISOString()};
+  return out;
 }
 
 let _safetyScanning=false;
@@ -913,7 +1022,14 @@ async function ensureSafety(sched,force=false){
       if(!force&&old?.base&&haversine(base.lat,base.lng,old.base.lat,old.base.lng)<=SAFETY_MOVE_KM)continue;
       try{
         const res=await fetchSafety(base);
-        await DB.ref('/safety/'+did).set(res);
+        // 空結果不寫入。寫進去等於宣告「這附近查過了，什麼都沒有」，之後就不會再重試，
+        // 但空結果多半是服務出問題（例如切到了資料不全的鏡像站）而不是真的荒無人煙。
+        // 不寫入的代價只是下次開 app 多打一次 API，比永久顯示空白划算。
+        if(!res.police.length&&!res.hospital.length){
+          console.warn('safety '+did+'：查無結果，不寫入以便下次重試');
+        }else{
+          await DB.ref('/safety/'+did).set(res);
+        }
       }catch(e){
         // 查不到就保留舊快取不覆蓋——舊資料比沒資料有用
         console.warn('safety '+did+' 失敗：',e.message);
@@ -940,10 +1056,14 @@ function renderOfflineStat(){
     });
   });
   const safeReady=days.filter(([did])=>lastSafety&&lastSafety[did]).length;
+  const facCount=Object.values(lastFacilities||{}).reduce((n,g)=>n+(g.items?.length||0),0);
+  // 只有有座標的天數才可能有安全資訊，拿 20 天當分母會永遠看起來沒做完
+  const eligible=days.filter(([did,day])=>Object.values(day.acts||{}).some(a=>a.geo)).length;
   const snap=snapLoad();
   const rows=[
     `地點定位　<b>${done} / ${total}</b> 已完成`,
-    `安全資訊　<b>${safeReady} / ${days.length}</b> 天已就緒`,
+    `設施清單　<b>${facCount}</b> 筆警局／醫療機構`,
+    `安全資訊　<b>${safeReady} / ${eligible}</b> 天已就緒`,
   ];
   if(failed.length)rows.push(`<span style="color:var(--muted)">查不到座標：${failed.map(esc).join('、')}</span>`);
   if(rejected.length)rows.push(`<span style="color:var(--orange)">位置可疑已略過：${rejected.map(esc).join('、')}</span>`);
@@ -952,11 +1072,25 @@ function renderOfflineStat(){
 }
 async function refreshOfflineData(){
   if(!navigator.onLine){toast('⚠️ 目前離線，請連上網路再更新');return;}
-  toast('🔄 更新中…');
-  await ensureActGeo(lastSched,true);
-  await ensureSafety(lastSched,true);
-  renderOfflineStat();
-  toast('✅ 離線資料已更新');
+  // 背景掃描還在跑時，ensureXxx 會因為旗標而直接 return，按鈕就成了「跳成功訊息但什麼都沒做」。
+  if(_geoScanning||_facScanning||_safetyScanning){toast('⏳ 背景更新中，請稍候再試');return;}
+  const btn=document.querySelector('#offlineStat')?.parentNode?.querySelector('button');
+  if(btn){btn.disabled=true;btn.textContent='更新中…';}
+  try{
+    toast('🔄 補齊地點座標…');
+    await ensureActGeo(lastSched,true);
+    toast('🔄 抓取警局與醫療機構…');
+    await ensureFacilities(lastSched,true);
+    toast('🔄 計算各日車程…');
+    await ensureSafety(lastSched,true);
+    renderOfflineStat();
+    toast('✅ 離線資料已更新');
+  }catch(e){
+    renderOfflineStat();
+    toast('⚠️ 更新未完成：'+(e?.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='立即更新';}
+  }
 }
 
 async function geocodeCity(name){
@@ -1144,7 +1278,7 @@ function bootApp(){
   const snap=snapLoad();
   if(snap){
     const d=snap.data;
-    lastSched=d.schedule||{};lastExps=d.expenses||{};lastNotes=d.notes||{};lastSafety=d.safety||{};
+    lastSched=d.schedule||{};lastExps=d.expenses||{};lastNotes=d.notes||{};lastSafety=d.safety||{};lastFacilities=d.facilities||{};
     if(d.config)applyTripCfg(d.config);
     renderSched(lastSched);renderExp(lastExps);renderStat(lastExps);renderNotes(lastNotes);
   }
@@ -1258,6 +1392,7 @@ function _fbListen(){
     lastNotes=d.notes||{};
     lastSched=sched;
     lastSafety=d.safety||{};
+    lastFacilities=d.facilities||{};
     // 行程日期沒跟上出發日就補正（上次存檔時寫入失敗、離線、或在別台裝置改的都會這樣）。
     // 注意：比對的兩邊都取自 Firebase（/config.start vs /schedule/dayN/date），不是各裝置本機值——
     // 當年的互踢 bug 是拿本機 CFG.start 去比，A 改日期、B 一連上就改回去。現在所有裝置算出的
@@ -1273,7 +1408,16 @@ function _fbListen(){
     snapSave(d);
     sync('ok');
     if(CFG.lat!=null)syncWeather(sched);
-    if(navigator.onLine)ensureActGeo(sched).then(()=>ensureSafety(lastSched));
+    // 先補座標 → 再抓整個行程範圍的設施清單 → 才算得出每天最近的警局/急診。
+    // 任何一步失敗都不能讓後面的步驟被跳過（.then 鏈遇到 reject 會整條斷掉），所以各自 catch。
+    if(navigator.onLine){
+      ensureActGeo(sched)
+        .catch(e=>console.warn('ensureActGeo:',e?.message||e))
+        .then(()=>ensureFacilities(lastSched))
+        .catch(e=>console.warn('ensureFacilities:',e?.message||e))
+        .then(()=>ensureSafety(lastSched))
+        .catch(e=>console.warn('ensureSafety:',e?.message||e));
+    }
     renderOfflineStat();
     ensureRatesForExpenses(lastExps).then(()=>{if(curTab==='exp'&&curAcc==='stat')renderStat(lastExps);});
   },err=>{sync(navigator.onLine?'ok':'offline');toast('⚠️ Firebase 錯誤：'+err.message);});
