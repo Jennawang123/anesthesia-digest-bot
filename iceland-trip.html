@@ -316,7 +316,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0805</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0807</span></div>
     </div>
   </div>
   <div class="content">
@@ -443,6 +443,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="fg"><label class="lb">類型</label><div class="ac-grid" id="acGrid"></div></div>
     <div class="fg" id="custom-ico-row" style="display:none"><label class="lb">自訂 Emoji</label><input class="inp" id="a_custom_ico" placeholder="貼上或輸入 emoji，例：🌸" style="font-size:22px;text-align:center;letter-spacing:4px" maxlength="4"></div>
     <div class="fg"><label class="lb">活動名稱 *</label><input class="inp" id="a_name" placeholder="例：淺草寺參觀"></div>
+    <div class="fg" id="move-day-row" style="display:none"><label class="lb">移到哪一天</label><select class="inp" id="a_move_day"></select></div>
     <div class="fg"><label class="lb">地點（自動生成 Google Maps 連結）</label><input class="inp" id="a_loc" placeholder="例：Sydney Opera House"></div>
     <div class="fg"><label class="lb">備註</label><textarea class="ta" id="a_note" placeholder="訂位資訊、注意事項…"></textarea></div>
     <div class="fg">
@@ -533,6 +534,9 @@ let weatherByDate=new Map();
 let curCat='food',curPayer=0,curCur='JPY';
 let curAC='sight',curACur='JPY',curAPayer=0;
 let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[],lastSafety={},lastFacilities={};
+// 行程頁一次只顯示一天。null = 總覽（只有住宿總整理）。
+// _overviewChosen 用來分辨「還沒選過、應該自動跳到今天」與「使用者自己選了總覽」。
+let curDay=null,_overviewChosen=false;
 const FALLBACK_RATES={JPY:0.21,AUD:21,USD:32,EUR:35};
 const _ratesFetching=new Set();
 const DG={on:false,did:null,aid:null,act:null,srcEl:null,ghost:null,timer:null,sx:0,sy:0};
@@ -1719,7 +1723,6 @@ function selAPayer(i){curAPayer=i;renderPayerPicker('payer-row-act',i,'selAPayer
 
 function renderSched(sched){
   const box=document.getElementById('schedBox');
-  const openDays=new Set([...document.querySelectorAll('.day-card.open')].map(el=>el.id.replace('dc-','')));
   // 把已掛載的地圖節點摘下暫存，重畫後再放回原位。Leaflet 實例在 detach 期間仍然有效，
   // 直接讓 innerHTML 沖掉會留下殭屍實例，而且每記一筆帳畫面就閃一次。
   dayMapEls.clear();
@@ -1727,15 +1730,23 @@ function renderSched(sched){
     const el=document.getElementById('dmap-'+did);
     if(el&&el.parentNode){el.parentNode.removeChild(el);dayMapEls.set(did,el);}
   });
-  const days=Object.entries(sched).sort((a,b)=>(parseInt(a[0].replace(/\D/g,''))||0)-(parseInt(b[0].replace(/\D/g,''))||0));
+  const allDays=Object.entries(sched).sort((a,b)=>(parseInt(a[0].replace(/\D/g,''))||0)-(parseInt(b[0].replace(/\D/g,''))||0));
   // 行程被清空時同樣要收尾：摘下的節點已經沒有位置可以放回去，
   // 不主動銷毀的話 dayMaps 會永遠留著指向脫離節點的實例。
-  if(!days.length){
+  if(!allDays.length){
     box.innerHTML='<div class="empty"><div class="empty-i">📅</div><div class="empty-h">尚無行程</div></div>';
     [...dayMaps.keys()].forEach(unmountDayMap);
     dayMapEls.clear();
+    curDay=null;
+    renderDayStrip(sched);
+    renderOverview(sched);
     return;
   }
+  // 一次只顯示一天：20 天全部攤開時，要找今天的行程得捲很久，地圖和安全資訊也會
+  // 同時掛 20 份。curDay 為 null 是總覽模式，只留住宿總整理。
+  if(curDay===null&&!_overviewChosen)curDay=defaultDay(sched);
+  if(curDay!==null&&!sched[curDay])curDay=defaultDay(sched);
+  const days=curDay===null?[]:allDays.filter(([did])=>did===curDay);
   box.innerHTML=days.map(([did,day])=>{
     const acts=Object.entries(day.acts||{}).sort((a,b)=>{
       const oa=a[1].order!=null?a[1].order:999999;
@@ -1795,15 +1806,19 @@ function renderSched(sched){
       </div>
     </div>`;
   }).join('');
-  openDays.forEach(did=>{const el=document.getElementById('dc-'+did);if(el)el.classList.add('open');});
-  // 把暫存的地圖節點放回去；已經不存在的日子（活動被刪光）就順手銷毀實例
+  if(!days.length){
+    box.innerHTML='<div class="empty"><div class="empty-i">🗓️</div><div class="empty-h">點上方日期看當天行程</div></div>';
+  }
+  // 一次只顯示一天，就沒有必要再讓使用者點一下才看得到內容
+  days.forEach(([did])=>{const el=document.getElementById('dc-'+did);if(el)el.classList.add('open');});
+  // 把暫存的地圖節點放回去；已經不在畫面上的日子（切到別天、或活動被刪光）就銷毀實例
   dayMapEls.forEach((el,did)=>{
     const ph=document.getElementById('dmap-'+did);
     if(ph&&ph.parentNode){ph.parentNode.replaceChild(el,ph);const m=dayMaps.get(did);if(m)setTimeout(()=>m.invalidateSize(),60);}
     else unmountDayMap(did);
   });
   dayMapEls.clear();
-  openDays.forEach(did=>mountDayMap(did));
+  days.forEach(([did])=>mountDayMap(did));
   renderDayStrip(sched);
   renderOverview(sched);
 }
@@ -1934,6 +1949,8 @@ function navUrl(lat,lng,label){
 function renderOverview(sched){
   const el=document.getElementById('overviewBox');
   if(!el)return;
+  // 住宿總整理是「整趟」的視角，只在總覽模式出現；看單日行程時它只會擋路
+  if(curDay!==null){el.innerHTML='';return;}
   const days=Object.entries(sched||{}).sort((a,b)=>(parseInt(a[0].replace(/\D/g,''))||0)-(parseInt(b[0].replace(/\D/g,''))||0));
   const rows=[];
   days.forEach(([did,day])=>{
@@ -1966,48 +1983,29 @@ function renderDayStrip(sched){
   const md=d=>{if(!d)return'';const[y,m,dd]=d.split('-');return `${parseInt(m)}/${parseInt(dd)}`;};
   const wd=d=>{if(!d)return'';return new Date(d+'T12:00:00').toLocaleDateString('zh-TW',{weekday:'short'});};
   el.innerHTML=
-    `<div class="ds-chip" id="ds-overview" onclick="jumpOverview()"><span class="ds-n">總覽</span><span class="ds-d">${days.length}天</span></div>`+
+    `<div class="ds-chip${curDay===null?' on':''}" id="ds-overview" onclick="selectDay(null)"><span class="ds-n">總覽</span><span class="ds-d">${days.length}天</span></div>`+
     days.map(([did,day])=>
-      `<div class="ds-chip" id="ds-${did}" onclick="jumpDay('${did}')"><span class="ds-n">D${did.replace(/\D/g,'')} ${wd(day.date)}</span><span class="ds-d">${md(day.date)}</span></div>`
+      `<div class="ds-chip${curDay===did?' on':''}" id="ds-${did}" onclick="selectDay('${did}')"><span class="ds-n">D${did.replace(/\D/g,'')} ${wd(day.date)}</span><span class="ds-d">${md(day.date)}</span></div>`
     ).join('');
-  initDaySpy();
+  const on=el.querySelector('.ds-chip.on');
+  if(on)on.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
 }
-function jumpOverview(){
+// 一次只顯示一天。null 代表總覽（只有住宿總整理，不列任何日卡）。
+function selectDay(did){
+  curDay=did;
+  _overviewChosen=(did===null);
   const sc=schedScroller();
-  if(sc)sc.scrollTo({top:0,behavior:'smooth'});
-  setDayChip('overview');
+  if(sc)sc.scrollTop=0;
+  renderSched(lastSched);
 }
-function jumpDay(did){
-  const card=document.getElementById('dc-'+did);
-  const sc=schedScroller();
-  if(!card||!sc)return;
-  card.classList.add('open');
-  mountDayMap(did);
-  const strip=document.getElementById('dayStrip');
-  const offset=(strip?strip.getBoundingClientRect().height:0)+8;
-  const y=card.getBoundingClientRect().top-sc.getBoundingClientRect().top+sc.scrollTop-offset;
-  sc.scrollTo({top:Math.max(0,y),behavior:'smooth'});
-  setDayChip(did);
-}
-function setDayChip(key){
-  document.querySelectorAll('.ds-chip').forEach(c=>c.classList.remove('on'));
-  const chip=document.getElementById('ds-'+key);
-  if(!chip)return;
-  chip.classList.add('on');
-  chip.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
-}
-let _daySpy=null;
-// 捲到哪天就 highlight 哪個 chip。root 指定成 .content（真正在捲的那層），
-// rootMargin 上緣留出 sticky 導覽列的高度，讓「目前這天」的判定跟視覺上看到的一致。
-function initDaySpy(){
-  if(_daySpy)_daySpy.disconnect();
-  const sc=schedScroller();
-  _daySpy=new IntersectionObserver(entries=>{
-    const vis=entries.filter(e=>e.isIntersecting)
-      .sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top)[0];
-    if(vis)setDayChip(vis.target.id.replace('dc-',''));
-  },{root:sc||null,rootMargin:'-80px 0px -70% 0px',threshold:0});
-  document.querySelectorAll('.day-card').forEach(c=>_daySpy.observe(c));
+// 進 app 時停在「今天」，行程還沒開始或已結束就停在第一天——
+// 旅行途中打開 app，最常想看的就是今天要去哪。
+function defaultDay(sched){
+  const t=today();
+  const hit=Object.entries(sched||{}).find(([did,d])=>d.date===t);
+  if(hit)return hit[0];
+  const days=Object.keys(sched||{}).sort((a,b)=>(parseInt(a.replace(/\D/g,''))||0)-(parseInt(b.replace(/\D/g,''))||0));
+  return days[0]||null;
 }
 function toggleDay(did){
   const card=document.getElementById('dc-'+did);
@@ -2045,6 +2043,7 @@ function openActM(did){
   document.getElementById('a_custom_ico').value='';document.getElementById('custom-ico-row').style.display='none';
   curActImages=[];renderActImgPreviews();
   curAC='sight';renderACGrid();selAPayer(0);selACur('JPY');
+  document.getElementById('move-day-row').style.display='none';   // 新增時沒有「移動」可言
   openM('m-act');setTimeout(()=>document.getElementById('a_name').focus(),280);
 }
 function openActEdit(did,aid){
@@ -2061,6 +2060,13 @@ function openActEdit(did,aid){
     curActImages=a.images?[...a.images]:[];renderActImgPreviews();
     selACur(a.cost?.cur||'JPY');selAPayer(Math.max(0,CFG.members.indexOf(a.cost?.paidBy)));
     curActOrder=a.order||0;
+    // 一次只顯示一天之後，拖曳只能在當天內排序（別天的卡片根本不在畫面上），
+    // 所以跨日移動改由這個選單負責。moveAct 是既有的，連記帳日期一起搬。
+    const sel=document.getElementById('a_move_day');
+    sel.innerHTML=Object.entries(lastSched)
+      .sort((x,y)=>(parseInt(x[0].replace(/\D/g,''))||0)-(parseInt(y[0].replace(/\D/g,''))||0))
+      .map(([d,day])=>`<option value="${d}"${d===did?' selected':''}>D${d.replace(/\D/g,'')}　${fmtD(day.date)}</option>`).join('');
+    document.getElementById('move-day-row').style.display='';
     openM('m-act');
   });
 }
@@ -2086,6 +2092,15 @@ function saveAct(){
     const expId='actcost_'+did+'_'+id;
     if(hasCost){DB.ref('/expenses/'+expId).set({desc:name,amt:costAmt,cur:curACur,cat:mapActCat(curAC),paidBy:CFG.members[curAPayer],date:dayData.date||'',fromAct:true,at:new Date().toISOString()});}
     else{DB.ref('/expenses/'+expId).remove();}
+    // 編輯模式下若選了別天，先存回原處再整筆搬過去（moveAct 會一併處理記帳的日期）
+    const moveTo=document.getElementById('move-day-row').style.display!=='none'
+      ? document.getElementById('a_move_day').value : did;
+    if(!isNew&&moveTo&&moveTo!==did){
+      moveAct(did,id,obj,moveTo);
+      curDay=moveTo;_overviewChosen=false;   // 跟著跳到目的地那天，否則活動看起來像消失了
+      closeM('m-act');
+      return;
+    }
     closeM('m-act');toast('✅ 已儲存');
   });
 }
