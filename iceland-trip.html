@@ -233,6 +233,12 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .sf-dist{font-size:15px;color:var(--muted);margin-top:2px;}
 .sf-tag{display:inline-block;background:#D9534F;color:#fff;border-radius:6px;padding:1px 7px;font-size:13px;font-weight:700;margin-left:6px;}
 .sf-note{font-size:14px;color:var(--muted);margin-top:10px;line-height:1.6;}
+.dow-row{display:flex;gap:7px;flex-wrap:wrap;}
+.dow-btn{width:42px;height:42px;border-radius:50%;border:2px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;cursor:pointer;color:var(--text);transition:all .12s;user-select:none;}
+.dow-btn.on{border-color:#D9534F;color:#D9534F;background:#FDF2F2;}
+.closed-tag{display:inline-flex;align-items:center;gap:3px;background:#D9534F;color:#fff;border-radius:7px;padding:2px 8px;font-size:14px;font-weight:700;margin-left:7px;vertical-align:middle;}
+.closed-note{font-size:15px;color:#B5504C;margin-top:2px;}
+.map-hint{padding:13px 16px;background:#FBF7F3;border-bottom:1px solid var(--border);font-size:15px;color:var(--muted);line-height:1.6;}
 .day-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px;}
 .wchip{display:inline-flex;align-items:center;gap:2px;background:#D9E6EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:var(--blue2);}
 .schip{display:inline-flex;align-items:center;gap:2px;background:#EAF5EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:#1E7D32;}
@@ -316,7 +322,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0807b</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0807c</span></div>
     </div>
   </div>
   <div class="content">
@@ -452,6 +458,10 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
         <button type="button" class="btn btn-g" style="flex:0 0 auto;padding:11px 14px" onclick="tryActGeo()">📍 試查</button>
       </div>
       <p class="hint" id="a_geo_result" style="text-align:left;margin-top:6px;font-size:15px"></p>
+    </div>
+    <div class="fg">
+      <label class="lb">公休日（點選；排到公休日會出現警示）</label>
+      <div class="dow-row" id="dowRow"></div>
     </div>
     <div class="fg"><label class="lb">備註</label><textarea class="ta" id="a_note" placeholder="訂位資訊、注意事項…"></textarea></div>
     <div class="fg">
@@ -646,6 +656,11 @@ function geoCandidates(raw){
   const dash=s.split(/\s+[-–—]\s+/)[0];
   if(dash!==s)push(dash);
 
+  // 2b) 「A & B」「A / B」取前段：實測「Aldan Hotel & Restaurant」查不到，
+  //     但「Aldan Hotel」查得到（Seyðisfjörður 的 Hotel Áldan）
+  const amp=s.split(/\s*[&＆/／]\s*/)[0];
+  if(amp!==s)push(amp);
+
   // 3) 去掉通用詞後的剩餘：「Fjaðrárgljúfur Masjid」→「Fjaðrárgljúfur」
   const toks=s.replace(/[,()]/g,' ').split(/\s+/).filter(Boolean);
   const kept=toks.filter(t=>!GEO_GENERIC.includes(t.toLowerCase().replace(/[^\p{L}]/gu,'')));
@@ -801,8 +816,11 @@ function dayKnownPoints(day){
 }
 let _geoScanning=false;
 // 掃出「有 loc、無 geo、且不是已知查不到」的活動排進佇列。
-// reason:'network' 的失敗視為可重試（服務當下不通，下次開 app 再試）；
-// 'no-match' 與 'sanity-reject' 不自動重試，避免無限打 API——要重查得改 loc 或按「立即更新」。
+// 只有 'no-match'（OSM 真的沒這個地方）才永久不重試。
+// 'network' 與 'sanity-reject' 都會重試：前者是服務當下不通；後者代表「當下沒有
+// 足夠的參照座標可以驗證」，而參照會隨著當天活動的增刪而改變——實測有地點本來
+// 查得到卻被標成 sanity-reject 卡死，就是因為判定當下那天還沒有任何座標。
+const GEO_RETRY_REASONS=['network','sanity-reject'];
 async function ensureActGeo(sched,force=false){
   if(_geoScanning)return;
   _geoScanning=true;
@@ -817,7 +835,7 @@ async function ensureActGeo(sched,force=false){
         // 已有座標時平常跳過；但「立即更新」是使用者主動要求重查，
         // 必須連已成功的也重跑——通過檢查但其實錯的座標，正是這條管線最擔心的錯誤模式。
         if(act.geo&&!force)continue;
-        if(!force&&act.geoFail&&act.geoFail.reason!=='network')continue;
+        if(!force&&act.geoFail&&!GEO_RETRY_REASONS.includes(act.geoFail.reason))continue;
         const res=await geoEnqueue(()=>geoResolve(q,refs));
         const base='/schedule/'+did+'/acts/'+aid;
         if(res.fail){
@@ -1063,7 +1081,12 @@ async function ensureSafety(sched,force=false){
       if(base&&base.from==='hotel')prevHotel={lat:base.lat,lng:base.lng,label:base.label};
       if(!base)continue;
       const old=lastSafety?.[did];
-      if(!force&&old?.base&&haversine(base.lat,base.lng,old.base.lat,old.base.lng)<=SAFETY_MOVE_KM)continue;
+      // 距離之外還要看依據本身有沒有變。新增住宿時，base 會從「當日行程中心」變成
+      // 「住宿」，若剛好落在 1km 內，只比距離就會判定不必重算——結果卡片上還寫著
+      // 「依當日行程位置查詢」，用的也還是舊座標。
+      const sameBase=old?.base&&old.base.from===base.from&&(old.base.label||'')===(base.label||'')
+        &&haversine(base.lat,base.lng,old.base.lat,old.base.lng)<=SAFETY_MOVE_KM;
+      if(!force&&sameBase)continue;
       try{
         const res=await fetchSafety(base);
         // 空結果不寫入。寫進去等於宣告「這附近查過了，什麼都沒有」，之後就不會再重試，
@@ -1550,7 +1573,12 @@ function switchAcc(t){
 }
 let fabMenuOpen=false;
 function fabTap(){
-  if(curTab==='sched'){openActM('day1');return;}
+  // 一次只顯示一天之後，這裡再寫死 day1 就等於「不管在看哪天，新增的都跑去第一天」
+  if(curTab==='sched'){
+    const did=curDay||defaultDay(lastSched);
+    if(!did){toast('請先選一天再新增活動');return;}
+    openActM(did);return;
+  }
   if(curTab==='exp'){openExpM();return;} // 拿掉收據掃描後只剩手動輸入，不用再展開選單
   if(curTab==='note'){
     fabMenuOpen=!fabMenuOpen;
@@ -1753,6 +1781,32 @@ function moveAct(fromDid,aid,act,toDid){
   });
 }
 
+// ─── 公休日 ─────────────────────────────────────────
+// Google 的營業時間要 Places API（付費金鑰），OSM 的 opening_hours 又幾乎沒人填
+// （實測這趟行程查得到的地點全部沒有這個標籤），所以只能手動選。
+// 存成星期幾的陣列，0=週日，跟 Date.getDay() 一致。
+const DOW=['日','一','二','三','四','五','六'];
+let curClosed=[];
+function renderDowPicker(){
+  const el=document.getElementById('dowRow');
+  if(!el)return;
+  el.innerHTML=DOW.map((d,i)=>`<div class="dow-btn${curClosed.includes(i)?' on':''}" onclick="toggleDow(${i})">${d}</div>`).join('');
+}
+function toggleDow(i){
+  const k=curClosed.indexOf(i);
+  if(k<0)curClosed.push(i);else curClosed.splice(k,1);
+  curClosed.sort((a,b)=>a-b);
+  renderDowPicker();
+}
+function dowOf(dateStr){
+  if(!dateStr)return -1;
+  return new Date(dateStr+'T12:00:00').getDay();
+}
+function closedLabel(closed){
+  if(!Array.isArray(closed)||!closed.length)return '';
+  return '公休週'+closed.slice().sort((a,b)=>a-b).map(i=>DOW[i]).join('/');
+}
+
 // ─── Schedule ────────────────────────────────────────
 function renderACGrid(){
   document.getElementById('acGrid').innerHTML=ACTS.map(c=>`<div class="ac-btn ${c.id===curAC?'on':''}" id="ac-${c.id}" onclick="selAC('${c.id}')"><span class="ac-i">${c.ico}</span><span class="ac-n">${c.name}</span></div>`).join('');
@@ -1815,7 +1869,8 @@ function renderSched(sched){
         <div class="day-chev">›</div>
       </div>
       <div class="day-body">
-        ${dayGeoActs(day).length?`<div id="dmap-${did}"></div>`:''}
+        ${dayGeoActs(day).length?`<div id="dmap-${did}"></div>`
+          :(acts.length?`<div class="map-hint">🗺️ 這天還沒有定位得到的地點，所以沒有地圖。<br>編輯活動 → 填「定位用地名」（例：Vík、Höfn）可以指定位置</div>`:'')}
         ${!acts.length?'<div style="padding:14px 16px;color:var(--muted);font-size:16px;text-align:center">尚無活動</div>':
           acts.map(([aid,act])=>{
             const ac=ACTM[act.cat]||ACTM.other;
@@ -1823,13 +1878,16 @@ function renderSched(sched){
             const mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(act.loc||'');
             const sym=curSym(act.cost?.cur||'JPY');
             const dp=0;
+            const closedTxt=closedLabel(act.closed);
+            const isClosed=Array.isArray(act.closed)&&act.closed.includes(dowOf(day.date));
             return `<div class="act-row" draggable="true" data-did="${did}" data-aid="${aid}">
               <div class="act-handle" data-did="${did}" data-aid="${aid}">⠿</div>
               <div class="act-ico" style="background:${ac.bg}">${actIco}</div>
               <div class="act-body">
                 ${act.time?`<div class="act-time">⏰ ${act.time}</div>`:''}
-                <div class="act-name">${esc(act.name||'')}</div>
+                <div class="act-name">${esc(act.name||'')}${isClosed?'<span class="closed-tag">⚠️ 公休日</span>':''}</div>
                 ${act.loc?`<div class="act-loc"><a href="${mapUrl}" target="_blank">📍 ${esc(act.loc)}</a></div>`:''}
+                ${closedTxt?`<div class="closed-note">${closedTxt}</div>`:''}
                 ${act.note?`<div class="act-note-t">💬 ${autolink(act.note)}</div>`:''}
                 ${act.images?.length?`<div class="act-imgs">${act.images.map(b=>`<img class="act-img-thumb" src="${b}" onclick="openLightbox('${b}')">`).join('')}</div>`:''}
                 ${act.cost?.amt>0?`<div class="act-cost">💰 ${sym}${parseFloat(act.cost.amt).toFixed(dp)} ${act.cost.cur||'JPY'}</div>`:''}
@@ -2084,6 +2142,7 @@ function openActM(did){
   document.getElementById('a_custom_ico').value='';document.getElementById('custom-ico-row').style.display='none';
   curActImages=[];renderActImgPreviews();
   curAC='sight';renderACGrid();selAPayer(0);selACur('JPY');
+  curClosed=[];renderDowPicker();
   document.getElementById('move-day-row').style.display='none';   // 新增時沒有「移動」可言
   openM('m-act');setTimeout(()=>document.getElementById('a_name').focus(),280);
 }
@@ -2102,6 +2161,7 @@ function openActEdit(did,aid){
     curAC=a.cat||'sight';renderACGrid();
     document.getElementById('a_custom_ico').value=a.customIco||'';
     document.getElementById('custom-ico-row').style.display=a.cat==='custom'?'':'none';
+    curClosed=Array.isArray(a.closed)?[...a.closed]:[];renderDowPicker();
     curActImages=a.images?[...a.images]:[];renderActImgPreviews();
     selACur(a.cost?.cur||'JPY');selAPayer(Math.max(0,CFG.members.indexOf(a.cost?.paidBy)));
     curActOrder=a.order||0;
@@ -2132,6 +2192,7 @@ function saveAct(){
       images:curActImages.length?[...curActImages]:null,
       loc:document.getElementById('a_loc').value.trim(),note:document.getElementById('a_note').value.trim(),
       ...(geoQ?{geoQ}:{}),
+      closed:curClosed.length?[...curClosed]:null,
       cost:hasCost?{amt:costAmt,cur:curACur,paidBy:CFG.members[curAPayer]}:null,
       order:isNew?(maxOrder+1):curActOrder};
     const id=aid||('a'+uid());
@@ -2623,6 +2684,23 @@ function _selftest(){
     ok('Photon 無參照時一律拒絕', sanityCheck(IS,[],'photon')===false);
     ok('Photon 有參照且合理則通過', sanityCheck(IS,refs,'photon')===true);
     ok('Photon 有參照但不合理被擋', sanityCheck(FAR,refs,'photon')===false);
+  }
+
+  // ---- 公休日 ----
+  {
+    ok('dowOf 2026-09-14 是週一', dowOf('2026-09-14')===1);
+    ok('dowOf 2026-09-20 是週日', dowOf('2026-09-20')===0);
+    ok('dowOf 空值回 -1', dowOf('')===-1);
+    ok('closedLabel 依序排列', closedLabel([4,2,3])==='公休週二/三/四');
+    ok('closedLabel 空陣列回空字串', closedLabel([])==='');
+    ok('closedLabel 非陣列回空字串', closedLabel(null)==='');
+    ok('週日用 0 表示', closedLabel([0])==='公休週日');
+  }
+
+  // ---- geoCandidates 的 & 分隔 ----
+  {
+    ok('& 取前段', geoCandidates('Aldan Hotel & Restaurant').includes('Aldan Hotel'));
+    ok('斜線取前段', geoCandidates('Kaffi Vik / Bistro').includes('Kaffi Vik'));
   }
 
   // ---- geoQueryOf ----
