@@ -207,12 +207,18 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .ov-h{font-size:19px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:7px;}
 .ov-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
 .ov-row:last-child{border-bottom:none;}
-.ov-date{flex:0 0 auto;font-size:17px;font-weight:800;color:var(--blue2);min-width:52px;}
+.ov-date{flex:0 0 auto;font-size:17px;font-weight:800;color:var(--blue2);min-width:62px;}
+.ov-date2{font-size:14px;font-weight:700;color:var(--muted);margin-top:2px;}
+.ov-stay{font-size:15px;color:var(--muted);margin-top:3px;}
 .ov-name{font-size:18px;font-weight:700;line-height:1.4;}
 .ov-loc{font-size:16px;color:var(--muted);margin-top:2px;white-space:pre-wrap;word-break:break-word;}
 .ov-nav{flex:0 0 auto;background:#E8EFF3;color:var(--blue2);border:none;border-radius:9px;padding:7px 11px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;}
 /* ── 每日地圖（離線時降級成 .day-map-ph 地點清單）── */
-.day-map{height:220px;margin:0;background:#DCE6EA;position:relative;}
+/* z-index:0 不是裝飾，是必要的：Leaflet 的圖層是 .leaflet-pane{position:absolute;z-index:400}，
+   而 position:relative 但 z-index:auto 的容器「不會」建立堆疊脈絡，那些 400 於是直接跟
+   .ov（彈窗遮罩，z-index:200）在根層級比大小，地圖就蓋在「新增活動」表單上面。
+   給容器一個 z-index 值即可建立堆疊脈絡，把 400/800/1000 全部關在裡面。 */
+.day-map{height:220px;margin:0;background:#DCE6EA;position:relative;z-index:0;}
 .day-map-ph{padding:14px 16px;background:var(--card);}
 .dm-row{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border);}
 .dm-row:last-child{border-bottom:none;}
@@ -238,6 +244,13 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .dow-btn.on{border-color:#D9534F;color:#D9534F;background:#FDF2F2;}
 .closed-tag{display:inline-flex;align-items:center;gap:3px;background:#D9534F;color:#fff;border-radius:7px;padding:2px 8px;font-size:14px;font-weight:700;margin-left:7px;vertical-align:middle;}
 .closed-note{font-size:15px;color:#B5504C;margin-top:2px;}
+/* ── 行程之間的距離 ── */
+.leg{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 16px 8px 44px;border-bottom:1px solid var(--border);background:#FBFAF8;}
+.leg-d{font-size:15px;color:var(--muted);font-weight:600;}
+.leg-d b{color:var(--text);font-weight:800;}
+.leg-b{background:#E8EFF3;color:var(--blue2);border-radius:9px;padding:5px 11px;font-size:15px;font-weight:700;text-decoration:none;white-space:nowrap;}
+/* ── 住宿專屬欄位 ── */
+.stay-ro{font-size:17px;font-weight:700;padding:11px 13px;background:var(--bg);border-radius:10px;}
 .map-hint{padding:13px 16px;background:#FBF7F3;border-bottom:1px solid var(--border);font-size:15px;color:var(--muted);line-height:1.6;}
 .day-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px;}
 .wchip{display:inline-flex;align-items:center;gap:2px;background:#D9E6EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:var(--blue2);}
@@ -322,7 +335,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0807c</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0807d</span></div>
     </div>
   </div>
   <div class="content">
@@ -449,7 +462,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="fg"><label class="lb">類型</label><div class="ac-grid" id="acGrid"></div></div>
     <div class="fg" id="custom-ico-row" style="display:none"><label class="lb">自訂 Emoji</label><input class="inp" id="a_custom_ico" placeholder="貼上或輸入 emoji，例：🌸" style="font-size:22px;text-align:center;letter-spacing:4px" maxlength="4"></div>
     <div class="fg"><label class="lb">活動名稱 *</label><input class="inp" id="a_name" placeholder="例：淺草寺參觀"></div>
-    <div class="fg" id="move-day-row" style="display:none"><label class="lb">移到哪一天</label><select class="inp" id="a_move_day"></select></div>
+    <div class="fg" id="move-day-row" style="display:none"><label class="lb" id="move-day-lb">移到哪一天</label><select class="inp" id="a_move_day" onchange="renderStayOut()"></select></div>
     <div class="fg"><label class="lb">地點（自動生成 Google Maps 連結）</label><input class="inp" id="a_loc" placeholder="例：Sydney Opera House"></div>
     <div class="fg">
       <label class="lb">定位用地名（選填）</label>
@@ -459,7 +472,21 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
       </div>
       <p class="hint" id="a_geo_result" style="text-align:left;margin-top:6px;font-size:15px"></p>
     </div>
-    <div class="fg">
+    <div class="fg" id="stay-row" style="display:none">
+      <label class="lb">入住日</label>
+      <div class="stay-ro" id="a_stay_in_ro">—</div>
+      <p class="hint" style="text-align:left;margin:5px 0 12px">入住日就是這筆住宿所在的那一天</p>
+      <label class="lb">退房日</label>
+      <select class="inp" id="a_stay_out"></select>
+      <div class="fr" style="margin-top:12px">
+        <div class="fg" style="margin-bottom:0"><label class="lb">可入住時間</label><input class="inp" id="a_stay_ci" placeholder="例：15:00"></div>
+        <div class="fg" style="margin-bottom:0"><label class="lb">須退房時間</label><input class="inp" id="a_stay_co" placeholder="例：11:00"></div>
+      </div>
+      <div class="fg" style="margin:12px 0 0"><label class="lb">預計抵達時間（可入住 ≠ 你會到的時間）</label><input class="inp" id="a_stay_arr" placeholder="例：19:30"></div>
+      <button type="button" class="btn btn-g" style="margin-top:12px;width:100%" onclick="lookupStayTimes()">🔎 上網查這間的入住／退房時間</button>
+      <p class="hint" style="text-align:left;margin-top:6px" id="a_stay_src"></p>
+    </div>
+    <div class="fg" id="closed-row">
       <label class="lb">公休日（點選；排到公休日會出現警示）</label>
       <div class="dow-row" id="dowRow"></div>
     </div>
@@ -551,7 +578,7 @@ let CFG={},DB=null,curTab='sched',curAcc='exp';
 let weatherByDate=new Map();
 let curCat='food',curPayer=0,curCur='JPY';
 let curAC='sight',curACur='JPY',curAPayer=0;
-let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[],lastSafety={},lastFacilities={};
+let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[],lastSafety={},lastFacilities={},lastLegs={};
 // 行程頁一次只顯示一天。null = 總覽（只有住宿總整理）。
 // _overviewChosen 用來分辨「還沒選過、應該自動跳到今天」與「使用者自己選了總覽」。
 let curDay=null,_overviewChosen=false;
@@ -874,12 +901,32 @@ async function pruneDayOutliers(did,resolved){
   }
 }
 
+const dayNum=did=>parseInt(String(did||'').replace(/\D/g,''))||0;
+// 跨夜住宿只記在入住日這一筆活動上（stay.out = 退房日），中間那幾天的 acts 裡沒有它。
+// 但晚上人確實睡在那裡，所以地圖與安全資訊都得把它算進來，否則連住三晚的第二、三天
+// 會退化成「依當日行程位置」，指到白天開過的路線中點而不是今晚落腳處。
+// 退房日當天早上就離開了，那天不算住這裡，故用嚴格小於。
+function coveringHotel(sched,did){
+  const n=dayNum(did);
+  for(const [hdid,day] of Object.entries(sched||{})){
+    if(dayNum(hdid)>=n)continue;
+    for(const a of Object.values(day.acts||{})){
+      if(a.cat!=='hotel'||!a.stay?.out)continue;
+      if(n<dayNum(a.stay.out))return a;
+    }
+  }
+  return null;
+}
+
 // ─── 安全資訊：定位基準與查詢 ───────────────────────
-// 依序：當日住宿 → 當日所有座標的中心 → 前一日住宿。三者皆無則該日不顯示安全資訊。
-function dayBaseLatLng(day,prevHotel){
+// 依序：當日住宿 → 跨夜住宿 → 當日所有座標的中心 → 前一日住宿。全無則該日不顯示安全資訊。
+function dayBaseLatLng(day,prevHotel,did,sched){
   const acts=Object.values(day?.acts||{});
   const hotel=acts.find(a=>a.cat==='hotel'&&a.geo&&typeof a.geo.lat==='number');
   if(hotel)return {lat:hotel.geo.lat,lng:hotel.geo.lng,from:'hotel',label:hotel.name||hotel.loc||'住宿'};
+  const cov=did?coveringHotel(sched||lastSched,did):null;
+  if(cov?.geo&&typeof cov.geo.lat==='number')
+    return {lat:cov.geo.lat,lng:cov.geo.lng,from:'hotel',label:cov.name||cov.loc||'住宿'};
   const pts=acts.filter(a=>a.geo&&typeof a.geo.lat==='number').map(a=>a.geo);
   if(pts.length){
     return {lat:pts.reduce((s,p)=>s+p.lat,0)/pts.length,
@@ -1051,6 +1098,35 @@ async function osrmDrive(fromLat,fromLng,toLat,toLng){
     return {km:+(d.routes[0].distance/1000).toFixed(1),min:Math.round(d.routes[0].duration/60)};
   }catch(e){return null;}
 }
+// ─── 行程與行程之間的車程 ───────────────────────────
+// 一樣走「事先抓好、渲染時只讀本機」：環島路上大段沒訊號，而想知道「離下一站多遠」
+// 的時候正是打不到 OSRM 的時候。快取鍵用兩端座標而非活動 id，這樣拖曳排序或跨日搬動
+// 之後，只要兩點沒變就直接命中，不必重打。Firebase 的 key 不接受 '.'，故換成 'd'。
+const legKey=(a,b)=>[a.lat,a.lng,b.lat,b.lng].map(v=>v.toFixed(4).replace('.','d')).join('_');
+let _legScanning=false;
+const LEG_MAX_PER_RUN=12;
+async function ensureLegs(sched,force=false){
+  if(_legScanning||!navigator.onLine)return;
+  _legScanning=true;
+  try{
+    let n=0;
+    const days=Object.entries(sched||{}).sort((a,b)=>dayNum(a[0])-dayNum(b[0]));
+    for(const [did,day] of days){
+      const pts=dayGeoActs(day,did);
+      for(let i=0;i+1<pts.length;i++){
+        const k=legKey(pts[i],pts[i+1]);
+        if(!force&&lastLegs?.[k])continue;
+        // 20 天一次跑完會打上百次 OSRM。分批就好——每次同步都會再進來一趟，
+        // 幾輪之後自然補齊，而且使用者當下在看的那天通常最先被算到。
+        if(n>=LEG_MAX_PER_RUN)return;
+        n++;
+        const d=await osrmDrive(pts[i].lat,pts[i].lng,pts[i+1].lat,pts[i+1].lng);
+        if(d)await DB.ref('/legs/'+k).set({...d,at:new Date().toISOString()});
+        await sleep(1100);
+      }
+    }
+  }finally{_legScanning=false;}
+}
 async function fetchSafety(base){
   const near=nearestFacilities(base);
   const out={base,police:[],hospital:[],at:new Date().toISOString()};
@@ -1077,7 +1153,7 @@ async function ensureSafety(sched,force=false){
     const days=Object.entries(sched||{}).sort((a,b)=>(parseInt(a[0].replace(/\D/g,''))||0)-(parseInt(b[0].replace(/\D/g,''))||0));
     let prevHotel=null;
     for(const [did,day] of days){
-      const base=dayBaseLatLng(day,prevHotel);
+      const base=dayBaseLatLng(day,prevHotel,did,sched);
       if(base&&base.from==='hotel')prevHotel={lat:base.lat,lng:base.lng,label:base.label};
       if(!base)continue;
       const old=lastSafety?.[did];
@@ -1107,6 +1183,14 @@ async function ensureSafety(sched,force=false){
 }
 // ─── 設定頁：離線資料狀態 ───────────────────────────
 // 純渲染，不打網路也不寫 Firebase；資料一律取自已同步到本機的 lastSched / lastSafety。
+function legTotals(){
+  let total=0,done=0;
+  Object.entries(lastSched||{}).forEach(([did,day])=>{
+    const pts=dayGeoActs(day,did);
+    for(let i=0;i+1<pts.length;i++){total++;if(lastLegs?.[legKey(pts[i],pts[i+1])])done++;}
+  });
+  return {total,done};
+}
 function renderOfflineStat(){
   const el=document.getElementById('offlineStat');
   if(!el)return;
@@ -1127,10 +1211,12 @@ function renderOfflineStat(){
   // 只有有座標的天數才可能有安全資訊，拿 20 天當分母會永遠看起來沒做完
   const eligible=days.filter(([did,day])=>Object.values(day.acts||{}).some(a=>a.geo)).length;
   const snap=snapLoad();
+  const leg=legTotals();
   const rows=[
     `地點定位　<b>${done} / ${total}</b> 已完成`,
     `設施清單　<b>${facCount}</b> 筆警局／醫療機構`,
     `安全資訊　<b>${safeReady} / ${eligible}</b> 天已就緒`,
+    `路段車程　<b>${leg.done} / ${leg.total}</b> 段已算好`,
   ];
   if(failed.length)rows.push(`<span style="color:var(--muted)">查不到座標：${failed.map(esc).join('、')}</span>`);
   if(rejected.length)rows.push(`<span style="color:var(--orange)">位置可疑已略過：${rejected.map(esc).join('、')}</span>`);
@@ -1140,7 +1226,7 @@ function renderOfflineStat(){
 async function refreshOfflineData(){
   if(!navigator.onLine){toast('⚠️ 目前離線，請連上網路再更新');return;}
   // 背景掃描還在跑時，ensureXxx 會因為旗標而直接 return，按鈕就成了「跳成功訊息但什麼都沒做」。
-  if(_geoScanning||_facScanning||_safetyScanning){toast('⏳ 背景更新中，請稍候再試');return;}
+  if(_geoScanning||_facScanning||_safetyScanning||_legScanning){toast('⏳ 背景更新中，請稍候再試');return;}
   const btn=document.querySelector('#offlineStat')?.parentNode?.querySelector('button');
   if(btn){btn.disabled=true;btn.textContent='更新中…';}
   try{
@@ -1150,6 +1236,8 @@ async function refreshOfflineData(){
     await ensureFacilities(lastSched,true);
     toast('🔄 計算各日車程…');
     await ensureSafety(lastSched,true);
+    toast('🔄 計算行程之間的距離…');
+    await ensureLegs(lastSched);   // 不帶 force：既有路段沒變就沒必要重打，這裡只補缺
     renderOfflineStat();
     toast('✅ 離線資料已更新');
   }catch(e){
@@ -1345,7 +1433,7 @@ function bootApp(){
   const snap=snapLoad();
   if(snap){
     const d=snap.data;
-    lastSched=d.schedule||{};lastExps=d.expenses||{};lastNotes=d.notes||{};lastSafety=d.safety||{};lastFacilities=d.facilities||{};
+    lastSched=d.schedule||{};lastExps=d.expenses||{};lastNotes=d.notes||{};lastSafety=d.safety||{};lastFacilities=d.facilities||{};lastLegs=d.legs||{};
     if(d.config)applyTripCfg(d.config);
     renderSched(lastSched);renderExp(lastExps);renderStat(lastExps);renderNotes(lastNotes);
   }
@@ -1460,6 +1548,7 @@ function _fbListen(){
     lastSched=sched;
     lastSafety=d.safety||{};
     lastFacilities=d.facilities||{};
+    lastLegs=d.legs||{};
     // 行程日期沒跟上出發日就補正（上次存檔時寫入失敗、離線、或在別台裝置改的都會這樣）。
     // 注意：比對的兩邊都取自 Firebase（/config.start vs /schedule/dayN/date），不是各裝置本機值——
     // 當年的互踢 bug 是拿本機 CFG.start 去比，A 改日期、B 一連上就改回去。現在所有裝置算出的
@@ -1483,7 +1572,9 @@ function _fbListen(){
         .then(()=>ensureFacilities(lastSched))
         .catch(e=>console.warn('ensureFacilities:',e?.message||e))
         .then(()=>ensureSafety(lastSched))
-        .catch(e=>console.warn('ensureSafety:',e?.message||e));
+        .catch(e=>console.warn('ensureSafety:',e?.message||e))
+        .then(()=>ensureLegs(lastSched))
+        .catch(e=>console.warn('ensureLegs:',e?.message||e));
     }
     renderOfflineStat();
     ensureRatesForExpenses(lastExps).then(()=>{if(curTab==='exp'&&curAcc==='stat')renderStat(lastExps);});
@@ -1807,11 +1898,76 @@ function closedLabel(closed){
   return '公休週'+closed.slice().sort((a,b)=>a-b).map(i=>DOW[i]).join('/');
 }
 
+// ─── 住宿：入住／退房 ───────────────────────────────
+// 住宿活動放在「入住日」那天，stay.out 指向退房日；中間幾天靠 coveringHotel 推得出來，
+// 不必在每一天都各放一筆（那樣改一次時間要改三處，而且座標得各查一次）。
+let curStay=null;
+function nightsBetween(d1,d2){
+  if(!d1||!d2)return 0;
+  return Math.max(0,Math.round((new Date(d2+'T12:00:00')-new Date(d1+'T12:00:00'))/86400000));
+}
+function stayLabel(act,inDate){
+  const s=act?.stay;if(!s)return '';
+  const parts=[];
+  const out=s.out&&lastSched[s.out];
+  if(out){
+    const n=nightsBetween(inDate,out.date);
+    parts.push(`🛏️ 住到 D${dayNum(s.out)} ${fmtD(out.date)}${n?`（${n} 晚）`:''}`);
+  }
+  if(s.ci||s.co)parts.push(`入住 ${s.ci||'—'} · 退房 ${s.co||'—'}`);
+  if(s.arr)parts.push(`預計 ${s.arr} 抵達`);
+  return parts.join('　');
+}
+// 入住日就是這筆活動所在的那天。編輯模式下「移到哪一天」被改掉時，入住日跟著變，
+// 所以要從那個選單讀，而不是從隱藏欄位讀。
+function stayInDid(){
+  const row=document.getElementById('move-day-row');
+  if(row&&row.style.display!=='none')return document.getElementById('a_move_day').value;
+  return document.getElementById('ma-did').value;
+}
+function renderStayOut(){
+  const inDid=stayInDid();
+  const inDay=lastSched[inDid];
+  const ro=document.getElementById('a_stay_in_ro');
+  if(ro)ro.textContent=inDay?`D${dayNum(inDid)}　${fmtD(inDay.date)}`:'—';
+  const sel=document.getElementById('a_stay_out');
+  if(!sel)return;
+  const want=sel.value||curStay?.out||'';
+  const opts=Object.entries(lastSched)
+    .sort((x,y)=>dayNum(x[0])-dayNum(y[0]))
+    .filter(([d])=>dayNum(d)>dayNum(inDid));
+  sel.innerHTML='<option value="">（未指定）</option>'+opts.map(([d,day])=>{
+    const n=nightsBetween(inDay?.date,day.date);
+    return `<option value="${d}">D${dayNum(d)}　${fmtD(day.date)}（${n} 晚）</option>`;
+  }).join('');
+  if(want&&opts.some(([d])=>d===want))sel.value=want;
+}
+// 這是純靜態頁，沒有後端。要「AI 上網查」就得把金鑰放進公開的 Netlify 頁面，等於公開金鑰，
+// 所以改成把查詢丟給搜尋引擎，讓人看官方頁面上寫的實際時間。訂房確認信才是最終依據——
+// 同一個品牌不同分館時間常常不一樣，AI 轉述反而容易給錯。
+function lookupStayTimes(){
+  const n=document.getElementById('a_name').value.trim()||document.getElementById('a_loc').value.trim();
+  if(!n){toast('請先填活動名稱或地點');return;}
+  window.open('https://www.google.com/search?q='+encodeURIComponent(n+' check-in check-out time'),'_blank');
+}
+// 交通與住宿沒有「公休日」可言：機場、租車還車、旅館櫃台不會週三不開。
+// 讓那排圓圈出現在這兩種類型只會把表單拉長，也容易誤點成公休。
+const NO_CLOSED_CATS=['transport','hotel'];
+function applyCatFields(){
+  const show=(id,on)=>{const e=document.getElementById(id);if(e)e.style.display=on?'':'none';};
+  show('custom-ico-row',curAC==='custom');
+  show('closed-row',!NO_CLOSED_CATS.includes(curAC));
+  show('stay-row',curAC==='hotel');
+  const lb=document.getElementById('move-day-lb');
+  if(lb)lb.textContent=curAC==='hotel'?'入住日（＝這筆住宿放在哪一天）':'移到哪一天';
+  if(curAC==='hotel')renderStayOut();
+}
+
 // ─── Schedule ────────────────────────────────────────
 function renderACGrid(){
   document.getElementById('acGrid').innerHTML=ACTS.map(c=>`<div class="ac-btn ${c.id===curAC?'on':''}" id="ac-${c.id}" onclick="selAC('${c.id}')"><span class="ac-i">${c.ico}</span><span class="ac-n">${c.name}</span></div>`).join('');
 }
-function selAC(id){curAC=id;document.querySelectorAll('.ac-btn').forEach(e=>e.classList.remove('on'));document.getElementById('ac-'+id)?.classList.add('on');document.getElementById('custom-ico-row').style.display=id==='custom'?'':'none';}
+function selAC(id){curAC=id;document.querySelectorAll('.ac-btn').forEach(e=>e.classList.remove('on'));document.getElementById('ac-'+id)?.classList.add('on');applyCatFields();}
 function selACur(c){curACur=c;renderCurChips('cur-row-act',c,'selACur');}
 function selAPayer(i){curAPayer=i;renderPayerPicker('payer-row-act',i,'selAPayer');}
 
@@ -1869,10 +2025,10 @@ function renderSched(sched){
         <div class="day-chev">›</div>
       </div>
       <div class="day-body">
-        ${dayGeoActs(day).length?`<div id="dmap-${did}"></div>`
+        ${dayGeoActs(day,did).length?`<div id="dmap-${did}"></div>`
           :(acts.length?`<div class="map-hint">🗺️ 這天還沒有定位得到的地點，所以沒有地圖。<br>編輯活動 → 填「定位用地名」（例：Vík、Höfn）可以指定位置</div>`:'')}
         ${!acts.length?'<div style="padding:14px 16px;color:var(--muted);font-size:16px;text-align:center">尚無活動</div>':
-          acts.map(([aid,act])=>{
+          acts.map(([aid,act],idx)=>{
             const ac=ACTM[act.cat]||ACTM.other;
             const actIco=act.cat==='custom'?(act.customIco||'✏️'):ac.ico;
             const mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(act.loc||'');
@@ -1880,6 +2036,10 @@ function renderSched(sched){
             const dp=0;
             const closedTxt=closedLabel(act.closed);
             const isClosed=Array.isArray(act.closed)&&act.closed.includes(dowOf(day.date));
+            const stayTxt=act.cat==='hotel'?stayLabel(act,day.date):'';
+            // 兩端都要有座標才畫距離列。少一端就不畫，不用直線硬湊一個看似精確的數字。
+            const nxt=acts[idx+1]?.[1];
+            const legRow=(act.geo&&nxt?.geo)?legHtml(act.geo,nxt.geo):'';
             return `<div class="act-row" draggable="true" data-did="${did}" data-aid="${aid}">
               <div class="act-handle" data-did="${did}" data-aid="${aid}">⠿</div>
               <div class="act-ico" style="background:${ac.bg}">${actIco}</div>
@@ -1888,6 +2048,7 @@ function renderSched(sched){
                 <div class="act-name">${esc(act.name||'')}${isClosed?'<span class="closed-tag">⚠️ 公休日</span>':''}</div>
                 ${act.loc?`<div class="act-loc"><a href="${mapUrl}" target="_blank">📍 ${esc(act.loc)}</a></div>`:''}
                 ${closedTxt?`<div class="closed-note">${closedTxt}</div>`:''}
+                ${stayTxt?`<div class="ov-stay">${stayTxt}</div>`:''}
                 ${act.note?`<div class="act-note-t">💬 ${autolink(act.note)}</div>`:''}
                 ${act.images?.length?`<div class="act-imgs">${act.images.map(b=>`<img class="act-img-thumb" src="${b}" onclick="openLightbox('${b}')">`).join('')}</div>`:''}
                 ${act.cost?.amt>0?`<div class="act-cost">💰 ${sym}${parseFloat(act.cost.amt).toFixed(dp)} ${act.cost.cur||'JPY'}</div>`:''}
@@ -1896,8 +2057,8 @@ function renderSched(sched){
                 <button class="ib" onclick="openActEdit('${did}','${aid}')">✎</button>
                 <button class="ib" onclick="delAct('${did}','${aid}')">✕</button>
               </div>
-            </div>`;
-          }).join('')
+            </div>${legRow}`;
+          }).join('')+lastLegToStay(did,acts)
         }
         <div class="day-add" onclick="openActM('${did}')">＋ 新增活動</div>
         ${safetyHtml(did)}
@@ -1939,8 +2100,8 @@ function loadLeaflet(){
   return _leafletLoading;
 }
 // 當天有座標的活動，依 order 排序
-function dayGeoActs(day){
-  return Object.entries(day?.acts||{})
+function dayGeoActs(day,did){
+  const list=Object.entries(day?.acts||{})
     .filter(([aid,a])=>a.geo&&typeof a.geo.lat==='number')
     .sort((a,b)=>{
       const oa=a[1].order!=null?a[1].order:999999, ob=b[1].order!=null?b[1].order:999999;
@@ -1948,6 +2109,34 @@ function dayGeoActs(day){
       return (a[1].time||'').localeCompare(b[1].time||'');
     })
     .map(([aid,a])=>({aid,name:a.name||'',lat:a.geo.lat,lng:a.geo.lng}));
+  // 連住數晚時，中間幾天的活動清單裡沒有住宿，但那天最後還是要開回同一間。
+  // 補在最後一個點，地圖才畫得出「今晚回哪裡」這一段。
+  const cov=did?coveringHotel(lastSched,did):null;
+  if(cov?.geo&&typeof cov.geo.lat==='number')
+    list.push({aid:'stay',name:(cov.name||cov.loc||'住宿')+'（今晚住）',lat:cov.geo.lat,lng:cov.geo.lng});
+  return list;
+}
+// 行程之間的距離列。d 有值就是 OSRM 事先算好的實際車程；沒有就退回直線並明確標示，
+// 免得把「直線 62 公里」誤讀成「開 62 公里就到」——冰島的峽灣繞路差很多。
+function legHtml(a,b,label='到下一站'){
+  const d=lastLegs?.[legKey(a,b)];
+  const txt=d?`${label} <b>${d.km} 公里</b> · 約 ${d.min} 分`
+            :`${label} 直線 <b>${haversine(a.lat,a.lng,b.lat,b.lng).toFixed(1)} 公里</b>`;
+  const dir=m=>`https://www.google.com/maps/dir/?api=1&origin=${a.lat},${a.lng}&destination=${b.lat},${b.lng}&travelmode=${m}`;
+  return `<div class="leg">
+    <span class="leg-d">↳ ${txt}</span>
+    <a class="leg-b" href="${dir('driving')}" target="_blank">🚗 開車</a>
+    <a class="leg-b" href="${dir('walking')}" target="_blank">🚶 步行</a>
+  </div>`;
+}
+// 連住數晚時，「當天最後一站 → 今晚住哪」也是要開的一段路，但住宿活動記在入住日、
+// 不在這天的清單裡，上面的相鄰配對配不到它，得另外補這一列。
+function lastLegToStay(did,acts){
+  const cov=coveringHotel(lastSched,did);
+  if(!cov?.geo||typeof cov.geo.lat!=='number')return '';
+  const last=[...acts].reverse().find(([,a])=>a.geo&&typeof a.geo.lat==='number');
+  if(!last)return '';
+  return legHtml(last[1].geo,cov.geo,`到今晚住宿「${esc(cov.name||cov.loc||'住宿')}」`);
 }
 const dayMaps=new Map();      // did → L.map 實例
 const dayMapEls=new Map();    // did → 地圖容器 DOM（renderSched 重畫時暫存）
@@ -1967,7 +2156,7 @@ async function mountDayMap(did){
   const host=document.getElementById('dmap-'+did);
   if(!host||host.dataset.mounted==='1')return;
   const day=lastSched[did];
-  const pts=dayGeoActs(day);
+  const pts=dayGeoActs(day,did);
   if(!pts.length)return;
   host.dataset.mounted='1';
   const okL=navigator.onLine?await loadLeaflet():false;
@@ -2053,7 +2242,9 @@ function renderOverview(sched){
   const rows=[];
   days.forEach(([did,day])=>{
     Object.values(day.acts||{}).filter(a=>a.cat==='hotel').forEach(a=>{
-      rows.push({date:day.date,name:a.name||'住宿',loc:a.loc||'',geo:a.geo});
+      const out=a.stay?.out&&lastSched[a.stay.out];
+      rows.push({date:day.date,name:a.name||'住宿',loc:a.loc||'',geo:a.geo,
+                 outDate:out?out.date:'',stay:stayLabel(a,day.date)});
     });
   });
   if(!rows.length){el.innerHTML='';return;}
@@ -2061,10 +2252,11 @@ function renderOverview(sched){
   el.innerHTML=`<div class="ov-card">
     <div class="ov-h">🛏️ 住宿總整理</div>
     ${rows.map(r=>`<div class="ov-row">
-      <div class="ov-date">${md(r.date)}</div>
+      <div class="ov-date">${md(r.date)}${r.outDate?`<div class="ov-date2">→ ${md(r.outDate)}</div>`:''}</div>
       <div style="flex:1;min-width:0">
         <div class="ov-name">${esc(r.name)}</div>
         ${r.loc?`<div class="ov-loc">${esc(r.loc)}</div>`:''}
+        ${r.stay?`<div class="ov-stay">${r.stay}</div>`:''}
       </div>
       ${(r.geo||r.loc)?`<a class="ov-nav" href="${navUrl(r.geo?.lat,r.geo?.lng,r.loc||r.name)}" target="_blank">導航</a>`:''}
     </div>`).join('')}
@@ -2139,11 +2331,13 @@ function openActM(did){
   document.getElementById('a_name').value='';
   document.getElementById('a_loc').value='';document.getElementById('a_note').value='';document.getElementById('a_cost').value='';
   document.getElementById('a_geoq').value='';document.getElementById('a_geo_result').textContent='';
-  document.getElementById('a_custom_ico').value='';document.getElementById('custom-ico-row').style.display='none';
+  document.getElementById('a_custom_ico').value='';
   curActImages=[];renderActImgPreviews();
   curAC='sight';renderACGrid();selAPayer(0);selACur('JPY');
   curClosed=[];renderDowPicker();
+  curStay=null;fillStayInputs(null);
   document.getElementById('move-day-row').style.display='none';   // 新增時沒有「移動」可言
+  applyCatFields();
   openM('m-act');setTimeout(()=>document.getElementById('a_name').focus(),280);
 }
 function openActEdit(did,aid){
@@ -2160,8 +2354,8 @@ function openActEdit(did,aid){
     document.getElementById('a_cost').value=a.cost?.amt||'';
     curAC=a.cat||'sight';renderACGrid();
     document.getElementById('a_custom_ico').value=a.customIco||'';
-    document.getElementById('custom-ico-row').style.display=a.cat==='custom'?'':'none';
     curClosed=Array.isArray(a.closed)?[...a.closed]:[];renderDowPicker();
+    curStay=a.stay?{...a.stay}:null;fillStayInputs(curStay);
     curActImages=a.images?[...a.images]:[];renderActImgPreviews();
     selACur(a.cost?.cur||'JPY');selAPayer(Math.max(0,CFG.members.indexOf(a.cost?.paidBy)));
     curActOrder=a.order||0;
@@ -2172,8 +2366,18 @@ function openActEdit(did,aid){
       .sort((x,y)=>(parseInt(x[0].replace(/\D/g,''))||0)-(parseInt(y[0].replace(/\D/g,''))||0))
       .map(([d,day])=>`<option value="${d}"${d===did?' selected':''}>D${d.replace(/\D/g,'')}　${fmtD(day.date)}</option>`).join('');
     document.getElementById('move-day-row').style.display='';
+    // 一定要排在 move-day-row 填好之後：renderStayOut 的入住日是從那個選單讀的
+    applyCatFields();
     openM('m-act');
   });
+}
+function fillStayInputs(s){
+  document.getElementById('a_stay_ci').value=s?.ci||'';
+  document.getElementById('a_stay_co').value=s?.co||'';
+  document.getElementById('a_stay_arr').value=s?.arr||'';
+  const sel=document.getElementById('a_stay_out');if(sel)sel.value='';
+  const src=document.getElementById('a_stay_src');
+  if(src)src.textContent=s?.src?`時間來源：${s.src}（僅供參考，以訂房確認信為準）`:'';
 }
 function saveAct(){
   const did=document.getElementById('ma-did').value,aid=document.getElementById('ma-aid').value;
@@ -2192,7 +2396,16 @@ function saveAct(){
       images:curActImages.length?[...curActImages]:null,
       loc:document.getElementById('a_loc').value.trim(),note:document.getElementById('a_note').value.trim(),
       ...(geoQ?{geoQ}:{}),
-      closed:curClosed.length?[...curClosed]:null,
+      // 類型改成交通／住宿之後那排圓圈就藏起來了，此時把 closed 一起清掉；
+      // 否則畫面上看不到、卻還會冒出「⚠️ 公休日」，怎麼點都關不掉。
+      closed:(!NO_CLOSED_CATS.includes(curAC)&&curClosed.length)?[...curClosed]:null,
+      stay:curAC==='hotel'?{
+        out:document.getElementById('a_stay_out').value||null,
+        ci:document.getElementById('a_stay_ci').value.trim()||null,
+        co:document.getElementById('a_stay_co').value.trim()||null,
+        arr:document.getElementById('a_stay_arr').value.trim()||null,
+        src:curStay?.src||null,
+      }:null,
       cost:hasCost?{amt:costAmt,cur:curACur,paidBy:CFG.members[curAPayer]}:null,
       order:isNew?(maxOrder+1):curActOrder};
     const id=aid||('a'+uid());
@@ -2724,6 +2937,52 @@ function _selftest(){
     const p=dayBaseLatLng(empty,{lat:64.25,lng:-15.20});
     ok('無座標退回前一日住宿', p&&p.from==='prevHotel'&&near(p.lat,64.25,0.001));
     ok('全無則回 null', dayBaseLatLng(empty,null)===null);
+  }
+
+  // ---- 跨夜住宿 ----
+  {
+    // day2 入住、day5 退房 → day3、day4 晚上都住這裡，day5 早上已離開
+    const sched={
+      day1:{date:'2026-09-14',acts:{}},
+      day2:{date:'2026-09-15',acts:{h:{cat:'hotel',name:'東部旅館',geo:{lat:65.27,lng:-14.40},stay:{out:'day5'}}}},
+      day3:{date:'2026-09-16',acts:{s:{cat:'sight',geo:{lat:65.00,lng:-14.90}}}},
+      day4:{date:'2026-09-17',acts:{}},
+      day5:{date:'2026-09-18',acts:{}},
+    };
+    ok('入住日當天不算 covering（本來就有住宿活動）', coveringHotel(sched,'day2')===null);
+    ok('中間日抓得到跨夜住宿', coveringHotel(sched,'day3')?.name==='東部旅館');
+    ok('中間日第二天也抓得到', coveringHotel(sched,'day4')?.name==='東部旅館');
+    ok('退房日當天不算住這裡', coveringHotel(sched,'day5')===null);
+    ok('入住日之前不算', coveringHotel(sched,'day1')===null);
+    ok('沒有 stay.out 就不跨夜', coveringHotel({day1:{acts:{h:{cat:'hotel',geo:{lat:64,lng:-19}}}}},'day2')===null);
+    // 中間日雖然只有一個景點，安全資訊仍應以今晚落腳處為準，而不是那個景點
+    const b=dayBaseLatLng(sched.day3,null,'day3',sched);
+    ok('中間日的安全基準是跨夜住宿', b&&b.from==='hotel'&&near(b.lat,65.27,0.001));
+    ok('不傳 did 時維持舊行為', dayBaseLatLng(sched.day3,null)?.from==='center');
+
+    ok('nightsBetween 三晚', nightsBetween('2026-09-15','2026-09-18')===3);
+    ok('nightsBetween 同日為 0', nightsBetween('2026-09-15','2026-09-15')===0);
+    ok('nightsBetween 缺參數為 0', nightsBetween('','2026-09-18')===0);
+    ok('nightsBetween 不回負數', nightsBetween('2026-09-18','2026-09-15')===0);
+  }
+
+  // ---- 路段快取鍵 ----
+  {
+    const a={lat:64.1466,lng:-21.9426},b={lat:63.6300,lng:-19.6300};
+    ok('legKey 不含 Firebase 禁用字元', !/[.$#[\]/]/.test(legKey(a,b)));
+    ok('legKey 有方向性', legKey(a,b)!==legKey(b,a));
+    ok('legKey 同兩點穩定', legKey(a,b)===legKey({lat:64.1466,lng:-21.9426},{lat:63.63,lng:-19.63}));
+    ok('legKey 容得下負經度', legKey(a,b).includes('-21d9426'));
+    // 小數第五位以後的抖動不該讓快取失效（拖曳排序時座標其實一模一樣，這裡防的是重新定位）
+    ok('legKey 取四位小數', legKey(a,b)===legKey(a,{lat:63.63001,lng:-19.63001}));
+  }
+
+  // ---- 分類決定顯示哪些欄位 ----
+  {
+    ok('交通不顯示公休日', NO_CLOSED_CATS.includes('transport'));
+    ok('住宿不顯示公休日', NO_CLOSED_CATS.includes('hotel'));
+    ok('餐廳仍顯示公休日', !NO_CLOSED_CATS.includes('food'));
+    ok('景點仍顯示公休日', !NO_CLOSED_CATS.includes('sight'));
   }
 
   console.log(out.join('\n')+`\n\n通過 ${pass} / 失敗 ${fail}`);
