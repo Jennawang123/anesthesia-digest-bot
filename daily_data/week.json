@@ -1,6 +1,6 @@
 {
   "week": "2026-W32",
-  "fetched_at": "2026-08-08T07:22:08.904197+00:00",
+  "fetched_at": "2026-08-08T07:36:40.871458+00:00",
   "articles": {
     "1": {
       "hot_theme": "Sepsis diagnosis and management strategies",
@@ -38,14 +38,6 @@
           "score": 8
         },
         {
-          "title": "Dose-Response Effects of Anterior Chest Wall Loading on Lung Mechanics, Regional Ventilation, and Hemodynamics in Acute Respiratory Distress Syndrome: A Prospective Physiological Study.",
-          "abstract": "In acute respiratory distress syndrome (ARDS), global airway pressures do not distinguish lung from chest wall mechanics, limiting bedside identification of regional overdistension. Anterior chest wall loading (ACWL) has been proposed to transiently increase non-dependent pleural pressure and unmask regional overdistension, but its dose-dependent effects remain uncertain. We hypothesized that low loads reduce transpulmonary driving pressure (ΔP) whereas higher loads promote derecruitment and hem",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42549807/",
-          "score": 7
-        },
-        {
           "title": "Development and external validation of a multimodal artificial intelligence mortality prediction model of critically ill patients using multicenter data.",
           "abstract": "Early prediction of in-hospital mortality in critically ill patients can aid clinicians in optimizing treatment. The objective was to develop a multimodal deep learning model, using structured and unstructured clinical data, to predict in-hospital mortality risk among critically ill patients after their initial 24 hour intensive care unit (ICU) admission.",
           "journal": "Anesthesiology",
@@ -60,6 +52,38 @@
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42556377/",
           "score": 7
+        },
+        {
+          "title": "Burden of and risk factors for neurological complications in critical illness.",
+          "abstract": "Neurological complications are common in critical illness and are increasingly recognized as major contributors to morbidity, mortality, and long-term disability among patients admitted to an intensive care unit (ICU). Even in the absence of a primary neurological diagnosis, systemic critical illness can exert substantial physiological stress on the brain through hypoxemia, hemodynamic instability, inflammation, and metabolic derangements. Delirium, stroke, seizures, and neuromuscular disorders ",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42377460/",
+          "score": 6
+        },
+        {
+          "title": "Current knowledge and challenges of sepsis-associated encephalopathy.",
+          "abstract": "Encephalopathy is a common complication of sepsis, occurring in up to 70% of patients admitted to the intensive care unit. It is primarily characterized by a deterioration in condition, ranging from delirium to coma, but also by electroencephalographic changes and seizures. Sepsis-associated encephalopathy (SAE) is linked to increased mortality, which rises in proportion to the severity of both clinical manifestations and electroencephalographic abnormalities, and is frequently followed by long-",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42301312/",
+          "score": 6
+        },
+        {
+          "title": "Interleukin-6 is a mediator of therapeutic efficacy in acute lung injury.",
+          "abstract": "Inflammation in acute respiratory distress syndrome (ARDS) and COVID-19 causes disruption of the alveolar-capillary barrier and tissue damage, which has been associated with increased mortality. Elevated pro-inflammatory plasma biomarker (specifically IL-6) levels reflect the degree of systemic inflammation and are linked to severity of lung injury. Understanding the causal pathway between inflammation, interventions, and patient outcomes could improve clinical care.",
+          "journal": "AJRCCM",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42150114/",
+          "score": 6
+        },
+        {
+          "title": "Dose-Response Effects of Anterior Chest Wall Loading on Lung Mechanics, Regional Ventilation, and Hemodynamics in Acute Respiratory Distress Syndrome: A Prospective Physiological Study.",
+          "abstract": "In acute respiratory distress syndrome (ARDS), global airway pressures do not distinguish lung from chest wall mechanics, limiting bedside identification of regional overdistension. Anterior chest wall loading (ACWL) has been proposed to transiently increase non-dependent pleural pressure and unmask regional overdistension, but its dose-dependent effects remain uncertain. We hypothesized that low loads reduce transpulmonary driving pressure (ΔP) whereas higher loads promote derecruitment and hem",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42549807/",
+          "score": 5
         },
         {
           "title": "HIF1A-dependent induction of alveolar miR-147b dampens SARS-CoV-2-associated ARDS via direct targeting of viral RNA.",
@@ -78,43 +102,11 @@
           "score": 5
         },
         {
-          "title": "Burden of and risk factors for neurological complications in critical illness.",
-          "abstract": "Neurological complications are common in critical illness and are increasingly recognized as major contributors to morbidity, mortality, and long-term disability among patients admitted to an intensive care unit (ICU). Even in the absence of a primary neurological diagnosis, systemic critical illness can exert substantial physiological stress on the brain through hypoxemia, hemodynamic instability, inflammation, and metabolic derangements. Delirium, stroke, seizures, and neuromuscular disorders ",
-          "journal": "Intensive Care",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42377460/",
-          "score": 5
-        },
-        {
-          "title": "ECMO for patients with obesity: evidence and practice.",
-          "abstract": "Obesity is increasingly encountered among patients requiring extracorporeal membrane oxygenation (ECMO) for severe respiratory or cardiac failure. It alters respiratory and cardiovascular physiology and drug pharmacokinetics and introduces technical and logistical challenges that may complicate patient selection, ECMO initiation, cannulation, anticoagulation, and monitoring. This review summarizes current evidence regarding the epidemiology, physiological implications, outcomes, and management o",
-          "journal": "Intensive Care",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42371000/",
-          "score": 5
-        },
-        {
-          "title": "Current knowledge and challenges of sepsis-associated encephalopathy.",
-          "abstract": "Encephalopathy is a common complication of sepsis, occurring in up to 70% of patients admitted to the intensive care unit. It is primarily characterized by a deterioration in condition, ranging from delirium to coma, but also by electroencephalographic changes and seizures. Sepsis-associated encephalopathy (SAE) is linked to increased mortality, which rises in proportion to the severity of both clinical manifestations and electroencephalographic abnormalities, and is frequently followed by long-",
-          "journal": "Intensive Care",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42301312/",
-          "score": 5
-        },
-        {
           "title": "Single-cell sequencing unveils a profibrotic macrophage and infiltrating monocyte niche in the bronchoalveolar lavage of patients with chronic obstructive pulmonary disease.",
           "abstract": "Chronic obstructive pulmonary disease (COPD) is characterized by global immune dysregulation. The most abundant immune cells in the distal airways and alveolar compartments are macrophages and lymphocytes. These cells have been poorly characterized in human airways due to their plasticity and numerous subtypes. There is a marked scarcity of information in the COPD airway, limiting our understanding of the inflammatory process that drives COPD progression.",
           "journal": "AJRCCM",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42153326/",
-          "score": 5
-        },
-        {
-          "title": "Interleukin-6 is a mediator of therapeutic efficacy in acute lung injury.",
-          "abstract": "Inflammation in acute respiratory distress syndrome (ARDS) and COVID-19 causes disruption of the alveolar-capillary barrier and tissue damage, which has been associated with increased mortality. Elevated pro-inflammatory plasma biomarker (specifically IL-6) levels reflect the degree of systemic inflammation and are linked to severity of lung injury. Understanding the causal pathway between inflammation, interventions, and patient outcomes could improve clinical care.",
-          "journal": "AJRCCM",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42150114/",
           "score": 5
         },
         {
@@ -128,8 +120,16 @@
       ]
     },
     "2": {
-      "hot_theme": "Postoperative opioid prescribing and pain management",
+      "hot_theme": "Postoperative opioid prescribing reduction",
       "items": [
+        {
+          "title": "The impact of everyday acoustic environments on chronic pain mechanisms in fibromyalgia: a randomized, triple-blind, placebo-controlled 4 × 4 crossover trial.",
+          "abstract": "Given the limited efficacy of current therapeutic approaches, shifting the focus beyond individual-level factors toward environmental influences may offer potential complementary, nonpharmacological strategies for preventive and therapeutic purposes. The neuromodulatory effects of auditory stimuli have been shown to influence pain processing through central mechanisms. Given the heightened sensory sensitivity that characterizes fibromyalgia syndrome, everyday acoustic environments may represent ",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42350308/",
+          "score": 10
+        },
         {
           "title": "Brief cognitive behavioral therapy for chronic pain rapidly improves pain interference: a randomized controlled trial.",
           "abstract": "Abbreviated psychotherapies for chronic pain improve access to care by reducing length of treatment and reaching patients outside of chronic pain clinics, such as primary care. However, the evidence for these approaches is limited. We conducted a randomized controlled trial of brief cognitive behavioral therapy for chronic pain (ie, 6, 30-minute sessions of psychoeducation, behavioral and cognitive skills, and relapse prevention delivered individually) with 184 primary care patients with moderat",
@@ -147,11 +147,11 @@
           "score": 10
         },
         {
-          "title": "Exclusion of psychiatric disorders in neuropathic pain research: a secondary analysis of 312 randomized controlled trials.",
-          "abstract": "Chronic neuropathic pain frequently coincides with psychiatric disorders. Randomized controlled trials (RCTs), which underpin treatment guidelines, often seek to reduce confounding variables through exclusion criteria. This may affect the representation of populations with psychiatric comorbidities. This secondary analysis of 312 RCTs on neuropathic pain interventions examined how psychiatric-related exclusions are reported. Data were drawn from a published systematic review of neuropathic pain ",
-          "journal": "PAIN",
+          "title": "Clinical Decision Support to Reduce Opioid Prescribing at Discharge for Inpatients Undergoing Surgery (LESS Study): An Interrupted Time Series Analysis.",
+          "abstract": "Unnecessary opioid prescribing after surgery is wasteful and expands the reservoir for nonmedical use, thereby contributing to preventable morbidity and mortality. The authors used an interrupted time series design to evaluate whether implementing a systemwide clinical decision support intervention reduced opioid prescribing at discharge.",
+          "journal": "Anesthesiology",
           "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42153807/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42166796/",
           "score": 8
         },
         {
@@ -160,14 +160,6 @@
           "journal": "PAIN",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42153471/",
-          "score": 8
-        },
-        {
-          "title": "Epigenetics, inflammation and postoperative complications: a scoping review",
-          "abstract": "Publication date: Available online 6 August 2026   Source:  British Journal of Anaesthesia  Author(s): Ruairí Wilson, Charlotte Fern, Kieran Woolcock, Carl Goodyear, Ben Shelley",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226004812?dgcid=rss_sd_all",
           "score": 8
         },
         {
@@ -187,12 +179,68 @@
           "score": 7
         },
         {
-          "title": "The impact of everyday acoustic environments on chronic pain mechanisms in fibromyalgia: a randomized, triple-blind, placebo-controlled 4 × 4 crossover trial.",
-          "abstract": "Given the limited efficacy of current therapeutic approaches, shifting the focus beyond individual-level factors toward environmental influences may offer potential complementary, nonpharmacological strategies for preventive and therapeutic purposes. The neuromodulatory effects of auditory stimuli have been shown to influence pain processing through central mechanisms. Given the heightened sensory sensitivity that characterizes fibromyalgia syndrome, everyday acoustic environments may represent ",
+          "title": "Patient-reported outcomes, postoperative pain and pain relief after day-case surgery (POPPY): short-term peri-operative analgesic use.",
+          "abstract": "An increasing proportion of complex surgical procedures are being performed in the UK as day-cases, with variable and limited follow up. Discharge prescriptions must provide adequate analgesia, while considering the safety of the patient and public, following best practice guidance and good opioid stewardship.",
+          "journal": "Anaesthesia",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41906195/",
+          "score": 6
+        },
+        {
+          "title": "Negative affect, catastrophizing, and self-efficacy during transition from acute episode of low back pain to future disability: a causal mediation analysis of the Understanding persistent Pain Where it ResiDes longitudinal cohort study.",
+          "abstract": "This study examined whether psychological factors mediate the relationship between acute low back pain and future disability. We conducted a secondary causal mediation analysis of the UPWaRD longitudinal cohort (N = 120 adults with acute low back pain of < 6 weeks' duration; ACTRN12619000002189; protocol: https://osf.io/q8wf6/ ). Baseline pain intensity (11-point numerical rating scale) was the exposure, psychological factors measured at 3 months were the mediators (depression, anxiety, stress, ",
           "journal": "PAIN",
           "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42350308/",
-          "score": 7
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42350305/",
+          "score": 6
+        },
+        {
+          "title": "Cognitive-affective and behavioral pain mechanisms in individuals with chronic low back pain: a network analysis.",
+          "abstract": "Various cognitive-affective and behavioral factors contribute to the maintenance of low back pain, but these factors are often evaluated in isolation. The network approach provides an avenue to evaluate multiple cognitive-affective and behavioral factors at once and across time. This study explored the relationship between pain, expectancies, avoidance, and related cognitive-affective and behavioral factors using network analysis. A total of 30 individuals with chronic low back pain completed ec",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42302112/",
+          "score": 6
+        },
+        {
+          "title": "Sex differences in adolescent chronic pain outcomes after spinal fusion: role of coping strategies.",
+          "abstract": "Sex differences in postsurgical pain are poorly understood in adolescence, a critical period for chronic pain development. The aims of this analysis were to examine sex differences in chronic pain outcomes 6 months after spinal fusion and test whether pain coping strategies, specifically differences in distraction-based coping and emotion-focused avoidance, explained these differences. Adolescents (N = 145; 78% females; ages 10-18; 67% White; 17% Hispanic) undergoing surgery for idiopathic/juven",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42289098/",
+          "score": 6
+        },
+        {
+          "title": "Distinct transcriptional signatures of large-scale functional gradient organization in acute and chronic low back-related leg pain.",
+          "abstract": "Low back-related leg pain (LBLP)-a severe subtype marked by radicular symptoms and high chronicity rates-implicates central nervous system reorganization, yet the large-scale functional gradient organization principles governing brain-wide functional shifts during chronicization remain unknown. Here, we used \"Functional Gradient-Transcriptomics\" analysis to characterize hierarchical brain reorganization and the underlying molecular landscape in patients with acute (n = 40) and chronic (n = 103) ",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42212473/",
+          "score": 6
+        },
+        {
+          "title": "Hypermobility and chronic pain in adolescents: diverging functional and neural profiles without sensory differences.",
+          "abstract": "Chronic pain (CP) affects approximately 20% of children, significantly impacting their physical, emotional, and social well-being. Hypermobility disorders (HDs) are prevalent in pediatric populations, including those with CP, and often contribute to impairments in psychological and physical functioning. This study examined differences in sensory, functional, and neural circuitry among CP in youth with and without comorbid HD (CP + HD). Contrary to our a priori hypothesis and previous literature ",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42187063/",
+          "score": 6
+        },
+        {
+          "title": "Exclusion of psychiatric disorders in neuropathic pain research: a secondary analysis of 312 randomized controlled trials.",
+          "abstract": "Chronic neuropathic pain frequently coincides with psychiatric disorders. Randomized controlled trials (RCTs), which underpin treatment guidelines, often seek to reduce confounding variables through exclusion criteria. This may affect the representation of populations with psychiatric comorbidities. This secondary analysis of 312 RCTs on neuropathic pain interventions examined how psychiatric-related exclusions are reported. Data were drawn from a published systematic review of neuropathic pain ",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42153807/",
+          "score": 6
+        },
+        {
+          "title": "Distinct social pathways in the links between pain interference and psychological function in youth with chronic pain.",
+          "abstract": "Evidence suggests that pain interference is linked to depression and anxiety in youth with chronic pain, yet the contributions of the social environment to these associations remain unclear. Guided by the Stress-Buffering Model of Social Support, this study tested theory-driven mediation and moderation models to examine whether peer relationships and bullying contribute to or modify concurrent and short-term longitudinal associations between pain interference and psychological function. A cross-",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42152696/",
+          "score": 6
         },
         {
           "title": "Cumulative impacts of early-life interpersonal adversity and persistent/recurrent pain in children: a longitudinal normative modelling study from the ABCD study cohort.",
@@ -200,15 +248,15 @@
           "journal": "PAIN",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42095845/",
-          "score": 7
+          "score": 6
         },
         {
-          "title": "Clinical Decision Support to Reduce Opioid Prescribing at Discharge for Inpatients Undergoing Surgery (LESS Study): An Interrupted Time Series Analysis.",
-          "abstract": "Unnecessary opioid prescribing after surgery is wasteful and expands the reservoir for nonmedical use, thereby contributing to preventable morbidity and mortality. The authors used an interrupted time series design to evaluate whether implementing a systemwide clinical decision support intervention reduced opioid prescribing at discharge.",
-          "journal": "Anesthesiology",
+          "title": "The role of physical activity in children and adolescents with chronic pain: the moderating effects of psychological symptoms and sleep difficulties.",
+          "abstract": "Chronic pain in children and adolescents affects physical, psychological, social, and academic function. Although physical activity may play a role, its direct effects and its interactions with sleep difficulties and psychological symptoms remain unclear. This cross-sectional study examined whether physical activity is associated with chronic pain, and whether these associations vary by sleep difficulties and psychological symptoms. We analyzed data from 212,105 individuals (49% girls, age: 11-1",
+          "journal": "PAIN",
           "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42166796/",
-          "score": 5
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42093187/",
+          "score": 6
         },
         {
           "title": "Evaluation of Postblock Hypersensitivity Using Quantitative Sensory Testing before, during, and after Axillary Brachial Plexus Block Resolution in Healthy Volunteers.",
@@ -219,75 +267,11 @@
           "score": 5
         },
         {
-          "title": "Organisational practices in postoperative opioid prescribing at discharge in UK NHS day surgery units: the OPIOID-discharge survey.",
-          "abstract": "In March 2025, the Medicines and Healthcare products Regulatory Agency published a drug safety update removing the indication of postoperative pain from the licence of prolonged-release opioids and mandated discussing risks with patients. Our study assessed compliance with these recommendations 6 months post-publication.",
-          "journal": "Anaesthesia",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41906196/",
-          "score": 5
-        },
-        {
-          "title": "Patient-reported outcomes, postoperative pain and pain relief after day-case surgery (POPPY): short-term peri-operative analgesic use.",
-          "abstract": "An increasing proportion of complex surgical procedures are being performed in the UK as day-cases, with variable and limited follow up. Discharge prescriptions must provide adequate analgesia, while considering the safety of the patient and public, following best practice guidance and good opioid stewardship.",
-          "journal": "Anaesthesia",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41906195/",
-          "score": 5
-        },
-        {
-          "title": "Negative affect, catastrophizing, and self-efficacy during transition from acute episode of low back pain to future disability: a causal mediation analysis of the Understanding persistent Pain Where it ResiDes longitudinal cohort study.",
-          "abstract": "This study examined whether psychological factors mediate the relationship between acute low back pain and future disability. We conducted a secondary causal mediation analysis of the UPWaRD longitudinal cohort (N = 120 adults with acute low back pain of < 6 weeks' duration; ACTRN12619000002189; protocol: https://osf.io/q8wf6/ ). Baseline pain intensity (11-point numerical rating scale) was the exposure, psychological factors measured at 3 months were the mediators (depression, anxiety, stress, ",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42350305/",
-          "score": 5
-        },
-        {
-          "title": "Cognitive-affective and behavioral pain mechanisms in individuals with chronic low back pain: a network analysis.",
-          "abstract": "Various cognitive-affective and behavioral factors contribute to the maintenance of low back pain, but these factors are often evaluated in isolation. The network approach provides an avenue to evaluate multiple cognitive-affective and behavioral factors at once and across time. This study explored the relationship between pain, expectancies, avoidance, and related cognitive-affective and behavioral factors using network analysis. A total of 30 individuals with chronic low back pain completed ec",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42302112/",
-          "score": 5
-        },
-        {
-          "title": "Sex differences in adolescent chronic pain outcomes after spinal fusion: role of coping strategies.",
-          "abstract": "Sex differences in postsurgical pain are poorly understood in adolescence, a critical period for chronic pain development. The aims of this analysis were to examine sex differences in chronic pain outcomes 6 months after spinal fusion and test whether pain coping strategies, specifically differences in distraction-based coping and emotion-focused avoidance, explained these differences. Adolescents (N = 145; 78% females; ages 10-18; 67% White; 17% Hispanic) undergoing surgery for idiopathic/juven",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42289098/",
-          "score": 5
-        },
-        {
           "title": "A prospective diary study of chronic pain-related intrusive mental imagery: \"trolls climbing up my spine with ice axes\" and other vivid images.",
           "abstract": "People with chronic pain can experience intrusive mental images (IMI) related to pain, that is, cognitions in the form of sensory-like experiences without actual sensory input. Previous retrospective studies suggested that such images are prevalent, associated with strong emotions, and contribute to pain maintenance. We prospectively investigated pain-related IMI occurrence and characteristics in patients with chronic secondary postsurgical or posttraumatic pain using electronic diaries, aiming ",
           "journal": "PAIN",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42240088/",
-          "score": 5
-        },
-        {
-          "title": "Distinct transcriptional signatures of large-scale functional gradient organization in acute and chronic low back-related leg pain.",
-          "abstract": "Low back-related leg pain (LBLP)-a severe subtype marked by radicular symptoms and high chronicity rates-implicates central nervous system reorganization, yet the large-scale functional gradient organization principles governing brain-wide functional shifts during chronicization remain unknown. Here, we used \"Functional Gradient-Transcriptomics\" analysis to characterize hierarchical brain reorganization and the underlying molecular landscape in patients with acute (n = 40) and chronic (n = 103) ",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42212473/",
-          "score": 5
-        },
-        {
-          "title": "Hypermobility and chronic pain in adolescents: diverging functional and neural profiles without sensory differences.",
-          "abstract": "Chronic pain (CP) affects approximately 20% of children, significantly impacting their physical, emotional, and social well-being. Hypermobility disorders (HDs) are prevalent in pediatric populations, including those with CP, and often contribute to impairments in psychological and physical functioning. This study examined differences in sensory, functional, and neural circuitry among CP in youth with and without comorbid HD (CP + HD). Contrary to our a priori hypothesis and previous literature ",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42187063/",
-          "score": 5
-        },
-        {
-          "title": "Distinct social pathways in the links between pain interference and psychological function in youth with chronic pain.",
-          "abstract": "Evidence suggests that pain interference is linked to depression and anxiety in youth with chronic pain, yet the contributions of the social environment to these associations remain unclear. Guided by the Stress-Buffering Model of Social Support, this study tested theory-driven mediation and moderation models to examine whether peer relationships and bullying contribute to or modify concurrent and short-term longitudinal associations between pain interference and psychological function. A cross-",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42152696/",
           "score": 5
         },
         {
@@ -315,19 +299,27 @@
           "score": 5
         },
         {
-          "title": "The role of physical activity in children and adolescents with chronic pain: the moderating effects of psychological symptoms and sleep difficulties.",
-          "abstract": "Chronic pain in children and adolescents affects physical, psychological, social, and academic function. Although physical activity may play a role, its direct effects and its interactions with sleep difficulties and psychological symptoms remain unclear. This cross-sectional study examined whether physical activity is associated with chronic pain, and whether these associations vary by sleep difficulties and psychological symptoms. We analyzed data from 212,105 individuals (49% girls, age: 11-1",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42093187/",
-          "score": 5
-        },
-        {
           "title": "Psychometric validation of the Tampa Scale of Kinesiophobia for Youth (TSK-7-Y): a brief measure of movement-related fear in youth with chronic pain.",
           "abstract": "Fear of movement (FoM), or kinesiophobia, is associated with functional disability in individuals with chronic pain. The Tampa Scale of Kinesiophobia (TSK) is among the most widely used instruments for assessing FoM and has undergone several revisions; however, its psychometric properties have not been evaluated in youth with chronic pain, and there is currently no consensus on the optimal version to use in pediatric pain populations. We examined data from youth with a range of chronic pain cond",
           "journal": "PAIN",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42475058/",
+          "score": 4
+        },
+        {
+          "title": "Astrocyte coordinated remodelling of the dorsal horn endothelium and pain hypersensitivity.",
+          "abstract": "Pain perception relies not only on sensory neurons but also on the interplay of a heterogeneous cell population, including endothelial cells, microglia, and astrocytes. Blood-spinal cord barrier dysfunction can alter nociceptive processing and lead to pain hypersensitivity. A component of this capillary network is the astrocytic foot processes that encapsulate the blood-brain barrier, providing critical nutritional support and protection. Astrocytes are a fundamental modulator of nervous system ",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42475057/",
+          "score": 4
+        },
+        {
+          "title": "Reframing nociplastic pain research and treatment using post-traumatic stress disorder-inspired conceptual models.",
+          "abstract": "Pain and fear are aversive alarm signals that serve adaptive protective functions. Pathologically disproportionate fear or pain responses can lead to conditions such as post-traumatic stress disorder (PTSD) or chronic pain. Although they are distinct conditions, PTSD and chronic pain-particularly nociplastic pain-share common risk factors, vulnerability, and exhibit mutual maintenance. Moreover, there exist similarities in the clinical presentation and neurophysiology of PTSD and nociplastic pai",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42289101/",
           "score": 4
         },
         {
@@ -355,28 +347,20 @@
           "score": 4
         },
         {
-          "title": "Astrocyte coordinated remodelling of the dorsal horn endothelium and pain hypersensitivity.",
-          "abstract": "Pain perception relies not only on sensory neurons but also on the interplay of a heterogeneous cell population, including endothelial cells, microglia, and astrocytes. Blood-spinal cord barrier dysfunction can alter nociceptive processing and lead to pain hypersensitivity. A component of this capillary network is the astrocytic foot processes that encapsulate the blood-brain barrier, providing critical nutritional support and protection. Astrocytes are a fundamental modulator of nervous system ",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42475057/",
-          "score": 3
-        },
-        {
-          "title": "Reframing nociplastic pain research and treatment using post-traumatic stress disorder-inspired conceptual models.",
-          "abstract": "Pain and fear are aversive alarm signals that serve adaptive protective functions. Pathologically disproportionate fear or pain responses can lead to conditions such as post-traumatic stress disorder (PTSD) or chronic pain. Although they are distinct conditions, PTSD and chronic pain-particularly nociplastic pain-share common risk factors, vulnerability, and exhibit mutual maintenance. Moreover, there exist similarities in the clinical presentation and neurophysiology of PTSD and nociplastic pai",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42289101/",
-          "score": 3
-        },
-        {
           "title": "Impaired skin reinnervation in epidermolysis bullosa due to neurotrophic deficiency.",
           "abstract": "The skin is densely innervated by peripheral sensory neurons that detect various stimuli through specialized nerve endings in the dermis and epidermis. In recessive dystrophic epidermolysis bullosa (RDEB), repeated skin injury disrupts epidermal nerve fibers, leading to neuropathic pain and reduced thermal sensitivity. Normally, keratinocyte-derived neurotrophic signals guide sensory fiber re-entry into healed epidermis. We hypothesized that impaired neurotrophic support underlies failed reinner",
           "journal": "PAIN",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42093186/",
-          "score": 3
+          "score": 4
+        },
+        {
+          "title": "Organisational practices in postoperative opioid prescribing at discharge in UK NHS day surgery units: the OPIOID-discharge survey.",
+          "abstract": "In March 2025, the Medicines and Healthcare products Regulatory Agency published a drug safety update removing the indication of postoperative pain from the licence of prolonged-release opioids and mandated discussing risks with patients. Our study assessed compliance with these recommendations 6 months post-publication.",
+          "journal": "Anaesthesia",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41906196/",
+          "score": 2
         },
         {
           "title": "κ-Opioid receptor activation suppresses triple-negative breast cancer progression by inducing urea cycle dysfunction and mitochondrial damage <em>in vitro</em> and in mice. Comment on <em>Br J Anaesth</em> 2025; 135: 1803–15",
@@ -384,7 +368,7 @@
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S0007091226005234?dgcid=rss_sd_all",
-          "score": 3
+          "score": 2
         },
         {
           "title": "Prostaglandins prevent long-lasting pain in a mouse model of chronic postsurgical pain: reconciling animal and clinical evidence. Response to <em>Br J Anaesth</em> 2026; 137: 344–6",
@@ -392,7 +376,7 @@
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S0007091226005155?dgcid=rss_sd_all",
-          "score": 3
+          "score": 2
         }
       ]
     },
@@ -413,7 +397,7 @@
           "journal": "Anesthesiology",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42247247/",
-          "score": 5
+          "score": 6
         },
         {
           "title": "Age-adjusted minimal alveolar concentration for sevoflurane: not so comparable after all?",
@@ -429,13 +413,29 @@
           "journal": "Anesthesiology",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42565467/",
-          "score": 4
+          "score": 3
+        },
+        {
+          "title": "State of Medical Education Research in Anesthesiology: Current Landscape and Future Directions-An Initiative of the Anesthesia Research Council.",
+          "abstract": "Without strategic intervention to support medical education research in anesthesiology, the training of future anesthesiologists may be compromised. Currently no comprehensive strategy exists for developing education research into a robust and self-sustaining discipline within anesthesiology. Few anesthesiologists are qualified to mentor the next generation of rigorous researchers in education who will advance both the theory and practice of medical education in our specialty and throughout medi",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42359693/",
+          "score": 2
         }
       ]
     },
     "4": {
-      "hot_theme": "Pediatric pain and early-life adversity outcomes",
+      "hot_theme": "Pediatric pain outcomes and trajectories",
       "items": [
+        {
+          "title": "Intrathecal bupivacaine <em>versus</em> bupivacaine plus fentanyl for anaesthesia for Caesarean delivery: noninferiority analysis and exclusions. Response to <em>Br J Anaesth</em> 2026; 137: 285–286",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Li-Hong Sun, Warwick D. Ngan Kee, Xin-Zhong Chen",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003521?dgcid=rss_sd_all",
+          "score": 8
+        },
         {
           "title": "The Adolescent Surgery Experience (ASE) prospective cohort study: Postoperative pain trajectory, opioid use and satisfaction.",
           "abstract": "Between 3-5% of adolescents develop new persistent opioid use after surgery. Little is known about their recovery experience, including pain trajectory, pain treatment and prolonged opioid use.",
@@ -453,12 +453,36 @@
           "score": 7
         },
         {
+          "title": "Sex differences in adolescent chronic pain outcomes after spinal fusion: role of coping strategies.",
+          "abstract": "Sex differences in postsurgical pain are poorly understood in adolescence, a critical period for chronic pain development. The aims of this analysis were to examine sex differences in chronic pain outcomes 6 months after spinal fusion and test whether pain coping strategies, specifically differences in distraction-based coping and emotion-focused avoidance, explained these differences. Adolescents (N = 145; 78% females; ages 10-18; 67% White; 17% Hispanic) undergoing surgery for idiopathic/juven",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42289098/",
+          "score": 6
+        },
+        {
+          "title": "Hypermobility and chronic pain in adolescents: diverging functional and neural profiles without sensory differences.",
+          "abstract": "Chronic pain (CP) affects approximately 20% of children, significantly impacting their physical, emotional, and social well-being. Hypermobility disorders (HDs) are prevalent in pediatric populations, including those with CP, and often contribute to impairments in psychological and physical functioning. This study examined differences in sensory, functional, and neural circuitry among CP in youth with and without comorbid HD (CP + HD). Contrary to our a priori hypothesis and previous literature ",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42187063/",
+          "score": 6
+        },
+        {
           "title": "Cumulative impacts of early-life interpersonal adversity and persistent/recurrent pain in children: a longitudinal normative modelling study from the ABCD study cohort.",
           "abstract": "Children experiencing persistent/recurrent pain (PRP) report increased exposure to early-life adversity (ELA), often accompanied by more severe pain and worse mental health outcomes. Separate studies of PRP and ELA show similar alterations in brain morphology, yet their distinct and cumulative contributions remain poorly understood. Structural magnetic resonance imaging data at baseline and 2-year follow-up were accessed from the Adolescent Brain Cognitive Development cohort (N = 1671). Linear m",
           "journal": "PAIN",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42095845/",
-          "score": 7
+          "score": 6
+        },
+        {
+          "title": "The role of physical activity in children and adolescents with chronic pain: the moderating effects of psychological symptoms and sleep difficulties.",
+          "abstract": "Chronic pain in children and adolescents affects physical, psychological, social, and academic function. Although physical activity may play a role, its direct effects and its interactions with sleep difficulties and psychological symptoms remain unclear. This cross-sectional study examined whether physical activity is associated with chronic pain, and whether these associations vary by sleep difficulties and psychological symptoms. We analyzed data from 212,105 individuals (49% girls, age: 11-1",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42093187/",
+          "score": 6
         },
         {
           "title": "HIF1A-dependent induction of alveolar miR-147b dampens SARS-CoV-2-associated ARDS via direct targeting of viral RNA.",
@@ -469,44 +493,12 @@
           "score": 5
         },
         {
-          "title": "Sex differences in adolescent chronic pain outcomes after spinal fusion: role of coping strategies.",
-          "abstract": "Sex differences in postsurgical pain are poorly understood in adolescence, a critical period for chronic pain development. The aims of this analysis were to examine sex differences in chronic pain outcomes 6 months after spinal fusion and test whether pain coping strategies, specifically differences in distraction-based coping and emotion-focused avoidance, explained these differences. Adolescents (N = 145; 78% females; ages 10-18; 67% White; 17% Hispanic) undergoing surgery for idiopathic/juven",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42289098/",
-          "score": 5
-        },
-        {
-          "title": "Hypermobility and chronic pain in adolescents: diverging functional and neural profiles without sensory differences.",
-          "abstract": "Chronic pain (CP) affects approximately 20% of children, significantly impacting their physical, emotional, and social well-being. Hypermobility disorders (HDs) are prevalent in pediatric populations, including those with CP, and often contribute to impairments in psychological and physical functioning. This study examined differences in sensory, functional, and neural circuitry among CP in youth with and without comorbid HD (CP + HD). Contrary to our a priori hypothesis and previous literature ",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42187063/",
-          "score": 5
-        },
-        {
-          "title": "The role of physical activity in children and adolescents with chronic pain: the moderating effects of psychological symptoms and sleep difficulties.",
-          "abstract": "Chronic pain in children and adolescents affects physical, psychological, social, and academic function. Although physical activity may play a role, its direct effects and its interactions with sleep difficulties and psychological symptoms remain unclear. This cross-sectional study examined whether physical activity is associated with chronic pain, and whether these associations vary by sleep difficulties and psychological symptoms. We analyzed data from 212,105 individuals (49% girls, age: 11-1",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42093187/",
-          "score": 5
-        },
-        {
           "title": "Utilising central and mobile destruction units during labour to reduce ambient nitrous oxide levels: a triple bottom line analysis",
           "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Katherine Whitehouse, Elizabeth P. Hu, Theo S. Cooke, Hashim M. Khan, Hussein Tuzlaw, Ian Baxter",
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003569?dgcid=rss_sd_all",
-          "score": 5
-        },
-        {
-          "title": "Intrathecal bupivacaine <em>versus</em> bupivacaine plus fentanyl for anaesthesia for Caesarean delivery: noninferiority analysis and exclusions. Response to <em>Br J Anaesth</em> 2026; 137: 285–286",
-          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Li-Hong Sun, Warwick D. Ngan Kee, Xin-Zhong Chen",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003521?dgcid=rss_sd_all",
-          "score": 3
+          "score": 4
         }
       ]
     },
@@ -514,20 +506,12 @@
       "hot_theme": null,
       "items": [
         {
-          "title": "ECMO for patients with obesity: evidence and practice.",
-          "abstract": "Obesity is increasingly encountered among patients requiring extracorporeal membrane oxygenation (ECMO) for severe respiratory or cardiac failure. It alters respiratory and cardiovascular physiology and drug pharmacokinetics and introduces technical and logistical challenges that may complicate patient selection, ECMO initiation, cannulation, anticoagulation, and monitoring. This review summarizes current evidence regarding the epidemiology, physiological implications, outcomes, and management o",
-          "journal": "Intensive Care",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42371000/",
-          "score": 5
-        },
-        {
           "title": "Association of duration of amino acids infusion and renal protection: is 48 hours of amino acids infusion enough after cardiac surgery? Comment on <em>Br J Anaesth</em> 2026; 137: 110–117",
           "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Baodong Wang, Jiayuan Huang, Zhiyun Chen",
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003417?dgcid=rss_sd_all",
-          "score": 3
+          "score": 8
         },
         {
           "title": "Low dose of landiolol does not prevent postoperative atrial fibrillation after cardiac surgery in non-Asian patients. Comment on <em>Br J Anaesth</em> 2026; 136: 65–73",
@@ -535,7 +519,15 @@
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003909?dgcid=rss_sd_all",
-          "score": 3
+          "score": 8
+        },
+        {
+          "title": "ECMO for patients with obesity: evidence and practice.",
+          "abstract": "Obesity is increasingly encountered among patients requiring extracorporeal membrane oxygenation (ECMO) for severe respiratory or cardiac failure. It alters respiratory and cardiovascular physiology and drug pharmacokinetics and introduces technical and logistical challenges that may complicate patient selection, ECMO initiation, cannulation, anticoagulation, and monitoring. This review summarizes current evidence regarding the epidemiology, physiological implications, outcomes, and management o",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42371000/",
+          "score": 5
         }
       ]
     }
