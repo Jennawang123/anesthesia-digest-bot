@@ -1,10 +1,18 @@
 {
   "week": "2026-W32",
-  "fetched_at": "2026-08-05T12:25:48.825671+00:00",
+  "fetched_at": "2026-08-08T07:22:08.904197+00:00",
   "articles": {
     "1": {
-      "hot_theme": "Acute respiratory distress syndrome management",
+      "hot_theme": "Sepsis diagnosis and management strategies",
       "items": [
+        {
+          "title": "Effect of Pre-operative Intravenous Crystalloid Bolus on Post-Induction Blood Pressure - a randomized blinded intervention trial.",
+          "abstract": "Post-induction hypotension in major non-cardiac surgery is common and a modifiable risk factor for adverse outcomes. There is an ongoing debate whether pre-operative crystalloid fluid administration can reduce the incidence or severity of post-induction hypotension. This study aims to assess whether a pre-operative intravenous crystalloid bolus reduces post-induction hypotension in high-risk patients under general anesthesia.",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42565471/",
+          "score": 10
+        },
         {
           "title": "Effects of a clinical metagenomics intervention on clinical outcomes, healthcare costs, and health-related quality of life in patients with sepsis or septic shock: results of the randomized-controlled DigiSep trial.",
           "abstract": "Early pathogen detection is crucial in sepsis. We hypothesized that detection of microbial circulating cell-free DNA by metagenomic next-generation sequencing (mNGS) improves clinical outcomes and health-related quality of life without increasing healthcare costs.",
@@ -22,6 +30,14 @@
           "score": 10
         },
         {
+          "title": "STARDaki: a consensus-based STARD extension for standardized reporting of diagnostic accuracy in acute kidney injury.",
+          "abstract": "Biomarkers have been identified to predict, diagnose and prognosticate acute kidney injury (AKI) but existing studies are heterogenous and contradictory.",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42517928/",
+          "score": 8
+        },
+        {
           "title": "Dose-Response Effects of Anterior Chest Wall Loading on Lung Mechanics, Regional Ventilation, and Hemodynamics in Acute Respiratory Distress Syndrome: A Prospective Physiological Study.",
           "abstract": "In acute respiratory distress syndrome (ARDS), global airway pressures do not distinguish lung from chest wall mechanics, limiting bedside identification of regional overdistension. Anterior chest wall loading (ACWL) has been proposed to transiently increase non-dependent pleural pressure and unmask regional overdistension, but its dose-dependent effects remain uncertain. We hypothesized that low loads reduce transpulmonary driving pressure (ΔP) whereas higher loads promote derecruitment and hem",
           "journal": "Anesthesiology",
@@ -30,44 +46,20 @@
           "score": 7
         },
         {
-          "title": "Oxygen saturation thresholds in children with acute respiratory distress (OxyKids): a multicentre, open, parallel-group, randomised clinical trial.",
-          "abstract": "Current peripheral oxygen saturation (SpO",
+          "title": "Development and external validation of a multimodal artificial intelligence mortality prediction model of critically ill patients using multicenter data.",
+          "abstract": "Early prediction of in-hospital mortality in critically ill patients can aid clinicians in optimizing treatment. The objective was to develop a multimodal deep learning model, using structured and unstructured clinical data, to predict in-hospital mortality risk among critically ill patients after their initial 24 hour intensive care unit (ICU) admission.",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42549798/",
+          "score": 7
+        },
+        {
+          "title": "NEWS2 versus shock status to stratify antibiotic urgency in patients with suspected sepsis: a retrospective, multicentre cohort study.",
+          "abstract": "The Surviving Sepsis Campaign guidelines stratify antibiotic urgency in suspected sepsis by shock status, recommending treatment within 1 h for patients with shock and within 3 h for possible sepsis without shock. UK National Institute for Health and Care Excellence (NICE) guidelines use National Early Warning Score 2 (NEWS2) risk categories, with a window of 1 h for the group at highest risk of mortality (aggregate score ≥7). We aimed to compare these strategies for identifying patients in whom",
           "journal": "Lancet Resp Med",
           "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42119581/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42556377/",
           "score": 7
-        },
-        {
-          "title": "Rocuronium dose and first-attempt intubation success in the critically ill: secondary analysis of two multicenter trials.",
-          "abstract": "The neuromuscular blockade dose may affect intubation success on the first attempt, thereby impacting outcomes for patients undergoing emergency tracheal intubation.",
-          "journal": "AJRCCM",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42149702/",
-          "score": 7
-        },
-        {
-          "title": "High-flow nasal cannula oxygen during breaks from noninvasive ventilation after extubation: an observational study.",
-          "abstract": "Clinical practice guidelines recommend prophylactic noninvasive ventilation (NIV) after extubation in high-risk patients. The effects of high-flow nasal cannula (HFNC) oxygen during breaks from NIV after extubation have been poorly explored. Our objective was to assess whether HFNC rather than standard oxygen during breaks from NIV may prevent extubation failure.",
-          "journal": "Intensive Care",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42440109/",
-          "score": 6
-        },
-        {
-          "title": "Burden of and risk factors for neurological complications in critical illness.",
-          "abstract": "Neurological complications are common in critical illness and are increasingly recognized as major contributors to morbidity, mortality, and long-term disability among patients admitted to an intensive care unit (ICU). Even in the absence of a primary neurological diagnosis, systemic critical illness can exert substantial physiological stress on the brain through hypoxemia, hemodynamic instability, inflammation, and metabolic derangements. Delirium, stroke, seizures, and neuromuscular disorders ",
-          "journal": "Intensive Care",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42377460/",
-          "score": 6
-        },
-        {
-          "title": "ECMO for patients with obesity: evidence and practice.",
-          "abstract": "Obesity is increasingly encountered among patients requiring extracorporeal membrane oxygenation (ECMO) for severe respiratory or cardiac failure. It alters respiratory and cardiovascular physiology and drug pharmacokinetics and introduces technical and logistical challenges that may complicate patient selection, ECMO initiation, cannulation, anticoagulation, and monitoring. This review summarizes current evidence regarding the epidemiology, physiological implications, outcomes, and management o",
-          "journal": "Intensive Care",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42371000/",
-          "score": 6
         },
         {
           "title": "HIF1A-dependent induction of alveolar miR-147b dampens SARS-CoV-2-associated ARDS via direct targeting of viral RNA.",
@@ -75,6 +67,30 @@
           "journal": "Anesthesiology",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42549801/",
+          "score": 5
+        },
+        {
+          "title": "High-flow nasal cannula oxygen during breaks from noninvasive ventilation after extubation: an observational study.",
+          "abstract": "Clinical practice guidelines recommend prophylactic noninvasive ventilation (NIV) after extubation in high-risk patients. The effects of high-flow nasal cannula (HFNC) oxygen during breaks from NIV after extubation have been poorly explored. Our objective was to assess whether HFNC rather than standard oxygen during breaks from NIV may prevent extubation failure.",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42440109/",
+          "score": 5
+        },
+        {
+          "title": "Burden of and risk factors for neurological complications in critical illness.",
+          "abstract": "Neurological complications are common in critical illness and are increasingly recognized as major contributors to morbidity, mortality, and long-term disability among patients admitted to an intensive care unit (ICU). Even in the absence of a primary neurological diagnosis, systemic critical illness can exert substantial physiological stress on the brain through hypoxemia, hemodynamic instability, inflammation, and metabolic derangements. Delirium, stroke, seizures, and neuromuscular disorders ",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42377460/",
+          "score": 5
+        },
+        {
+          "title": "ECMO for patients with obesity: evidence and practice.",
+          "abstract": "Obesity is increasingly encountered among patients requiring extracorporeal membrane oxygenation (ECMO) for severe respiratory or cardiac failure. It alters respiratory and cardiovascular physiology and drug pharmacokinetics and introduces technical and logistical challenges that may complicate patient selection, ECMO initiation, cannulation, anticoagulation, and monitoring. This review summarizes current evidence regarding the epidemiology, physiological implications, outcomes, and management o",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42371000/",
           "score": 5
         },
         {
@@ -86,6 +102,14 @@
           "score": 5
         },
         {
+          "title": "Single-cell sequencing unveils a profibrotic macrophage and infiltrating monocyte niche in the bronchoalveolar lavage of patients with chronic obstructive pulmonary disease.",
+          "abstract": "Chronic obstructive pulmonary disease (COPD) is characterized by global immune dysregulation. The most abundant immune cells in the distal airways and alveolar compartments are macrophages and lymphocytes. These cells have been poorly characterized in human airways due to their plasticity and numerous subtypes. There is a marked scarcity of information in the COPD airway, limiting our understanding of the inflammatory process that drives COPD progression.",
+          "journal": "AJRCCM",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42153326/",
+          "score": 5
+        },
+        {
           "title": "Interleukin-6 is a mediator of therapeutic efficacy in acute lung injury.",
           "abstract": "Inflammation in acute respiratory distress syndrome (ARDS) and COVID-19 causes disruption of the alveolar-capillary barrier and tissue damage, which has been associated with increased mortality. Elevated pro-inflammatory plasma biomarker (specifically IL-6) levels reflect the degree of systemic inflammation and are linked to severity of lung injury. Understanding the causal pathway between inflammation, interventions, and patient outcomes could improve clinical care.",
           "journal": "AJRCCM",
@@ -94,26 +118,34 @@
           "score": 5
         },
         {
-          "title": "Development and external validation of a multimodal artificial intelligence mortality prediction model of critically ill patients using multicenter data.",
-          "abstract": "Early prediction of in-hospital mortality in critically ill patients can aid clinicians in optimizing treatment. The objective was to develop a multimodal deep learning model, using structured and unstructured clinical data, to predict in-hospital mortality risk among critically ill patients after their initial 24 hour intensive care unit (ICU) admission.",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42549798/",
-          "score": 4
-        },
-        {
-          "title": "Single-cell sequencing unveils a profibrotic macrophage and infiltrating monocyte niche in the bronchoalveolar lavage of patients with chronic obstructive pulmonary disease.",
-          "abstract": "Chronic obstructive pulmonary disease (COPD) is characterized by global immune dysregulation. The most abundant immune cells in the distal airways and alveolar compartments are macrophages and lymphocytes. These cells have been poorly characterized in human airways due to their plasticity and numerous subtypes. There is a marked scarcity of information in the COPD airway, limiting our understanding of the inflammatory process that drives COPD progression.",
+          "title": "Limitations of the AIRFLOW-3 Trial: Targeted Lung Denervation in COPD.",
+          "abstract": "COPD；TLD.",
           "journal": "AJRCCM",
           "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42153326/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42548115/",
           "score": 4
         }
       ]
     },
     "2": {
-      "hot_theme": "Opioid prescribing and pain management",
+      "hot_theme": "Postoperative opioid prescribing and pain management",
       "items": [
+        {
+          "title": "Brief cognitive behavioral therapy for chronic pain rapidly improves pain interference: a randomized controlled trial.",
+          "abstract": "Abbreviated psychotherapies for chronic pain improve access to care by reducing length of treatment and reaching patients outside of chronic pain clinics, such as primary care. However, the evidence for these approaches is limited. We conducted a randomized controlled trial of brief cognitive behavioral therapy for chronic pain (ie, 6, 30-minute sessions of psychoeducation, behavioral and cognitive skills, and relapse prevention delivered individually) with 184 primary care patients with moderat",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42263268/",
+          "score": 10
+        },
+        {
+          "title": "Amitriptyline for neuropathic pain in patients with leprosy: a bicenter randomized controlled trial.",
+          "abstract": "In this bicenter, randomized, double-blind, placebo-controlled trial, we evaluated the effectiveness and safety of amitriptyline as an add-on therapy for leprosy-related neuropathic pain. A total of 117 participants were randomly assigned to receive amitriptyline or placebo for 9 weeks. The primary outcome was the change in pain intensity on a 100-mm visual analogue scale. Secondary outcomes included pain interference, responder rates, neuropathic pain symptoms, mood, sleep, catastrophizing, qua",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42152617/",
+          "score": 10
+        },
         {
           "title": "Exclusion of psychiatric disorders in neuropathic pain research: a secondary analysis of 312 randomized controlled trials.",
           "abstract": "Chronic neuropathic pain frequently coincides with psychiatric disorders. Randomized controlled trials (RCTs), which underpin treatment guidelines, often seek to reduce confounding variables through exclusion criteria. This may affect the representation of populations with psychiatric comorbidities. This secondary analysis of 312 RCTs on neuropathic pain interventions examined how psychiatric-related exclusions are reported. Data were drawn from a published systematic review of neuropathic pain ",
@@ -131,12 +163,20 @@
           "score": 8
         },
         {
-          "title": "Transversus abdominis plane block for postoperative pain management and opioid sparing: a systematic review and meta-analysis of randomised controlled trials. Comment on <em>Br J Anaesth</em> 2026;136: 266–82",
-          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Christopher B. Salmonsen, Kai H.W. Lange, Christian Rothe, Jakob Kleif, Claus A. Bertelsen",
+          "title": "Epigenetics, inflammation and postoperative complications: a scoping review",
+          "abstract": "Publication date: Available online 6 August 2026   Source:  British Journal of Anaesthesia  Author(s): Ruairí Wilson, Charlotte Fern, Kieran Woolcock, Carl Goodyear, Ben Shelley",
           "journal": "BJA",
           "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003880?dgcid=rss_sd_all",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226004812?dgcid=rss_sd_all",
           "score": 8
+        },
+        {
+          "title": "The Adolescent Surgery Experience (ASE) prospective cohort study: Postoperative pain trajectory, opioid use and satisfaction.",
+          "abstract": "Between 3-5% of adolescents develop new persistent opioid use after surgery. Little is known about their recovery experience, including pain trajectory, pain treatment and prolonged opioid use.",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42549800/",
+          "score": 7
         },
         {
           "title": "Effects of anaesthesia type on development of persistent postoperative opioid utilisation: a South Korean nationwide cohort study.",
@@ -144,14 +184,6 @@
           "journal": "Anaesthesia",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/41852109/",
-          "score": 7
-        },
-        {
-          "title": "Psychometric validation of the Tampa Scale of Kinesiophobia for Youth (TSK-7-Y): a brief measure of movement-related fear in youth with chronic pain.",
-          "abstract": "Fear of movement (FoM), or kinesiophobia, is associated with functional disability in individuals with chronic pain. The Tampa Scale of Kinesiophobia (TSK) is among the most widely used instruments for assessing FoM and has undergone several revisions; however, its psychometric properties have not been evaluated in youth with chronic pain, and there is currently no consensus on the optimal version to use in pediatric pain populations. We examined data from youth with a range of chronic pain cond",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42475058/",
           "score": 7
         },
         {
@@ -163,30 +195,6 @@
           "score": 7
         },
         {
-          "title": "Negative affect, catastrophizing, and self-efficacy during transition from acute episode of low back pain to future disability: a causal mediation analysis of the Understanding persistent Pain Where it ResiDes longitudinal cohort study.",
-          "abstract": "This study examined whether psychological factors mediate the relationship between acute low back pain and future disability. We conducted a secondary causal mediation analysis of the UPWaRD longitudinal cohort (N = 120 adults with acute low back pain of < 6 weeks' duration; ACTRN12619000002189; protocol: https://osf.io/q8wf6/ ). Baseline pain intensity (11-point numerical rating scale) was the exposure, psychological factors measured at 3 months were the mediators (depression, anxiety, stress, ",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42350305/",
-          "score": 7
-        },
-        {
-          "title": "Brief cognitive behavioral therapy for chronic pain rapidly improves pain interference: a randomized controlled trial.",
-          "abstract": "Abbreviated psychotherapies for chronic pain improve access to care by reducing length of treatment and reaching patients outside of chronic pain clinics, such as primary care. However, the evidence for these approaches is limited. We conducted a randomized controlled trial of brief cognitive behavioral therapy for chronic pain (ie, 6, 30-minute sessions of psychoeducation, behavioral and cognitive skills, and relapse prevention delivered individually) with 184 primary care patients with moderat",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42263268/",
-          "score": 7
-        },
-        {
-          "title": "Amitriptyline for neuropathic pain in patients with leprosy: a bicenter randomized controlled trial.",
-          "abstract": "In this bicenter, randomized, double-blind, placebo-controlled trial, we evaluated the effectiveness and safety of amitriptyline as an add-on therapy for leprosy-related neuropathic pain. A total of 117 participants were randomly assigned to receive amitriptyline or placebo for 9 weeks. The primary outcome was the change in pain intensity on a 100-mm visual analogue scale. Secondary outcomes included pain interference, responder rates, neuropathic pain symptoms, mood, sleep, catastrophizing, qua",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42152617/",
-          "score": 7
-        },
-        {
           "title": "Cumulative impacts of early-life interpersonal adversity and persistent/recurrent pain in children: a longitudinal normative modelling study from the ABCD study cohort.",
           "abstract": "Children experiencing persistent/recurrent pain (PRP) report increased exposure to early-life adversity (ELA), often accompanied by more severe pain and worse mental health outcomes. Separate studies of PRP and ELA show similar alterations in brain morphology, yet their distinct and cumulative contributions remain poorly understood. Structural magnetic resonance imaging data at baseline and 2-year follow-up were accessed from the Adolescent Brain Cognitive Development cohort (N = 1671). Linear m",
           "journal": "PAIN",
@@ -195,20 +203,12 @@
           "score": 7
         },
         {
-          "title": "The role of physical activity in children and adolescents with chronic pain: the moderating effects of psychological symptoms and sleep difficulties.",
-          "abstract": "Chronic pain in children and adolescents affects physical, psychological, social, and academic function. Although physical activity may play a role, its direct effects and its interactions with sleep difficulties and psychological symptoms remain unclear. This cross-sectional study examined whether physical activity is associated with chronic pain, and whether these associations vary by sleep difficulties and psychological symptoms. We analyzed data from 212,105 individuals (49% girls, age: 11-1",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42093187/",
-          "score": 7
-        },
-        {
           "title": "Clinical Decision Support to Reduce Opioid Prescribing at Discharge for Inpatients Undergoing Surgery (LESS Study): An Interrupted Time Series Analysis.",
           "abstract": "Unnecessary opioid prescribing after surgery is wasteful and expands the reservoir for nonmedical use, thereby contributing to preventable morbidity and mortality. The authors used an interrupted time series design to evaluate whether implementing a systemwide clinical decision support intervention reduced opioid prescribing at discharge.",
           "journal": "Anesthesiology",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42166796/",
-          "score": 6
+          "score": 5
         },
         {
           "title": "Evaluation of Postblock Hypersensitivity Using Quantitative Sensory Testing before, during, and after Axillary Brachial Plexus Block Resolution in Healthy Volunteers.",
@@ -216,7 +216,15 @@
           "journal": "Anesthesiology",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42359695/",
-          "score": 6
+          "score": 5
+        },
+        {
+          "title": "Organisational practices in postoperative opioid prescribing at discharge in UK NHS day surgery units: the OPIOID-discharge survey.",
+          "abstract": "In March 2025, the Medicines and Healthcare products Regulatory Agency published a drug safety update removing the indication of postoperative pain from the licence of prolonged-release opioids and mandated discussing risks with patients. Our study assessed compliance with these recommendations 6 months post-publication.",
+          "journal": "Anaesthesia",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41906196/",
+          "score": 5
         },
         {
           "title": "Patient-reported outcomes, postoperative pain and pain relief after day-case surgery (POPPY): short-term peri-operative analgesic use.",
@@ -224,7 +232,15 @@
           "journal": "Anaesthesia",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/41906195/",
-          "score": 6
+          "score": 5
+        },
+        {
+          "title": "Negative affect, catastrophizing, and self-efficacy during transition from acute episode of low back pain to future disability: a causal mediation analysis of the Understanding persistent Pain Where it ResiDes longitudinal cohort study.",
+          "abstract": "This study examined whether psychological factors mediate the relationship between acute low back pain and future disability. We conducted a secondary causal mediation analysis of the UPWaRD longitudinal cohort (N = 120 adults with acute low back pain of < 6 weeks' duration; ACTRN12619000002189; protocol: https://osf.io/q8wf6/ ). Baseline pain intensity (11-point numerical rating scale) was the exposure, psychological factors measured at 3 months were the mediators (depression, anxiety, stress, ",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42350305/",
+          "score": 5
         },
         {
           "title": "Cognitive-affective and behavioral pain mechanisms in individuals with chronic low back pain: a network analysis.",
@@ -232,7 +248,7 @@
           "journal": "PAIN",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42302112/",
-          "score": 6
+          "score": 5
         },
         {
           "title": "Sex differences in adolescent chronic pain outcomes after spinal fusion: role of coping strategies.",
@@ -240,7 +256,7 @@
           "journal": "PAIN",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42289098/",
-          "score": 6
+          "score": 5
         },
         {
           "title": "A prospective diary study of chronic pain-related intrusive mental imagery: \"trolls climbing up my spine with ice axes\" and other vivid images.",
@@ -248,62 +264,6 @@
           "journal": "PAIN",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42240088/",
-          "score": 6
-        },
-        {
-          "title": "Hypermobility and chronic pain in adolescents: diverging functional and neural profiles without sensory differences.",
-          "abstract": "Chronic pain (CP) affects approximately 20% of children, significantly impacting their physical, emotional, and social well-being. Hypermobility disorders (HDs) are prevalent in pediatric populations, including those with CP, and often contribute to impairments in psychological and physical functioning. This study examined differences in sensory, functional, and neural circuitry among CP in youth with and without comorbid HD (CP + HD). Contrary to our a priori hypothesis and previous literature ",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42187063/",
-          "score": 6
-        },
-        {
-          "title": "Distinct social pathways in the links between pain interference and psychological function in youth with chronic pain.",
-          "abstract": "Evidence suggests that pain interference is linked to depression and anxiety in youth with chronic pain, yet the contributions of the social environment to these associations remain unclear. Guided by the Stress-Buffering Model of Social Support, this study tested theory-driven mediation and moderation models to examine whether peer relationships and bullying contribute to or modify concurrent and short-term longitudinal associations between pain interference and psychological function. A cross-",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42152696/",
-          "score": 6
-        },
-        {
-          "title": "A multiverse approach to heat-evoked skin conductance analysis: evaluating the influence of analytic pipeline on associations between skin conductance and pain.",
-          "abstract": "Indices of physiological arousal and sympathetic nervous system activity provide important information about pain that can supplement verbal reports. Numerous studies focus on electrodermal activity, which is easy to measure and can provide insights on relationships between pain and arousal through the quantification of skin-conductance response (SCR). Despite SCR's value, there is no standard way to quantify SCR in response to noxious stimulation, and conclusions may vary depending on analytic ",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42152694/",
-          "score": 6
-        },
-        {
-          "title": "Topical capsaicin 8% differentially blocks activation of nociceptors by mechanical, heat, and electrical stimuli in human skin.",
-          "abstract": "Capsaicin can cause long-lasting analgesia in patients but the time course of the underlying C-nociceptor functional loss remains unclear. We investigated functional loss and sensory recovery of \"polymodal\" and \"silent\" C-nociceptors after topical 8% capsaicin treatment for 12 weeks. The volar forearms of 20 healthy volunteers received two 8% capsaicin patches (1.5 cm 2 , Qutenza) spaced 2 cm apart and one placebo patch over 4 consecutive days. Sensitivity of C-nociceptors was evaluated weekly b",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42152692/",
-          "score": 6
-        },
-        {
-          "title": "The Adolescent Surgery Experience (ASE) prospective cohort study: Postoperative pain trajectory, opioid use and satisfaction.",
-          "abstract": "Between 3-5% of adolescents develop new persistent opioid use after surgery. Little is known about their recovery experience, including pain trajectory, pain treatment and prolonged opioid use.",
-          "journal": "Anesthesiology",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42549800/",
-          "score": 5
-        },
-        {
-          "title": "Astrocyte coordinated remodelling of the dorsal horn endothelium and pain hypersensitivity.",
-          "abstract": "Pain perception relies not only on sensory neurons but also on the interplay of a heterogeneous cell population, including endothelial cells, microglia, and astrocytes. Blood-spinal cord barrier dysfunction can alter nociceptive processing and lead to pain hypersensitivity. A component of this capillary network is the astrocytic foot processes that encapsulate the blood-brain barrier, providing critical nutritional support and protection. Astrocytes are a fundamental modulator of nervous system ",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42475057/",
-          "score": 5
-        },
-        {
-          "title": "Lanthionine synthetase C-like protein 1 (LanCL1): a therapeutic target for neuropathic pain.",
-          "abstract": "Since the discovery of the mammalian lanthionine synthetase C-like (LanCL) proteins, there has been considerable interest in identifying their functions. Using LAT8881, a novel peptide ligand for LanCL1, we confirm a key role for LanCL1 in chronic neuropathic sensitisation, with little effect on inflammatory hypersensitivity or physiological nociception. LAT8881 reversed mechanical allodynia in multiple rodent neuropathic models, including chronic constriction injury, where it suppressed spontan",
-          "journal": "PAIN",
-          "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42263267/",
           "score": 5
         },
         {
@@ -315,11 +275,35 @@
           "score": 5
         },
         {
-          "title": "Distribution of divalent small interfering RNA into neurons of sensory ganglia produces selective, durable knockdown of Nav1.7 and strong analgesia.",
-          "abstract": "Humans missing the SCN9A gene encoding the Nav1.7 sodium ion channel are wholly insensitive to pain, but Nav1.7 inhibitors to date have not produced correspondingly strong analgesia in clinical trials. In this study, we address whether potential challenges of selectivity, tissue distribution, and target engagement might be addressed by divalent small interfering RNA (di-siRNA), a modality for transcript knockdown throughout the CNS following dosing into cerebrospinal fluid. Small interfering RNA",
+          "title": "Hypermobility and chronic pain in adolescents: diverging functional and neural profiles without sensory differences.",
+          "abstract": "Chronic pain (CP) affects approximately 20% of children, significantly impacting their physical, emotional, and social well-being. Hypermobility disorders (HDs) are prevalent in pediatric populations, including those with CP, and often contribute to impairments in psychological and physical functioning. This study examined differences in sensory, functional, and neural circuitry among CP in youth with and without comorbid HD (CP + HD). Contrary to our a priori hypothesis and previous literature ",
           "journal": "PAIN",
           "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42187058/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42187063/",
+          "score": 5
+        },
+        {
+          "title": "Distinct social pathways in the links between pain interference and psychological function in youth with chronic pain.",
+          "abstract": "Evidence suggests that pain interference is linked to depression and anxiety in youth with chronic pain, yet the contributions of the social environment to these associations remain unclear. Guided by the Stress-Buffering Model of Social Support, this study tested theory-driven mediation and moderation models to examine whether peer relationships and bullying contribute to or modify concurrent and short-term longitudinal associations between pain interference and psychological function. A cross-",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42152696/",
+          "score": 5
+        },
+        {
+          "title": "A multiverse approach to heat-evoked skin conductance analysis: evaluating the influence of analytic pipeline on associations between skin conductance and pain.",
+          "abstract": "Indices of physiological arousal and sympathetic nervous system activity provide important information about pain that can supplement verbal reports. Numerous studies focus on electrodermal activity, which is easy to measure and can provide insights on relationships between pain and arousal through the quantification of skin-conductance response (SCR). Despite SCR's value, there is no standard way to quantify SCR in response to noxious stimulation, and conclusions may vary depending on analytic ",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42152694/",
+          "score": 5
+        },
+        {
+          "title": "Topical capsaicin 8% differentially blocks activation of nociceptors by mechanical, heat, and electrical stimuli in human skin.",
+          "abstract": "Capsaicin can cause long-lasting analgesia in patients but the time course of the underlying C-nociceptor functional loss remains unclear. We investigated functional loss and sensory recovery of \"polymodal\" and \"silent\" C-nociceptors after topical 8% capsaicin treatment for 12 weeks. The volar forearms of 20 healthy volunteers received two 8% capsaicin patches (1.5 cm 2 , Qutenza) spaced 2 cm apart and one placebo patch over 4 consecutive days. Sensitivity of C-nociceptors was evaluated weekly b",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42152692/",
           "score": 5
         },
         {
@@ -331,12 +315,28 @@
           "score": 5
         },
         {
-          "title": "Impaired skin reinnervation in epidermolysis bullosa due to neurotrophic deficiency.",
-          "abstract": "The skin is densely innervated by peripheral sensory neurons that detect various stimuli through specialized nerve endings in the dermis and epidermis. In recessive dystrophic epidermolysis bullosa (RDEB), repeated skin injury disrupts epidermal nerve fibers, leading to neuropathic pain and reduced thermal sensitivity. Normally, keratinocyte-derived neurotrophic signals guide sensory fiber re-entry into healed epidermis. We hypothesized that impaired neurotrophic support underlies failed reinner",
+          "title": "The role of physical activity in children and adolescents with chronic pain: the moderating effects of psychological symptoms and sleep difficulties.",
+          "abstract": "Chronic pain in children and adolescents affects physical, psychological, social, and academic function. Although physical activity may play a role, its direct effects and its interactions with sleep difficulties and psychological symptoms remain unclear. This cross-sectional study examined whether physical activity is associated with chronic pain, and whether these associations vary by sleep difficulties and psychological symptoms. We analyzed data from 212,105 individuals (49% girls, age: 11-1",
           "journal": "PAIN",
           "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42093186/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42093187/",
           "score": 5
+        },
+        {
+          "title": "Psychometric validation of the Tampa Scale of Kinesiophobia for Youth (TSK-7-Y): a brief measure of movement-related fear in youth with chronic pain.",
+          "abstract": "Fear of movement (FoM), or kinesiophobia, is associated with functional disability in individuals with chronic pain. The Tampa Scale of Kinesiophobia (TSK) is among the most widely used instruments for assessing FoM and has undergone several revisions; however, its psychometric properties have not been evaluated in youth with chronic pain, and there is currently no consensus on the optimal version to use in pediatric pain populations. We examined data from youth with a range of chronic pain cond",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42475058/",
+          "score": 4
+        },
+        {
+          "title": "Lanthionine synthetase C-like protein 1 (LanCL1): a therapeutic target for neuropathic pain.",
+          "abstract": "Since the discovery of the mammalian lanthionine synthetase C-like (LanCL) proteins, there has been considerable interest in identifying their functions. Using LAT8881, a novel peptide ligand for LanCL1, we confirm a key role for LanCL1 in chronic neuropathic sensitisation, with little effect on inflammatory hypersensitivity or physiological nociception. LAT8881 reversed mechanical allodynia in multiple rodent neuropathic models, including chronic constriction injury, where it suppressed spontan",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42263267/",
+          "score": 4
         },
         {
           "title": "Preclinical models of female pelvic pain disorders.",
@@ -347,11 +347,19 @@
           "score": 4
         },
         {
-          "title": "Organisational practices in postoperative opioid prescribing at discharge in UK NHS day surgery units: the OPIOID-discharge survey.",
-          "abstract": "In March 2025, the Medicines and Healthcare products Regulatory Agency published a drug safety update removing the indication of postoperative pain from the licence of prolonged-release opioids and mandated discussing risks with patients. Our study assessed compliance with these recommendations 6 months post-publication.",
-          "journal": "Anaesthesia",
+          "title": "Distribution of divalent small interfering RNA into neurons of sensory ganglia produces selective, durable knockdown of Nav1.7 and strong analgesia.",
+          "abstract": "Humans missing the SCN9A gene encoding the Nav1.7 sodium ion channel are wholly insensitive to pain, but Nav1.7 inhibitors to date have not produced correspondingly strong analgesia in clinical trials. In this study, we address whether potential challenges of selectivity, tissue distribution, and target engagement might be addressed by divalent small interfering RNA (di-siRNA), a modality for transcript knockdown throughout the CNS following dosing into cerebrospinal fluid. Small interfering RNA",
+          "journal": "PAIN",
           "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41906196/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42187058/",
+          "score": 4
+        },
+        {
+          "title": "Astrocyte coordinated remodelling of the dorsal horn endothelium and pain hypersensitivity.",
+          "abstract": "Pain perception relies not only on sensory neurons but also on the interplay of a heterogeneous cell population, including endothelial cells, microglia, and astrocytes. Blood-spinal cord barrier dysfunction can alter nociceptive processing and lead to pain hypersensitivity. A component of this capillary network is the astrocytic foot processes that encapsulate the blood-brain barrier, providing critical nutritional support and protection. Astrocytes are a fundamental modulator of nervous system ",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42475057/",
           "score": 3
         },
         {
@@ -363,87 +371,79 @@
           "score": 3
         },
         {
-          "title": "Single-shot perineural femoral nerve block and falls following lower limb orthopaedic surgery: validity of the pooled risk estimate in contemporary practice. Response to <em>Br J Anaesth</em> 2026; 136: 1647-8",
-          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Matthew J. Billingham, Christopher Dixon, Kausik Dasgupta",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S000709122600348X?dgcid=rss_sd_all",
-          "score": 2
+          "title": "Impaired skin reinnervation in epidermolysis bullosa due to neurotrophic deficiency.",
+          "abstract": "The skin is densely innervated by peripheral sensory neurons that detect various stimuli through specialized nerve endings in the dermis and epidermis. In recessive dystrophic epidermolysis bullosa (RDEB), repeated skin injury disrupts epidermal nerve fibers, leading to neuropathic pain and reduced thermal sensitivity. Normally, keratinocyte-derived neurotrophic signals guide sensory fiber re-entry into healed epidermis. We hypothesized that impaired neurotrophic support underlies failed reinner",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42093186/",
+          "score": 3
         },
         {
-          "title": "Morphine and hydromorphone pharmacodynamics in human volunteers: sensitivity to benefit–harm thresholds. Comment on <em>Br J Anaesth</em> 2026; 136: 1459-71",
-          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Yiran Feng, Boyi Zhang, Jiale Chen",
+          "title": "κ-Opioid receptor activation suppresses triple-negative breast cancer progression by inducing urea cycle dysfunction and mitochondrial damage <em>in vitro</em> and in mice. Comment on <em>Br J Anaesth</em> 2025; 135: 1803–15",
+          "abstract": "Publication date: Available online 6 August 2026   Source:  British Journal of Anaesthesia  Author(s): Yumiao Shi, Yiying Tao, Zhiying Pan, Guojun Qian, Weifeng Yu, Jie Tian",
           "journal": "BJA",
           "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003466?dgcid=rss_sd_all",
-          "score": 2
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226005234?dgcid=rss_sd_all",
+          "score": 3
+        },
+        {
+          "title": "Prostaglandins prevent long-lasting pain in a mouse model of chronic postsurgical pain: reconciling animal and clinical evidence. Response to <em>Br J Anaesth</em> 2026; 137: 344–6",
+          "abstract": "Publication date: Available online 6 August 2026   Source:  British Journal of Anaesthesia  Author(s): Mohamad Karaky, Lucas V. Lima, Jeffrey S. Mogil, Luda Diatchenko",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226005155?dgcid=rss_sd_all",
+          "score": 3
         }
       ]
     },
     "3": {
-      "hot_theme": "GLP-1 receptor agonists perioperative safety",
+      "hot_theme": null,
       "items": [
+        {
+          "title": "Difficult Airway Society 2025 guidelines for management of unanticipated difficult tracheal intubation in adults: rethinking tracheal tube size for emergency scalpel cricothyroidotomy. Comment on <em>Br J Anaesth</em> 2025; 136: 283–307",
+          "abstract": "Publication date: Available online 6 August 2026   Source:  British Journal of Anaesthesia  Author(s): Kathryn Noakes, Stuart M. Paterson",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226005052?dgcid=rss_sd_all",
+          "score": 8
+        },
         {
           "title": "Cerebral Small-vessel Disease and Postoperative Delirium in Elderly Noncardiac Surgical Patients.",
           "abstract": "Postoperative delirium is common in elderly surgical patients and is associated with complications and prolonged hospitalization. Cerebral small-vessel disease, a leading cause of dementia, is highly prevalent in elderly surgical patients. However, the relationship between cerebral small-vessel disease and postoperative delirium remains unknown. The authors therefore tested the primary hypothesis that cerebral small-vessel disease is associated with postoperative delirium in elderly noncardiac s",
           "journal": "Anesthesiology",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42247247/",
-          "score": 10
+          "score": 5
         },
         {
-          "title": "Risk of postoperative respiratory complications in adults treated with GLP-1 receptor agonists: a propensity-matched population-based study",
-          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Tomer Talmy, Stephane Ledot, Barak Cohen, Ron Suharev, Miryam Frishman, Alexander Avidan, Idit Matot, Itay Nitzan",
+          "title": "Age-adjusted minimal alveolar concentration for sevoflurane: not so comparable after all?",
+          "abstract": "Publication date: Available online 5 August 2026   Source:  British Journal of Anaesthesia  Author(s): Stefan Schwerin, Philipp Willmann, Gerhard Schneider, Matthias Kreuzer",
           "journal": "BJA",
           "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003429?dgcid=rss_sd_all",
-          "score": 6
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226005064?dgcid=rss_sd_all",
+          "score": 5
         },
         {
-          "title": "Safer prehospital anaesthesia: updated guidelines from the Association of Anaesthetists.",
-          "abstract": "Prehospital emergency anaesthesia is recognised as a high-risk clinical intervention. These updated guidelines consider changes in prehospital practice and parallel changes in the practice of in-hospital emergency anaesthesia, with the aim of encouraging standardised safe anaesthetic practice in a challenging clinical area.",
-          "journal": "Anaesthesia",
+          "title": "Fragility Index of Randomized Clinical Trials in Perioperative Anesthesia: A Methodological Survey of Guideline-Supporting Evidence.",
+          "abstract": "The Fragility Index (FI) quantifies how small changes in trial outcomes can alter statistical significance, providing a measure of the numerical stability of randomized controlled trial (RCT) results. Despite its growing use, fragility has not been systematically examined in the perioperative evidence supporting anesthesiology guidelines. This study evaluated the FI, Reverse Fragility Index (rFI), and Fragility Quotient (FQ) of RCTs cited in North American and European perioperative clinical pra",
+          "journal": "Anesthesiology",
           "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/41873247/",
-          "score": 3
-        },
-        {
-          "title": "Propofol infusion syndrome in an infant after low-dose and short duration administration revealing carnitine palmitoyltransferase 2 deficiency",
-          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Raul Bustos B, Lucas Gomez R",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003478?dgcid=rss_sd_all",
-          "score": 2
-        },
-        {
-          "title": "Use of supraglottic airways in neonates and infants less than 2 months old and role in difficult mask ventilation. Response to <em>Br J Anaesth</em> 2026; 137: 313–314",
-          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Shawn Jackson, Julia H. Nagle, Iasha Z. Khan, Steven J. Staffa, Amira Toivonen, Stephen G. Flynn, James M. Peyton, Raymond S. Park, Pete G. Kovatsis, Mary Lyn Stein",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S000709122600351X?dgcid=rss_sd_all",
-          "score": 2
-        },
-        {
-          "title": "Difficult Airway Society 2025 guidelines for management of unanticipated difficult tracheal intubation in adults: awake tracheal intubation for a physiologically difficult airway. Comment on <em>Br J Anaesth</em> 2026; 136: 283–307",
-          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Muhammad J. Khan, Arunabha Karmakar",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003508?dgcid=rss_sd_all",
-          "score": 2
-        },
-        {
-          "title": "Gucagon-like peptide-1 receptor agonists and pulmonary aspiration: stratify physiology, not prescriptions",
-          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Lukasz Szarpak, Maciej Maslyk, Dawid Aleksandrowicz",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003545?dgcid=rss_sd_all",
-          "score": 2
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42565467/",
+          "score": 4
         }
       ]
     },
     "4": {
-      "hot_theme": null,
+      "hot_theme": "Pediatric pain and early-life adversity outcomes",
       "items": [
+        {
+          "title": "The Adolescent Surgery Experience (ASE) prospective cohort study: Postoperative pain trajectory, opioid use and satisfaction.",
+          "abstract": "Between 3-5% of adolescents develop new persistent opioid use after surgery. Little is known about their recovery experience, including pain trajectory, pain treatment and prolonged opioid use.",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42549800/",
+          "score": 7
+        },
         {
           "title": "Labour epidural analgesia and early childhood behavioural outcomes: the moderating role of maternal mental health and pro-inflammatory cytokines.",
           "abstract": "Labour epidural analgesia is the most effective method for intrapartum pain relief and is associated with improved maternal outcomes. However, concerns have been raised regarding potential associations between labour epidural analgesia and adverse psycho-emotional outcomes in children. Evidence from large epidemiological studies is inconsistent and potential biological mechanisms remain unclear. Maternal immune activation during pregnancy may play a role. We aimed to investigate behavioural and ",
@@ -453,12 +453,28 @@
           "score": 7
         },
         {
+          "title": "Cumulative impacts of early-life interpersonal adversity and persistent/recurrent pain in children: a longitudinal normative modelling study from the ABCD study cohort.",
+          "abstract": "Children experiencing persistent/recurrent pain (PRP) report increased exposure to early-life adversity (ELA), often accompanied by more severe pain and worse mental health outcomes. Separate studies of PRP and ELA show similar alterations in brain morphology, yet their distinct and cumulative contributions remain poorly understood. Structural magnetic resonance imaging data at baseline and 2-year follow-up were accessed from the Adolescent Brain Cognitive Development cohort (N = 1671). Linear m",
+          "journal": "PAIN",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42095845/",
+          "score": 7
+        },
+        {
+          "title": "HIF1A-dependent induction of alveolar miR-147b dampens SARS-CoV-2-associated ARDS via direct targeting of viral RNA.",
+          "abstract": "Acute respiratory distress syndrome (ARDS) causes significant morbidity and mortality during viral pneumonia, including SARS-CoV-2 infections. Nevertheless, most patients with SARS-CoV-2 infections recover seamlessly without developing ARDS, suggesting the existence of endogenous pathways to protect the lungs. Since microRNAs (miRNAs) can regulate endogenous molecular pathways involved in lung protection, we hypothesized that alveolar miRNAs could function to dampen SARS-CoV-2-associated lung in",
+          "journal": "Anesthesiology",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42549801/",
+          "score": 5
+        },
+        {
           "title": "Sex differences in adolescent chronic pain outcomes after spinal fusion: role of coping strategies.",
           "abstract": "Sex differences in postsurgical pain are poorly understood in adolescence, a critical period for chronic pain development. The aims of this analysis were to examine sex differences in chronic pain outcomes 6 months after spinal fusion and test whether pain coping strategies, specifically differences in distraction-based coping and emotion-focused avoidance, explained these differences. Adolescents (N = 145; 78% females; ages 10-18; 67% White; 17% Hispanic) undergoing surgery for idiopathic/juven",
           "journal": "PAIN",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42289098/",
-          "score": 6
+          "score": 5
         },
         {
           "title": "Hypermobility and chronic pain in adolescents: diverging functional and neural profiles without sensory differences.",
@@ -466,14 +482,22 @@
           "journal": "PAIN",
           "pub_date": "2026/Aug",
           "url": "https://pubmed.ncbi.nlm.nih.gov/42187063/",
-          "score": 6
+          "score": 5
         },
         {
-          "title": "Critical illness outcomes of hospitalized pregnant women following a Texas abortion ban.",
-          "abstract": "In September 2021, Texas Senate Bill 8 (SB8) banned abortion after embryonic cardiac activity.",
-          "journal": "AJRCCM",
+          "title": "The role of physical activity in children and adolescents with chronic pain: the moderating effects of psychological symptoms and sleep difficulties.",
+          "abstract": "Chronic pain in children and adolescents affects physical, psychological, social, and academic function. Although physical activity may play a role, its direct effects and its interactions with sleep difficulties and psychological symptoms remain unclear. This cross-sectional study examined whether physical activity is associated with chronic pain, and whether these associations vary by sleep difficulties and psychological symptoms. We analyzed data from 212,105 individuals (49% girls, age: 11-1",
+          "journal": "PAIN",
           "pub_date": "2026/Aug",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42149703/",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42093187/",
+          "score": 5
+        },
+        {
+          "title": "Utilising central and mobile destruction units during labour to reduce ambient nitrous oxide levels: a triple bottom line analysis",
+          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Katherine Whitehouse, Elizabeth P. Hu, Theo S. Cooke, Hashim M. Khan, Hussein Tuzlaw, Ian Baxter",
+          "journal": "BJA",
+          "pub_date": "",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003569?dgcid=rss_sd_all",
           "score": 5
         },
         {
@@ -482,15 +506,7 @@
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003521?dgcid=rss_sd_all",
-          "score": 2
-        },
-        {
-          "title": "Use of supraglottic airways in neonates and infants less than 2 months old and role in difficult mask ventilation. Response to <em>Br J Anaesth</em> 2026; 137: 313–314",
-          "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Shawn Jackson, Julia H. Nagle, Iasha Z. Khan, Steven J. Staffa, Amira Toivonen, Stephen G. Flynn, James M. Peyton, Raymond S. Park, Pete G. Kovatsis, Mary Lyn Stein",
-          "journal": "BJA",
-          "pub_date": "",
-          "url": "https://www.sciencedirect.com/science/article/pii/S000709122600351X?dgcid=rss_sd_all",
-          "score": 2
+          "score": 3
         }
       ]
     },
@@ -498,12 +514,20 @@
       "hot_theme": null,
       "items": [
         {
+          "title": "ECMO for patients with obesity: evidence and practice.",
+          "abstract": "Obesity is increasingly encountered among patients requiring extracorporeal membrane oxygenation (ECMO) for severe respiratory or cardiac failure. It alters respiratory and cardiovascular physiology and drug pharmacokinetics and introduces technical and logistical challenges that may complicate patient selection, ECMO initiation, cannulation, anticoagulation, and monitoring. This review summarizes current evidence regarding the epidemiology, physiological implications, outcomes, and management o",
+          "journal": "Intensive Care",
+          "pub_date": "2026/Aug",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42371000/",
+          "score": 5
+        },
+        {
           "title": "Association of duration of amino acids infusion and renal protection: is 48 hours of amino acids infusion enough after cardiac surgery? Comment on <em>Br J Anaesth</em> 2026; 137: 110–117",
           "abstract": "Publication date: August 2026   Source:  British Journal of Anaesthesia, Volume 137, Issue 2  Author(s): Baodong Wang, Jiayuan Huang, Zhiyun Chen",
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003417?dgcid=rss_sd_all",
-          "score": 2
+          "score": 3
         },
         {
           "title": "Low dose of landiolol does not prevent postoperative atrial fibrillation after cardiac surgery in non-Asian patients. Comment on <em>Br J Anaesth</em> 2026; 136: 65–73",
@@ -511,7 +535,7 @@
           "journal": "BJA",
           "pub_date": "",
           "url": "https://www.sciencedirect.com/science/article/pii/S0007091226003909?dgcid=rss_sd_all",
-          "score": 2
+          "score": 3
         }
       ]
     }
