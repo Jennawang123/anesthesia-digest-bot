@@ -88,8 +88,17 @@ def fetch_ncbi(query_term: str, journal_label: str, days_back: int = 30) -> list
         if any(kw in title.lower() for kw in ERRATA_KEYWORDS):
             continue
 
-        abstract_el = art.find(".//AbstractText")
-        abstract = (abstract_el.text or "") if abstract_el is not None else ""
+        # 結構化摘要在 XML 裡是多個 AbstractText（PURPOSE / METHODS / RESULTS /
+        # CONCLUSION），只取 find() 的第一個等於丟掉所有數據，只留下研究動機。
+        # 另外 .text 會漏掉巢狀標記（如 <i>），必須用 itertext()。
+        parts = []
+        for el in art.findall(".//AbstractText"):
+            text = "".join(el.itertext()).strip()
+            if not text:
+                continue
+            label = el.get("Label") or el.get("NlmCategory")
+            parts.append(f"{label}: {text}" if label else text)
+        abstract = " ".join(parts)
         if not abstract:
             continue
 
@@ -101,7 +110,8 @@ def fetch_ncbi(query_term: str, journal_label: str, days_back: int = 30) -> list
 
         articles.append({
             "title":    title,
-            "abstract": abstract[:500],
+            "abstract": abstract[:2500],   # 結構化摘要含 RESULTS 段，500 字會攔腰截斷
+            "pmid":     pmid,
             "journal":  journal_label,
             "pub_date": pub_date,
             "url":      f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "",
