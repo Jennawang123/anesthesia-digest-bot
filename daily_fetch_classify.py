@@ -310,6 +310,8 @@ def classify_articles(articles: list[dict]) -> dict[str, dict]:
 # ── 3. Main ───────────────────────────────────────────────────────────────────
 
 def main():
+    where = "GitHub Actions" if os.environ.get("GITHUB_ACTIONS") == "true" else "本機"
+    print(f"執行環境：{where}")
     print("Fetching articles...")
     all_articles: list[dict] = []
 
@@ -407,6 +409,20 @@ def main():
         print("Saved → daily_data/week.json (local only)")
 
 
+def commit_identity() -> tuple[dict, str]:
+    """本機執行也會用 Contents API 寫檔，過去一律掛 github-actions[bot]，
+    導致 commit 紀錄裡分不出是排程跑的還是有人在本機手動跑的。"""
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        return (
+            {"name": "github-actions[bot]", "email": "github-actions[bot]@users.noreply.github.com"},
+            "",
+        )
+    return (
+        {"name": "anesthesia-digest-bot (local)", "email": "local-run@users.noreply.github.com"},
+        " (local run)",
+    )
+
+
 def _upload_to_github(data: dict, token: str, repo: str) -> None:
     import base64
     content_b64 = base64.b64encode(
@@ -424,13 +440,11 @@ def _upload_to_github(data: dict, token: str, repo: str) -> None:
     get = requests.get(url, headers=headers)
     sha = get.json().get("sha") if get.status_code == 200 else None
 
+    committer, suffix = commit_identity()
     payload: dict = {
-        "message": "chore: weekly classified articles [skip ci]",
+        "message": f"chore: weekly classified articles{suffix} [skip ci]",
         "content": content_b64,
-        "committer": {
-            "name":  "github-actions[bot]",
-            "email": "github-actions[bot]@users.noreply.github.com",
-        },
+        "committer": committer,
     }
     if sha:
         payload["sha"] = sha

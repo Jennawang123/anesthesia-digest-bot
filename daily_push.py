@@ -52,6 +52,20 @@ def load_sent_urls() -> set[str]:
         return set()
 
 
+def commit_identity() -> tuple[dict, str]:
+    """本機執行也會用 Contents API 寫檔，過去一律掛 github-actions[bot]，
+    導致 commit 紀錄裡分不出是排程跑的還是有人在本機手動跑的。"""
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        return (
+            {"name": "github-actions[bot]", "email": "github-actions[bot]@users.noreply.github.com"},
+            "",
+        )
+    return (
+        {"name": "anesthesia-digest-bot (local)", "email": "local-run@users.noreply.github.com"},
+        " (local run)",
+    )
+
+
 def save_sent_urls(urls: set[str]) -> None:
     gh_token = os.environ.get("GITHUB_TOKEN")
     gh_repo  = os.environ.get("GITHUB_REPOSITORY")
@@ -73,10 +87,11 @@ def save_sent_urls(urls: set[str]) -> None:
         url = f"https://api.github.com/repos/{gh_repo}/contents/daily_data/sent_articles.json"
         get  = requests.get(url, headers=headers)
         sha  = get.json().get("sha") if get.status_code == 200 else None
+        committer, suffix = commit_identity()
         payload: dict = {
-            "message": "chore: update sent articles [skip ci]",
+            "message": f"chore: update sent articles{suffix} [skip ci]",
             "content": content_b64,
-            "committer": {"name": "github-actions[bot]", "email": "github-actions[bot]@users.noreply.github.com"},
+            "committer": committer,
         }
         if sha:
             payload["sha"] = sha
@@ -462,6 +477,8 @@ def main():
         return
 
     topic = TOPICS[weekday]
+    where = "GitHub Actions" if os.environ.get("GITHUB_ACTIONS") == "true" else "本機"
+    print(f"執行環境：{where}")
     print(f"{date_str} {topic['day']} | 主題：{topic['name']}")
 
     articles, hot_theme = load_articles(weekday)
