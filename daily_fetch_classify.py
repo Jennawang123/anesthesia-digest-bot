@@ -329,6 +329,9 @@ def main():
         ("Eur J Anaesth",   "0265-0215 OR 1365-2346"),   # European Journal of Anaesthesiology
         ("J Neurosurg Anes","0898-4921 OR 1537-1921"),   # J Neurosurgical Anesthesiology
         ("J Cardiothor Vasc Anes", "1053-0770 OR 1532-8422"),  # J Cardiothoracic & Vascular Anesthesia
+        # 2026-08-08 補：週四（小兒與產科）候選數在其他主題變多後相對落後
+        ("Paediatr Anaesth", "1155-5645 OR 1460-9592"),   # Paediatric Anaesthesia
+        ("Int J Obstet Anes","0959-289X OR 1532-3374"),   # Int J Obstetric Anesthesia
     ]
     failed_sources: list[str] = []
 
