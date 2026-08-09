@@ -123,17 +123,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 
 /* Pie chart */
 .pie-card{background:var(--card);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
-.pie-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.pie-title{font-size:19px;font-weight:700;}
-.pie-tabs{display:flex;gap:6px;}
+.pie-hdr{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.pie-title{font-size:19px;font-weight:700;white-space:nowrap;}
+.pie-tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
 .pie-tab{padding:5px 13px;border-radius:20px;font-size:16px;font-weight:700;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);}
 .pie-tab.on{background:var(--blue);color:#fff;border-color:var(--blue);}
 .pie-tab.twd.on{background:var(--purple);border-color:var(--purple);}
-.pie-body{display:flex;align-items:center;gap:12px;}
-.pie-legend{flex:1;min-width:0;}
+/* 圓餅圖與圖例改成上下排：並排時圖例只剩 ~180px，分類名稱會被 ellipsis 吃掉（🎡..），
+   而使用者要看的正是「哪一類花了這些錢」。上下排讓名稱拿到整行寬度。 */
+.pie-body{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.pie-legend{width:100%;min-width:0;}
 .pie-leg-row{display:flex;align-items:center;gap:7px;padding:5px 0;font-size:18px;}
 .pie-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
-.pie-cat{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
+.pie-cat{flex:1;min-width:0;font-weight:600;word-break:break-word;}
 .pie-amt{font-size:18px;font-weight:700;text-align:right;white-space:nowrap;}
 .pie-pct{font-size:16px;color:var(--muted);width:42px;text-align:right;flex-shrink:0;}
 .pie-rate{font-size:15px;color:var(--muted);text-align:center;margin-top:8px;}
@@ -245,10 +247,11 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .closed-tag{display:inline-flex;align-items:center;gap:3px;background:#D9534F;color:#fff;border-radius:7px;padding:2px 8px;font-size:14px;font-weight:700;margin-left:7px;vertical-align:middle;}
 .closed-note{font-size:15px;color:#B5504C;margin-top:2px;}
 /* ── 行程之間的距離 ── */
-.leg{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 16px 8px 44px;border-bottom:1px solid var(--border);background:#FBFAF8;}
-.leg-d{font-size:15px;color:var(--muted);font-weight:600;}
+.leg{display:flex;align-items:center;gap:8px;padding:8px 16px 8px 44px;border-bottom:1px solid var(--border);background:#FBFAF8;}
+/* 距離文字吃掉剩餘寬度，兩顆按鈕才不會被擠到第二行（只有 icon，不放「開車/步行」字樣）*/
+.leg-d{font-size:15px;color:var(--muted);font-weight:600;flex:1;min-width:0;}
 .leg-d b{color:var(--text);font-weight:800;}
-.leg-b{background:#E8EFF3;color:var(--blue2);border-radius:9px;padding:5px 11px;font-size:15px;font-weight:700;text-decoration:none;white-space:nowrap;}
+.leg-b{background:#E8EFF3;color:var(--blue2);border-radius:9px;padding:5px 10px;font-size:18px;line-height:1.1;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;}
 /* ── 住宿專屬欄位 ── */
 .stay-ro{font-size:17px;font-weight:700;padding:11px 13px;background:var(--bg);border-radius:10px;}
 .map-hint{padding:13px 16px;background:#FBF7F3;border-bottom:1px solid var(--border);font-size:15px;color:var(--muted);line-height:1.6;}
@@ -256,6 +259,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .wchip{display:inline-flex;align-items:center;gap:2px;background:#D9E6EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:var(--blue2);}
 .schip{display:inline-flex;align-items:center;gap:2px;background:#EAF5EA;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:#1E7D32;}
 .cchip{display:inline-flex;align-items:center;gap:2px;background:#F5E7D6;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:#8A5A2B;}
+.kmchip{display:inline-flex;align-items:center;gap:2px;background:#EDEAF5;border-radius:20px;padding:3px 9px;font-size:15px;font-weight:700;color:#5B4E7D;}
 /* ── Acc sub-toggle ── */
 .acc-toggle{display:flex;background:var(--bg);border-radius:10px;padding:3px;gap:3px;margin-bottom:12px;}
 .acc-opt{flex:1;padding:8px 4px;text-align:center;border-radius:8px;cursor:pointer;font-size:15px;font-weight:600;color:var(--muted);transition:all .15s;}
@@ -278,8 +282,11 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .todo-item{padding:8px 2px;border-bottom:1px solid var(--border);font-size:19px;}
 .todo-item:last-child{border-bottom:none;}
 /* ── Lightbox ── */
-#m-lb{background:rgba(0,0,0,.88);align-items:center;justify-content:center;}
-#m-lb img{max-width:100%;max-height:90dvh;object-fit:contain;border-radius:8px;}
+/* touch-action:none 才收得到雙指手勢；沒有它瀏覽器會先把 pinch 當成整頁縮放吃掉 */
+#m-lb{background:rgba(0,0,0,.88);align-items:center;justify-content:center;overflow:hidden;touch-action:none;}
+#m-lb img{max-width:100%;max-height:90dvh;object-fit:contain;border-radius:8px;transform-origin:center center;will-change:transform;user-select:none;-webkit-user-drag:none;}
+.lb-x{position:absolute;top:14px;right:14px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.9);color:#1A1A2E;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;}
+.lb-hint{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:rgba(255,255,255,.75);font-size:15px;pointer-events:none;}
 </style>
 </head>
 <body>
@@ -335,7 +342,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0807d</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0810a</span></div>
     </div>
   </div>
   <div class="content">
@@ -1427,7 +1434,7 @@ function bootApp(){
   document.getElementById('c_url').value=CFG.url||'';
   document.getElementById('c_apikey').value=CFG.apiKey||'';
   if(CFG.title)applyTripCfg(CFG); // 已經知道設定就先畫，否則等 /config 進來
-  renderCatGrid();renderACGrid();initDnD();initActDnD();
+  renderCatGrid();renderACGrid();initDnD();initActDnD();initLightbox();
   // 匯率改成 lazy fetch：由 _fbListen() 收到 expenses 資料後依實際用到的幣別呼叫
   // 先用上次的快照把畫面畫出來，Firebase 連上後再覆蓋。沒訊號時這就是唯一的資料來源。
   const snap=snapLoad();
@@ -2014,7 +2021,9 @@ function renderSched(sched){
       return`<span class="schip">${ico} ${sym}${Math.round(tot).toLocaleString('zh-TW')} ${cur}</span>`;
     }).join('');
     const cChip=day.city?`<span class="cchip">📍 ${esc(day.city.q||day.city.label||'')}</span>`:'';
-    const metaRow=(cChip||wChip||sChips)?`<div class="day-meta">${cChip}${wChip}${sChips}</div>`:'';
+    const dk=calcDayKm(day,did);
+    const kChip=dk.km>0?`<span class="kmchip">🚗 ${dk.approx?'約 ':''}${dk.km.toFixed(dk.km<10?1:0)} 公里</span>`:'';
+    const metaRow=(cChip||wChip||sChips||kChip)?`<div class="day-meta">${cChip}${wChip}${kChip}${sChips}</div>`:'';
     return `<div class="day-card" id="dc-${did}">
       <div class="day-hdr" onclick="toggleDay('${did}')">
         <div class="day-info">
@@ -2123,11 +2132,24 @@ function legHtml(a,b,label='到下一站'){
   const txt=d?`${label} <b>${d.km} 公里</b> · 約 ${d.min} 分`
             :`${label} 直線 <b>${haversine(a.lat,a.lng,b.lat,b.lng).toFixed(1)} 公里</b>`;
   const dir=m=>`https://www.google.com/maps/dir/?api=1&origin=${a.lat},${a.lng}&destination=${b.lat},${b.lng}&travelmode=${m}`;
+  // 只留 icon：加上「開車 / 步行」四個字會把按鈕擠到第二行，一天十幾段就多十幾行
   return `<div class="leg">
     <span class="leg-d">↳ ${txt}</span>
-    <a class="leg-b" href="${dir('driving')}" target="_blank">🚗 開車</a>
-    <a class="leg-b" href="${dir('walking')}" target="_blank">🚶 步行</a>
+    <a class="leg-b" href="${dir('driving')}" target="_blank" title="開車路線" aria-label="開車路線">🚗</a>
+    <a class="leg-b" href="${dir('walking')}" target="_blank" title="步行路線" aria-label="步行路線">🚶</a>
   </div>`;
+}
+// 一天要開多遠。dayGeoActs 已經含「今晚落腳處」，所以相鄰配對加總 = 日卡上所有距離列的總和。
+// 只要有一段沒有 OSRM 快取（退回直線）就標「約」，免得把低估的數字讀成實際里程。
+function calcDayKm(day,did){
+  const pts=dayGeoActs(day,did);
+  let km=0,approx=false;
+  for(let i=0;i+1<pts.length;i++){
+    const d=lastLegs?.[legKey(pts[i],pts[i+1])];
+    if(d&&d.km!=null)km+=+d.km;
+    else{km+=haversine(pts[i].lat,pts[i].lng,pts[i+1].lat,pts[i+1].lng);approx=true;}
+  }
+  return {km,approx};
 }
 // 連住數晚時，「當天最後一站 → 今晚住哪」也是要開的一段路，但住宿活動記在入住日、
 // 不在這天的清單裡，上面的相鄰配對配不到它，得另外補這一列。
@@ -2553,11 +2575,12 @@ function renderPie(exps){
   const result=drawDonut('pieCanvas',exps,curPieCur);
   if(!result)return;
   const{entries,total}=result;
-  const sym=curSym(curPieCur),dp=0;
+  const sym=curSym(curPieCur);
   document.getElementById('pieLegend').innerHTML=entries.map(([cat,val])=>{
     const c=CATM[cat]||CATM.other;
     const pct=((val/total)*100).toFixed(0);
-    const dispVal=(curPieCur==='combined')?val.toFixed(0):val.toFixed(dp);
+    // 千分位跟成員卡片一致；六位數的金額沒有逗號很難一眼讀出位數
+    const dispVal=Math.round(val).toLocaleString('zh-TW');
     return`<div class="pie-leg-row">
       <div class="pie-dot" style="background:${PCOL[cat]||'#94A3B8'}"></div>
       <span class="pie-cat">${c.ico} ${c.name}</span>
@@ -2664,8 +2687,10 @@ function renderNotes(notes){
 function renderNoteCard(nid,n){
   if(n.type==='note'){
     // 換行要留著（CSS 有 white-space:pre-wrap），截斷長度也放寬，不然多行筆記第二行就被切掉
+    // 網址要能直接點（記事本放的是即時路況、天氣那類到現場才會用的連結）。
+    // autolink 內部已經 esc 過，這裡不能再 esc 一次，否則標籤會被跳脫成字面文字。
     const raw=n.content||'';
-    const preview=esc(raw.slice(0,300))+(raw.length>300?'…':'');
+    const preview=autolink(raw.slice(0,300))+(raw.length>300?'…':'');
     const thumbs=(n.images||[]).map(b=>`<img class="act-img-thumb" src="${b}" onclick="openLightbox('${b}')">`).join('');
     return`<div class="card note-card">
       <div class="note-hdr">
@@ -2817,7 +2842,7 @@ function removeActImg(i){curActImages.splice(i,1);renderActImgPreviews();}
 function autolink(text){
   if(!text)return'';
   return text.split(/(https?:\/\/\S+)/).map((part,i)=>{
-    if(i%2===1)return`<a href="${part}" target="_blank" rel="noopener" style="color:var(--blue);word-break:break-all">${esc(part)}</a>`;
+    if(i%2===1)return`<a href="${esc(part)}" target="_blank" rel="noopener" style="color:var(--blue);word-break:break-all">${esc(part)}</a>`;
     return esc(part);
   }).join('');
 }
@@ -2835,8 +2860,81 @@ function compressImage(file){
     img.src=url;
   });
 }
+// ─── 圖片放大檢視 ───────────────────────────────────
+// 行程／記事的縮圖點開後要能放大看細節（招牌、菜單、票券上的小字）。#m-lb 是蓋滿全螢幕的
+// 固定定位遮罩，瀏覽器原生的雙指縮放進不來，所以自己接 touch 事件做 pinch + 拖曳。
+// 不做雙擊縮放：遮罩本身要「點一下關閉」，雙擊的第一下會先觸發 click 把視窗關掉。
+let _lbS=1,_lbX=0,_lbY=0,_lbMoved=false;
+const LB_MAX=6;
+// 限制拖曳範圍：不夾住的話可以把圖整個拖出畫面，而放大狀態下點空白又不關閉，
+// 使用者會以為 app 當掉（右上角的 ✕ 不受 transform 影響，是最後的退路）
+function _lbClamp(){
+  const im=document.getElementById('lb-img');
+  if(!im||!im.clientWidth)return;
+  const mx=Math.max(0,(im.clientWidth*_lbS-window.innerWidth)/2);
+  const my=Math.max(0,(im.clientHeight*_lbS-window.innerHeight)/2);
+  _lbX=Math.min(mx,Math.max(-mx,_lbX));
+  _lbY=Math.min(my,Math.max(-my,_lbY));
+}
+function _lbApply(){
+  const im=document.getElementById('lb-img');
+  if(!im)return;
+  _lbClamp();
+  im.style.transform=`translate(${_lbX}px,${_lbY}px) scale(${_lbS})`;
+  const h=document.getElementById('lb-hint');
+  if(h)h.style.opacity=_lbS>1?'0':'1';
+}
+function _lbReset(){_lbS=1;_lbX=0;_lbY=0;_lbMoved=false;_lbApply();}
+// 縮回 1x 時把位移歸零，否則放大拖走之後縮小回來，圖會停在畫面外
+function _lbZoom(s,x,y){
+  _lbS=Math.min(LB_MAX,Math.max(1,s));
+  if(_lbS<=1){_lbS=1;_lbX=0;_lbY=0;}else{_lbX=x;_lbY=y;}
+  _lbApply();
+}
+function lbTap(){
+  // 放大中或剛剛拖／縮過就不關；否則手指一放開圖就消失，等於沒辦法看
+  if(_lbS>1||_lbMoved){_lbMoved=false;return;}
+  closeM('m-lb');
+}
+function initLightbox(){
+  const ov=document.getElementById('m-lb');
+  if(!ov)return;
+  let mode='',d0=0,s0=1,x0=0,y0=0,px=0,py=0;
+  const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  ov.addEventListener('touchstart',e=>{
+    if(e.touches.length===2){
+      mode='pinch';d0=dist(e.touches)||1;s0=_lbS;x0=_lbX;y0=_lbY;_lbMoved=true;
+      e.preventDefault();
+    }else if(e.touches.length===1){
+      mode=_lbS>1?'pan':'';
+      px=e.touches[0].clientX;py=e.touches[0].clientY;x0=_lbX;y0=_lbY;
+      if(!mode)_lbMoved=false;
+    }
+  },{passive:false});
+  ov.addEventListener('touchmove',e=>{
+    if(mode==='pinch'&&e.touches.length===2){
+      e.preventDefault();
+      _lbZoom(s0*dist(e.touches)/d0,x0,y0);
+    }else if(mode==='pan'&&e.touches.length===1){
+      e.preventDefault();
+      const dx=e.touches[0].clientX-px,dy=e.touches[0].clientY-py;
+      _lbX=x0+dx;_lbY=y0+dy;
+      if(Math.abs(dx)>6||Math.abs(dy)>6)_lbMoved=true;
+      _lbApply();
+    }
+  },{passive:false});
+  ov.addEventListener('touchend',()=>{mode='';},{passive:true});
+  ov.addEventListener('touchcancel',()=>{mode='';},{passive:true});
+  // 桌機：滾輪縮放，方便在電腦上核對圖片
+  ov.addEventListener('wheel',e=>{
+    e.preventDefault();
+    _lbMoved=true;
+    _lbZoom(_lbS*(e.deltaY<0?1.12:1/1.12),_lbX,_lbY);
+  },{passive:false});
+}
 function openLightbox(src){
   document.getElementById('lb-img').src=src;
+  _lbReset();
   openM('m-lb');
 }
 
@@ -2992,8 +3090,10 @@ window._selftest=_selftest;
 </script>
 
 <!-- Lightbox -->
-<div class="ov" id="m-lb" onclick="closeM('m-lb')">
+<div class="ov" id="m-lb" onclick="lbTap(event)">
+  <button class="lb-x" onclick="event.stopPropagation();closeM('m-lb')">✕</button>
   <img id="lb-img" src="" alt="">
+  <div class="lb-hint" id="lb-hint">兩指撥開可放大 · 放大後可拖曳</div>
 </div>
 
 <!-- Note modal -->
