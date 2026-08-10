@@ -279,6 +279,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .note-preview{font-size:19px;color:var(--muted);line-height:1.6;margin-bottom:6px;white-space:pre-wrap;word-break:break-word;}
 .note-thumbs{display:flex;gap:6px;flex-wrap:wrap;}
 /* ── Todo items ── */
+.todo-e-row{display:flex;align-items:center;gap:6px;padding:5px 0;}
+.todo-e-inp{flex:1;min-width:0;}
 .todo-items{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
 .todo-item{padding:8px 2px;border-bottom:1px solid var(--border);font-size:19px;}
 .todo-item:last-child{border-bottom:none;}
@@ -343,7 +345,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0810b</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0810c</span></div>
     </div>
   </div>
   <div class="content">
@@ -2736,14 +2738,18 @@ function delNote(nid){
 
 // ─── Todo CRUD ───────────────────────────────────────
 let curTodoItems=[];
+// 已經打上去的項目要能直接改字。原本是唯讀的 <span>，打錯只能刪掉重打一次。
+// 打字時「不」重畫這一區：innerHTML 重建會把正在輸入的 input 換掉，游標與注音組字都會被吃掉。
 function renderTodoItemsEdit(){
   const el=document.getElementById('todo-items-edit');if(!el)return;
   el.innerHTML=curTodoItems.map((item,i)=>`
-    <div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border)">
-      <span style="flex:1;font-size:18px">${esc(item.text)}</span>
-      <button class="ib" onclick="removeTodoItem(${i})">✕</button>
+    <div class="todo-e-row">
+      <input class="inp todo-e-inp" value="${esc(item.text)}" oninput="editTodoItem(${i},this.value)"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" aria-label="待辦項目 ${i+1}">
+      <button class="ib" onclick="removeTodoItem(${i})" aria-label="刪除這個項目">✕</button>
     </div>`).join('');
 }
+function editTodoItem(i,v){if(curTodoItems[i])curTodoItems[i].text=v;}
 function addTodoItem(){
   const inp=document.getElementById('t_new_item');
   const text=inp.value.trim();if(!text)return;
@@ -2771,10 +2777,12 @@ function openTodoEdit(nid){
 function saveTodo(){
   const nid=document.getElementById('mt-id').value||('n'+uid());
   const title=document.getElementById('t_title').value.trim();
-  if(!curTodoItems.length){toast('請新增至少一個項目');return;}
+  // 項目可以就地編輯之後，內容有可能被清成空字串；空項目存進去只會變成一列點不到的空白
+  const items=curTodoItems.map(x=>({...x,text:(x.text||'').trim()})).filter(x=>x.text);
+  if(!items.length){toast('請新增至少一個項目');return;}
   const now=new Date().toISOString();
   const existing=lastNotes[nid];
-  const obj={type:'todo',title,items:[...curTodoItems],
+  const obj={type:'todo',title,items,
     createdAt:existing?.createdAt||now,updatedAt:now};
   DB.ref('/notes/'+nid).set(obj);
   closeM('m-todo');toast('✅ 已儲存');
