@@ -106,7 +106,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .act-body{flex:1;min-width:0;}
 .act-time{font-size:16px;color:var(--muted);font-weight:700;}
 .act-name{font-size:17px;font-weight:600;margin-top:1px;}
-.act-loc a{font-size:14px;color:var(--blue);margin-top:2px;display:flex;align-items:center;gap:3px;text-decoration:none;}
+/* 地點連結：爸媽老花，14px 的淺橘在戶外強光下看不清楚。放大到 17px、改深棕，並補回底線標示可點 */
+.act-loc a{font-size:17px;font-weight:600;color:#6B4A2F;margin-top:3px;display:flex;align-items:center;gap:4px;text-decoration:underline;text-underline-offset:2px;}
 .act-note-t{font-size:16px;color:var(--muted);margin-top:2px;font-style:italic;white-space:pre-wrap;word-break:break-word;}
 .act-cost{font-size:17px;font-weight:700;color:var(--green);margin-top:4px;}
 .act-btns{display:flex;gap:4px;flex-shrink:0;}
