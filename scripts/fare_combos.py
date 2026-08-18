@@ -26,6 +26,15 @@ PHASE1 = {
 }
 
 
+# Phase 2：亞洲端與日期窗同 Phase 1，長程改為美西。
+# 使用者明確排除 SEA，只要 LAX 與 SFO。
+PHASE2 = {
+    "asia_in": ["ICN", "PUS"],
+    "asia_out": ["ICN", "PUS"],
+    "long_haul": ["LAX", "SFO"],
+    "windows": PHASE1["windows"],
+}
+
 def date_windows(start, end):
     """把起訖日展開成每日字串清單（含頭含尾）。"""
     d0 = date.fromisoformat(start)

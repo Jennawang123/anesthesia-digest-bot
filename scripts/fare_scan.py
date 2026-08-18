@@ -24,7 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from fare_combos import PHASE1, generate
+from fare_combos import PHASE1, PHASE2, generate
 from fare_store import LocalStore, push_firebase, read_db_url
 from fx_rate import fetch_krw_twd, to_twd
 from gf_parse import parse_row
@@ -287,6 +287,8 @@ def main():
     ap.add_argument("--once", action="store_true", help="只掃一組驗證環境")
     ap.add_argument("--phase1", action="store_true",
                     help="掃 Phase 1：韓國進出 × VIE/MXP，864 組")
+    ap.add_argument("--phase2", action="store_true",
+                    help="掃 Phase 2：韓國進出 × LAX/SFO，864 組")
     ap.add_argument("--delay", type=float, default=3.0, help="每組間隔秒數")
     ap.add_argument("--concurrency", type=int, default=2, help="並行數")
     ap.add_argument("--detail", type=int, metavar="N",
@@ -308,8 +310,8 @@ def main():
                                delay=args.delay))
         return
 
-    if args.phase1:
-        combos = generate(PHASE1)
+    if args.phase1 or args.phase2:
+        combos = generate(PHASE2 if args.phase2 else PHASE1)
         store = LocalStore(STORE_PATH)
         db_url = read_db_url()
         print(f"結果檔：{STORE_PATH}")

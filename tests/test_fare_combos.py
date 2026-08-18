@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from fare_combos import combo_id, date_windows, generate  # noqa: E402
+from fare_combos import PHASE1, PHASE2, combo_id, date_windows, generate  # noqa: E402
 
 PHASE1 = {
     "asia_in": ["ICN", "PUS"],
@@ -53,3 +53,24 @@ def test_combo_id穩定且唯一():
     assert len(set(ids)) == len(ids)
     # 同樣輸入必須得到同樣 id，否則重複掃描會產生重複記錄
     assert combo_id(combos[0]["legs"]) == combos[0]["id"]
+
+
+def test_phase2為美西且不含SEA():
+    assert PHASE2["long_haul"] == ["LAX", "SFO"]
+    assert "SEA" not in PHASE2["long_haul"]
+
+
+def test_phase2總組合數為864():
+    # 城市對 2×2=4，目的地 2，日期 108 → 864
+    assert len(generate(PHASE2)) == 864
+
+
+def test_phase2與phase1的組合id不重疊():
+    # 兩階段結果存在同一個檔案，id 不可碰撞
+    ids1 = {c["id"] for c in generate(PHASE1)}
+    ids2 = {c["id"] for c in generate(PHASE2)}
+    assert not (ids1 & ids2)
+
+
+def test_phase2日期窗與phase1相同():
+    assert PHASE2["windows"] == PHASE1["windows"]
