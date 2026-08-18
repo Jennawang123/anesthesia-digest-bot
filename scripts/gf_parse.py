@@ -51,3 +51,61 @@ def parse_clock(text):
         hour = 0
 
     return f"{hour:02d}:{minute}", int(plus_days or 0)
+
+
+# 全形 ￦ (U+FFE6)。半形 ₩ (U+20A9) 抓不到 Google Flights 的價格。
+_PRICE_RE = re.compile(r"[￦₩]\s?([\d,]{4,})")
+_ROUTE_RE = re.compile(r"([A-Z]{3})[–\-—]([A-Z]{3})")
+_DURATION_RE = re.compile(r"(\d+\s*小時(?:\s*\d+\s*分鐘)?|\d+\s*分鐘)")
+# 轉機點：「1 小時 20 分鐘 BKK」的結尾機場代碼
+_VIA_RE = re.compile(r"分鐘\s+([A-Z]{3})")
+_CARRIER_RE = re.compile(r"(長榮航空|中華航空|大韓航空|[一-鿿]{2,6}航空)")
+
+
+def parse_row(text):
+    """解析一列航班文字，回傳 dict；非航班列回傳 None。
+
+    回傳欄位：depart, arrive, arrive_plus_days, carrier, duration,
+    from, to, nonstop, via, price
+    """
+    route = _ROUTE_RE.search(text)
+    price = _PRICE_RE.search(text)
+    if not route or not price:
+        return None
+
+    clocks = _CLOCK_RE.findall(text)
+    if len(clocks) < 2:
+        return None
+    depart = parse_clock(_rebuild_clock(clocks[0]))
+    arrive = parse_clock(_rebuild_clock(clocks[1]))
+    if not depart or not arrive:
+        return None
+
+    nonstop = "直達" in text
+    via = None
+    if not nonstop:
+        m = _VIA_RE.search(text)
+        via = m.group(1) if m else None
+
+    carrier = _CARRIER_RE.search(text)
+    duration = _DURATION_RE.search(text)
+
+    return {
+        "depart": depart[0],
+        "arrive": arrive[0],
+        "arrive_plus_days": arrive[1],
+        "carrier": carrier.group(1) if carrier else None,
+        "duration": duration.group(1).strip() if duration else None,
+        "from": route.group(1),
+        "to": route.group(2),
+        "nonstop": nonstop,
+        "via": via,
+        "price": int(price.group(1).replace(",", "")),
+    }
+
+
+def _rebuild_clock(groups):
+    """把 _CLOCK_RE.findall 的 tuple 還原成可再解析的字串。"""
+    period, hour, minute, plus_days = groups
+    s = f"{period}{hour}:{minute}"
+    return s + f"+{plus_days}" if plus_days else s
