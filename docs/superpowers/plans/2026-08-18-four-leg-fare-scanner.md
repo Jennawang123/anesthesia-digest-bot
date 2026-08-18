@@ -1489,6 +1489,8 @@ git commit -m "feat(fare): 詳掃補四段時刻與直飛狀態
   .links{margin-top:10px;display:flex;gap:10px}
   .links a{font-size:14px;color:var(--accent);text-decoration:none}
   .empty{text-align:center;color:var(--muted);padding:40px 0}
+  .filebtn{font-size:15px;padding:8px 12px;border:1px solid var(--line);
+        border-radius:8px;background:var(--card);cursor:pointer}
 </style>
 
 <h1>四腿票比價</h1>
@@ -1504,6 +1506,9 @@ git commit -m "feat(fare): 詳掃補四段時刻與直飛狀態
     <option value="">直飛不限</option>
     <option value="nonstop">只看四段全直飛</option>
   </select>
+  <label class="filebtn">載入本機檔案
+    <input type="file" id="loadFile" accept=".json" hidden>
+  </label>
   <button id="setup">設定資料庫</button>
 </div>
 
@@ -1523,12 +1528,37 @@ function askDb(){
 }
 document.getElementById("setup").onclick = askDb;
 
+// 掃描器把結果寫在 ~/four-leg-fares.json。用 file:// 開啟時瀏覽器
+// 不允許 fetch 本機檔案，所以改由使用者手動選檔載入。
+document.getElementById("loadFile").onchange = async (ev) => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  try{
+    const data = JSON.parse(await f.text());
+    RECORDS = Object.entries(data)
+      .map(([id, v]) => ({id, ...v}))
+      .filter(v => v.status === "ok" && v.priceKRW);
+    buildDestFilter();
+    render();
+  }catch(e){
+    document.getElementById("meta").textContent = "檔案讀取失敗：" + e.message;
+  }
+};
+
+function buildDestFilter(){
+  const sel = document.getElementById("filterDest");
+  const dests = [...new Set(RECORDS.map(r => r.legs[1].to))].sort();
+  sel.innerHTML = '<option value="">全部目的地</option>' +
+    dests.map(d => `<option value="${d}">${d}</option>`).join("");
+}
+
 async function load(){
   const base = dbUrl();
   if (!base){
     document.getElementById("meta").textContent = "尚未設定資料庫";
     document.getElementById("list").innerHTML =
-      '<div class="empty">請先點「設定資料庫」填入 Firebase 網址</div>';
+      '<div class="empty">點「載入本機檔案」選擇 ~/four-leg-fares.json<br>' +
+      '或點「設定資料庫」填入 Firebase 網址</div>';
     return;
   }
   try{
@@ -1537,6 +1567,7 @@ async function load(){
     RECORDS = Object.entries(data)
       .map(([id, v]) => ({id, ...v}))
       .filter(v => v.status === "ok" && v.priceKRW);
+    buildDestFilter();
     render();
   }catch(e){
     document.getElementById("meta").textContent = "讀取失敗：" + e.message;
@@ -1611,7 +1642,13 @@ load();
 - [ ] **Step 2: 在瀏覽器開啟確認畫面**
 
 Run: `open four-leg-fare.html`
-Expected: 顯示「尚未設定資料庫」與「設定資料庫」按鈕
+Expected: 顯示「尚未設定資料庫」，畫面提示可點「載入本機檔案」或「設定資料庫」
+
+- [ ] **Step 2b: 載入真實資料確認畫面**
+
+點「載入本機檔案」，選擇 `~/four-leg-fares.json`（掃描器已產生的真實結果）。
+Expected: 出現比價卡片，台幣為主、韓元小字並列，四段航線與直飛狀態正確顯示，
+最便宜的一組有綠色外框。快掃資料的第 2–4 段時刻顯示為淡灰的「時刻待補」。
 
 - [ ] **Step 3: Commit**
 
