@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-TW">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>四腿票比價</title>
+<style>
+  :root{--bg:#faf9f7;--card:#fff;--line:#e5e2dc;--ink:#2b2b2b;
+        --muted:#7a756c;--accent:#1a73e8;--best:#0b8043}
+  *{box-sizing:border-box}
+  body{margin:0;padding:16px;font-family:-apple-system,"PingFang TC",sans-serif;
+       background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:16px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  select,button,input{font-size:15px;padding:8px 12px;border:1px solid var(--line);
+         border-radius:8px;background:var(--card);color:var(--ink)}
+  button{cursor:pointer}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+        padding:14px 16px;margin-bottom:10px}
+  .card.best{border-color:var(--best);border-width:2px}
+  .price{font-size:22px;font-weight:700}
+  .price small{font-size:13px;color:var(--muted);font-weight:400;margin-left:8px}
+  .legs{margin-top:10px;display:grid;gap:6px}
+  .leg{display:grid;grid-template-columns:96px 1fr auto;gap:10px;
+       font-size:14px;align-items:center}
+  .leg .route{font-weight:600}
+  .leg .time{color:var(--muted)}
+  .leg .time.pending{opacity:.4;font-style:italic}
+  .tag{font-size:12px;padding:2px 8px;border-radius:12px;white-space:nowrap}
+  .tag.nonstop{background:#e6f4ea;color:var(--best)}
+  .tag.via{background:#fef7e0;color:#b06000}
+  .tag.unknown{background:#f1f3f4;color:var(--muted)}
+  .links{margin-top:10px;display:flex;gap:10px}
+  .links a{font-size:14px;color:var(--accent);text-decoration:none}
+  .empty{text-align:center;color:var(--muted);padding:40px 0}
+  .filebtn{font-size:15px;padding:8px 12px;border:1px solid var(--line);
+        border-radius:8px;background:var(--card);cursor:pointer}
+</style>
+
+<h1>四腿票比價</h1>
+<div class="sub" id="meta">載入中…</div>
+
+<div class="bar">
+  <select id="sort">
+    <option value="price">依價格（低→高）</option>
+    <option value="date">依出發日</option>
+  </select>
+  <select id="filterDest"><option value="">全部目的地</option></select>
+  <select id="filterStop">
+    <option value="">直飛不限</option>
+    <option value="nonstop">只看四段全直飛</option>
+  </select>
+  <label class="filebtn">載入本機檔案
+    <input type="file" id="loadFile" accept=".json" hidden>
+  </label>
+  <button id="setup">設定資料庫</button>
+</div>
+
+<div id="list"></div>
+
+<script>
+const LS_KEY = "fourLegFareDB";
+let RECORDS = [];
+
+function dbUrl(){ return localStorage.getItem(LS_KEY) || ""; }
+
+function askDb(){
+  const cur = dbUrl();
+  const v = prompt("Firebase Realtime Database 網址\n" +
+                   "例：https://xxx-default-rtdb.firebaseio.com", cur);
+  if (v !== null){ localStorage.setItem(LS_KEY, v.trim().replace(/\/$/,"")); load(); }
+}
+document.getElementById("setup").onclick = askDb;
+
+// 掃描器把結果寫在 ~/four-leg-fares.json。用 file:// 開啟時瀏覽器
+// 不允許 fetch 本機檔案，所以改由使用者手動選檔載入。
+document.getElementById("loadFile").onchange = async (ev) => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  try{
+    const data = JSON.parse(await f.text());
+    RECORDS = Object.entries(data)
+      .map(([id, v]) => ({id, ...v}))
+      .filter(v => v.status === "ok" && v.priceKRW);
+    buildDestFilter();
+    render();
+  }catch(e){
+    document.getElementById("meta").textContent = "檔案讀取失敗：" + e.message;
+  }
+};
+
+function buildDestFilter(){
+  const sel = document.getElementById("filterDest");
+  const dests = [...new Set(RECORDS.map(r => r.legs[1].to))].sort();
+  sel.innerHTML = '<option value="">全部目的地</option>' +
+    dests.map(d => `<option value="${d}">${d}</option>`).join("");
+}
+
+async function load(){
+  const base = dbUrl();
+  if (!base){
+    document.getElementById("meta").textContent = "尚未設定資料庫";
+    document.getElementById("list").innerHTML =
+      '<div class="empty">點「載入本機檔案」選擇 ~/four-leg-fares.json<br>' +
+      '或點「設定資料庫」填入 Firebase 網址</div>';
+    return;
+  }
+  try{
+    const r = await fetch(base + "/fares.json");
+    const data = await r.json() || {};
+    RECORDS = Object.entries(data)
+      .map(([id, v]) => ({id, ...v}))
+      .filter(v => v.status === "ok" && v.priceKRW);
+    buildDestFilter();
+    render();
+  }catch(e){
+    document.getElementById("meta").textContent = "讀取失敗：" + e.message;
+  }
+}
+
+function fmtTWD(n){ return n ? "NT$" + n.toLocaleString() : "—"; }
+function fmtKRW(n){ return "￦" + n.toLocaleString(); }
+
+function render(){
+  const sortBy = document.getElementById("sort").value;
+  const fDest = document.getElementById("filterDest").value;
+  const fStop = document.getElementById("filterStop").value;
+
+  let rows = RECORDS.slice();
+  if (fDest) rows = rows.filter(r => r.legs[1].to === fDest);
+  if (fStop === "nonstop") rows = rows.filter(r => r.allNonstop === true);
+
+  rows.sort((a,b) => sortBy === "price"
+    ? a.priceKRW - b.priceKRW
+    : a.legs[0].date.localeCompare(b.legs[0].date));
+
+  const cheapest = rows.length ? rows[0].priceKRW : null;
+  const fx = RECORDS.find(r => r.fxRate);
+  document.getElementById("meta").textContent =
+    `${rows.length} 組${fx ? `　匯率 ${fx.fxRate}（${fx.fxAt}）` : ""}`;
+
+  document.getElementById("list").innerHTML = rows.length
+    ? rows.map(r => card(r, r.priceKRW === cheapest)).join("")
+    : '<div class="empty">沒有符合條件的組合</div>';
+}
+
+function card(r, isBest){
+  const legs = r.legs.map(l => {
+    const known = l.depart && l.arrive;
+    const time = known
+      ? `${l.depart} – ${l.arrive}${l.arrivePlusDays ? "<sup>+" + l.arrivePlusDays + "</sup>" : ""}`
+      : "時刻待補";
+    let tag;
+    if (l.nonstop === true) tag = '<span class="tag nonstop">直飛</span>';
+    else if (l.nonstop === false) tag = `<span class="tag via">經 ${l.via || "轉機"}</span>`;
+    else tag = '<span class="tag unknown">未知</span>';
+    return `<div class="leg">
+      <span class="route">${l.from}→${l.to}</span>
+      <span class="time${known ? "" : " pending"}">${l.date}　${time}</span>
+      ${tag}</div>`;
+  }).join("");
+
+  return `<div class="card${isBest ? " best" : ""}">
+    <div class="price">${fmtTWD(r.priceTWD)}<small>${fmtKRW(r.priceKRW)}</small></div>
+    <div class="legs">${legs}</div>
+    <div class="links">
+      <a href="${gfLink(r)}" target="_blank" rel="noopener">Google Flights 複查</a>
+      <a href="https://www.evaair.com/zh-tw/index.html" target="_blank" rel="noopener">長榮訂票</a>
+    </div>
+  </div>`;
+}
+
+function gfLink(r){
+  // 掃描器已存過 tfs 時直接用；否則退回搜尋首頁
+  return r.url || "https://www.google.com/travel/flights";
+}
+
+document.getElementById("sort").onchange = render;
+document.getElementById("filterDest").onchange = render;
+document.getElementById("filterStop").onchange = render;
+load();
+</script>
+</html>
