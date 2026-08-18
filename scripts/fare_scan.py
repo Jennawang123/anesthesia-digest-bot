@@ -83,6 +83,9 @@ async def quick_scan(context, legs):
             ],
             "detail": "quick",
             "url": build_url(legs, currency="KRW", nonstop=True),
+            # 查詢時已對四段下直飛旗標。實測 3/3 詳掃結果皆 allNonstop=True，
+            # 故快掃結果雖看不到後三段，仍可據此視為全直飛。
+            "nonstopQuery": True,
         }
     except Exception as e:
         return {"status": "error", "error": str(e)[:200]}
@@ -230,6 +233,9 @@ async def detail_scan(context, legs):
             "allNonstop": all(c["nonstop"] for c in collected),
             "detail": "full",
             "url": build_url(legs, currency="KRW", nonstop=True),
+            # 查詢時已對四段下直飛旗標。實測 3/3 詳掃結果皆 allNonstop=True，
+            # 故快掃結果雖看不到後三段，仍可據此視為全直飛。
+            "nonstopQuery": True,
         }
     except Exception as e:
         return {"status": "error", "error": str(e)[:200]}

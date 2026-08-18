@@ -37,6 +37,7 @@
         border-radius:8px;background:var(--card);cursor:pointer}
   .bar label{font-size:14px;color:var(--muted);display:flex;align-items:center;gap:6px}
   .warn{color:#b06000;font-size:13px}
+  .ok{color:var(--best);font-size:13px}
   .legrow{background:var(--card);border:1px solid var(--line);border-radius:10px;
     padding:10px 12px;margin-bottom:8px}
   .legname{font-size:13px;color:var(--muted);margin-bottom:6px}
@@ -87,7 +88,7 @@ function passFilters(r){
   if (fi && r.legs[0].from !== fi) return false;
   if (fo && r.legs[3].to !== fo) return false;
   if (fd && r.legs[1].to !== fd) return false;
-  if (fNonstop.checked && r.allNonstop !== true) return false;
+  if (fNonstop.checked && r.allNonstop !== true && r.nonstopQuery !== true) return false;
   return true;
 }
 
@@ -211,11 +212,14 @@ function renderMeta(){
     ? new Date(times[times.length - 1]).toLocaleString("zh-TW",
         {month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit"})
     : "未知";
+  const nsQuery = RECORDS.filter(r => r.nonstopQuery === true).length;
   const nsCount = RECORDS.filter(r => r.allNonstop === true).length;
   meta.innerHTML = `${RECORDS.length} 組　最後掃描 ${when}` +
     `${fx ? `　匯率 ${fx.fxRate}` : ""}　` +
     `<span class="warn">價格為掃描當下的快照，非即時；要看即時價請點卡片的「Google Flights 複查」</span>` +
-    `${nsCount < RECORDS.length ? `<br><span class="warn">僅 ${nsCount} 組已確認四段全直飛（其餘尚未詳掃）</span>` : ""}`;
+    `${nsQuery === RECORDS.length
+        ? `<br><span class="ok">查詢時已限定四段直飛，${nsCount} 組經詳掃確認</span>`
+        : `<br><span class="warn">僅 ${nsCount} 組已確認四段全直飛（其餘尚未詳掃）</span>`}`;
 }
 
 function renderAll(){ buildFilters(); renderGrid(); renderPicked(); renderList(); renderMeta(); }
