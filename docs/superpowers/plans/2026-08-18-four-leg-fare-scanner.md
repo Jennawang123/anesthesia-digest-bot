@@ -2167,6 +2167,417 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ---
 
+## Task 15: Phase 2 加入美西 LAX／SFO
+
+**Files:**
+- Modify: `scripts/fare_combos.py`
+- Modify: `scripts/fare_scan.py`
+- Modify: `tests/test_fare_combos.py`
+
+使用者指定加入美西，但**明確排除 SEA**（只要 LAX 與 SFO）。亞洲端與日期窗沿用 Phase 1。
+
+- [ ] **Step 1: 寫失敗測試**
+
+在 `tests/test_fare_combos.py` 檔尾追加（並把最上方 import 改為
+`from fare_combos import PHASE1, PHASE2, combo_id, date_windows, generate`）：
+
+```python
+def test_phase2為美西且不含SEA():
+    assert PHASE2["long_haul"] == ["LAX", "SFO"]
+    assert "SEA" not in PHASE2["long_haul"]
+
+
+def test_phase2總組合數為864():
+    # 城市對 2×2=4，目的地 2，日期 108 → 864
+    assert len(generate(PHASE2)) == 864
+
+
+def test_phase2與phase1的組合id不重疊():
+    # 兩階段結果存在同一個檔案，id 不可碰撞
+    ids1 = {c["id"] for c in generate(PHASE1)}
+    ids2 = {c["id"] for c in generate(PHASE2)}
+    assert not (ids1 & ids2)
+
+
+def test_phase2日期窗與phase1相同():
+    assert PHASE2["windows"] == PHASE1["windows"]
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_fare_combos.py -v`
+Expected: FAIL — `ImportError: cannot import name 'PHASE2'`
+
+- [ ] **Step 3: 實作**
+
+在 `scripts/fare_combos.py` 的 `PHASE1` 定義之後追加：
+
+```python
+# Phase 2：亞洲端與日期窗同 Phase 1，長程改為美西。
+# 使用者明確排除 SEA，只要 LAX 與 SFO。
+PHASE2 = {
+    "asia_in": ["ICN", "PUS"],
+    "asia_out": ["ICN", "PUS"],
+    "long_haul": ["LAX", "SFO"],
+    "windows": PHASE1["windows"],
+}
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_fare_combos.py -v`
+Expected: PASS，10 passed（原 6 個 + 新增 4 個）
+
+- [ ] **Step 5: 掃描器加 --phase2 入口**
+
+在 `scripts/fare_scan.py` 頂部的 import 改為：
+
+```python
+from fare_combos import PHASE1, PHASE2, generate
+```
+
+在 `main()` 的 `--phase1` 參數定義之後追加：
+
+```python
+    ap.add_argument("--phase2", action="store_true",
+                    help="掃 Phase 2：韓國進出 × LAX/SFO，864 組")
+```
+
+把 `if args.phase1:` 那一行改為同時處理兩個階段：
+
+```python
+    if args.phase1 or args.phase2:
+        combos = generate(PHASE2 if args.phase2 else PHASE1)
+```
+
+其餘區塊內容不變（`store`、`db_url`、匯率、`scan_batch` 呼叫都照原樣）。
+
+- [ ] **Step 6: 驗證入口可用**
+
+Run: `python3 -u scripts/fare_scan.py --phase2 --concurrency 1 --delay 3` 並在約 20 秒後 Ctrl-C
+Expected: 印出「待掃 864 / 共 864 組」並開始掃描（Phase 1 的結果不會被誤認為已完成，因為 id 不重疊）
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add scripts/fare_combos.py scripts/fare_scan.py tests/test_fare_combos.py
+git commit -m "feat(fare): Phase 2 加入美西 LAX/SFO
+
+亞洲端與日期窗沿用 Phase 1。依使用者要求排除 SEA。
+測試確認兩階段的 combo_id 不重疊，可共存於同一結果檔。
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+```
+
+---
+
+## Task 16: 每日重掃前 N 組並累積價格歷史
+
+**Files:**
+- Modify: `scripts/fare_store.py`
+- Modify: `scripts/fare_scan.py`
+- Modify: `four-leg-fare.html`
+- Create: `~/Library/LaunchAgents/com.jenna.farerefresh.plist`（不進版控）
+- Test: `tests/test_fare_store.py`
+
+全部掃完後，只有少數組合值得持續追蹤。每天重掃最便宜的前 N 組（預設 50），
+把舊價格推入歷史，就能看出目前這個價是相對高點還是低點。
+
+全量重掃 864 組要 1–2 小時，前 50 組只需約 5 分鐘，適合每日排程。
+
+- [ ] **Step 1: 寫失敗測試**
+
+在 `tests/test_fare_store.py` 檔尾追加（並把 import 改為 `from fare_store import LocalStore`，若已是則不動）：
+
+```python
+def test_更新時把舊價格推入歷史(tmp_path):
+    s = LocalStore(tmp_path / "f.json")
+    s.put("a", {"status": "ok", "priceKRW": 100, "priceTWD": 2,
+                "scannedAt": "2026-08-18T00:00:00+00:00"})
+    s.put_with_history("a", {"status": "ok", "priceKRW": 120, "priceTWD": 3,
+                             "scannedAt": "2026-08-19T00:00:00+00:00"})
+    rec = s.get("a")
+    assert rec["priceKRW"] == 120                      # 現值是新的
+    assert len(rec["history"]) == 1                    # 舊值進歷史
+    assert rec["history"][0]["priceKRW"] == 100
+    assert rec["history"][0]["scannedAt"] == "2026-08-18T00:00:00+00:00"
+
+
+def test_歷史會持續累積(tmp_path):
+    s = LocalStore(tmp_path / "f.json")
+    s.put("a", {"status": "ok", "priceKRW": 100})
+    for p in (110, 120, 130):
+        s.put_with_history("a", {"status": "ok", "priceKRW": p})
+    assert [h["priceKRW"] for h in s.get("a")["history"]] == [100, 110, 120]
+
+
+def test_歷史最多保留30筆(tmp_path):
+    s = LocalStore(tmp_path / "f.json")
+    s.put("a", {"status": "ok", "priceKRW": 0})
+    for p in range(1, 40):
+        s.put_with_history("a", {"status": "ok", "priceKRW": p})
+    assert len(s.get("a")["history"]) == 30
+
+
+def test_首次寫入不產生空歷史(tmp_path):
+    s = LocalStore(tmp_path / "f.json")
+    s.put_with_history("a", {"status": "ok", "priceKRW": 100})
+    assert "history" not in s.get("a")
+
+
+def test_查無票時不汙染歷史(tmp_path):
+    # 某天暫時查不到票，不該把「無價格」寫進歷史
+    s = LocalStore(tmp_path / "f.json")
+    s.put("a", {"status": "ok", "priceKRW": 100})
+    s.put_with_history("a", {"status": "no_result"})
+    assert s.get("a")["priceKRW"] == 100      # 保留最後已知價格
+    assert s.get("a")["status"] == "ok"
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_fare_store.py -v`
+Expected: FAIL — `AttributeError: 'LocalStore' object has no attribute 'put_with_history'`
+
+- [ ] **Step 3: 實作歷史累積**
+
+在 `scripts/fare_store.py` 的 `LocalStore` 類別內、`put()` 之後追加：
+
+```python
+    HISTORY_MAX = 30
+
+    def put_with_history(self, combo_id, record):
+        """更新記錄並把舊價格推入 history。
+
+        重掃時用這個而非 put()，才能累積出價格趨勢。
+
+        若新結果沒有價格（例如當天暫時查無票），保留原記錄不動——
+        否則一次查詢失敗就會把已知的價格洗掉。
+        """
+        old = self.data.get(combo_id)
+        if not record.get("priceKRW"):
+            if old:
+                return          # 保留最後已知的價格
+            self.put(combo_id, record)
+            return
+
+        if old and old.get("priceKRW"):
+            hist = list(old.get("history") or [])
+            hist.append({
+                "priceKRW": old["priceKRW"],
+                "priceTWD": old.get("priceTWD"),
+                "scannedAt": old.get("scannedAt"),
+            })
+            record["history"] = hist[-self.HISTORY_MAX:]
+        self.put(combo_id, record)
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_fare_store.py -v`
+Expected: PASS，10 passed（原 5 個 + 新增 5 個）
+
+- [ ] **Step 5: 掃描器加 --refresh N**
+
+在 `scripts/fare_scan.py` 的 `def main():` 之前追加：
+
+```python
+async def run_refresh(top_n, store, db_url, rate, fx_at,
+                      delay=3.0, concurrency=2):
+    """重掃最便宜的前 N 組，累積價格歷史。供每日排程使用。"""
+    from playwright.async_api import async_playwright
+
+    ok = store.all_ok()
+    targets = sorted(ok.items(), key=lambda kv: kv[1]["priceKRW"])[:top_n]
+    print(f"重掃最便宜的 {len(targets)} 組")
+    if not targets:
+        print("尚無資料可重掃，請先執行 --phase1 / --phase2")
+        return
+
+    sem = asyncio.Semaphore(concurrency)
+    stats = {"done": 0, "up": 0, "down": 0, "same": 0, "fail": 0}
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        ctx = await browser.new_context(
+            locale="zh-TW", user_agent=UA,
+            viewport={"width": 1600, "height": 1400})
+
+        async def worker(cid, rec):
+            legs = [(l["date"], l["from"], l["to"]) for l in rec["legs"]]
+            old_price = rec["priceKRW"]
+            async with sem:
+                result = await quick_scan(ctx, legs)
+                await asyncio.sleep(delay)
+            if result["status"] == "ok":
+                result["priceTWD"] = to_twd(result["priceKRW"], rate)
+                result["fxRate"] = rate
+                result["fxAt"] = fx_at
+                diff = result["priceKRW"] - old_price
+                stats["up" if diff > 0 else "down" if diff < 0 else "same"] += 1
+            else:
+                stats["fail"] += 1
+            result["scannedAt"] = datetime.now(timezone.utc).isoformat()
+            store.put_with_history(cid, result)
+            if db_url and result["status"] == "ok":
+                try:
+                    push_firebase(db_url, cid, result)
+                except Exception as e:
+                    print(f"  Firebase 寫入失敗：{str(e)[:80]}")
+            stats["done"] += 1
+
+        await asyncio.gather(*(worker(cid, rec) for cid, rec in targets))
+        await browser.close()
+
+    print(f"完成 {stats['done']} 組：漲 {stats['up']}、跌 {stats['down']}、"
+          f"平 {stats['same']}、失敗 {stats['fail']}")
+```
+
+在 `main()` 的參數定義區追加：
+
+```python
+    ap.add_argument("--refresh", type=int, metavar="N",
+                    help="重掃最便宜的前 N 組並累積價格歷史（供每日排程）")
+```
+
+在 `if args.detail:` 區塊之前插入：
+
+```python
+    if args.refresh:
+        store = LocalStore(STORE_PATH)
+        db_url = read_db_url()
+        try:
+            rate, fx_at = fetch_krw_twd()
+        except Exception as e:
+            rate, fx_at = None, ""
+            print(f"匯率取得失敗，台幣欄位留空：{str(e)[:80]}")
+        asyncio.run(run_refresh(args.refresh, store, db_url, rate, fx_at,
+                                delay=args.delay, concurrency=args.concurrency))
+        return
+```
+
+- [ ] **Step 6: 實跑驗證**
+
+Run: `python3 -u scripts/fare_scan.py --refresh 3`
+Expected: 輸出類似
+
+```
+重掃最便宜的 3 組
+完成 3 組：漲 0、跌 0、平 3、失敗 0
+```
+
+確認歷史已寫入：
+
+Run: `python3 -c "
+import json,pathlib
+d=json.loads((pathlib.Path.home()/'four-leg-fares.json').read_text())
+h=[v for v in d.values() if v.get('history')]
+print('有歷史的組合數:', len(h))
+if h: print('第一筆歷史:', h[0]['history'])
+"`
+Expected: 有歷史的組合數為 3（若價格未變動，歷史仍會記錄前一次的值）
+
+- [ ] **Step 7: 前端顯示漲跌**
+
+在 `four-leg-fare.html` 的 `card()` 函式中，把價格那一行改為：
+
+```javascript
+  const hist = r.history || [];
+  let trend = "";
+  if (hist.length){
+    const prev = hist[hist.length - 1].priceTWD;
+    if (prev && r.priceTWD !== prev){
+      const d = r.priceTWD - prev;
+      trend = `<span class="trend ${d > 0 ? "up" : "down"}">`
+            + `${d > 0 ? "▲" : "▼"} ${Math.abs(d).toLocaleString()}</span>`;
+    } else {
+      trend = '<span class="trend flat">— 持平</span>';
+    }
+  }
+  const priceLine = `<div class="price">${fmtTWD(r.priceTWD)}`
+    + `<small>${fmtKRW(r.priceKRW)}</small>${trend}</div>`;
+```
+
+並把該函式 return 內的 `<div class="price">…</div>` 整行替換為 `${priceLine}`。
+
+在 `<style>` 追加：
+
+```css
+  .trend{font-size:13px;font-weight:600;margin-left:10px}
+  .trend.up{color:#c5221f}
+  .trend.down{color:var(--best)}
+  .trend.flat{color:var(--muted);font-weight:400}
+```
+
+- [ ] **Step 8: 建立 launchd 排程**
+
+沿用 `com.jenna.dbbackup.plist` 的模式。寫入
+`~/Library/LaunchAgents/com.jenna.farerefresh.plist`：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jenna.farerefresh</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/python3</string>
+        <string>/Users/wangyingyu/Library/Mobile Documents/com~apple~CloudDocs/Jenna_agent/scripts/fare_scan.py</string>
+        <string>--refresh</string>
+        <string>50</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/wangyingyu/Library/Logs/fare-refresh.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/wangyingyu/Library/Logs/fare-refresh.log</string>
+</dict>
+</plist>
+```
+
+載入排程：
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.jenna.farerefresh.plist 2>/dev/null
+launchctl load ~/Library/LaunchAgents/com.jenna.farerefresh.plist
+launchctl list | grep farerefresh
+```
+
+Expected: `launchctl list` 顯示 `com.jenna.farerefresh`
+
+**注意**：此 plist 位於家目錄，不進版控（repo 為 public）。
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add scripts/fare_store.py scripts/fare_scan.py tests/test_fare_store.py four-leg-fare.html
+git commit -m "feat(fare): 每日重掃前 N 組並累積價格歷史
+
+新增 --refresh N，重掃最便宜的前 N 組並把舊價格推入 history，
+前端顯示漲跌。全量重掃 864 組要 1-2 小時，前 50 組僅約 5 分鐘，
+適合每日排程（launchd plist 在家目錄，不進版控）。
+
+查無票時保留最後已知價格，避免一次查詢失敗洗掉既有資料。
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+```
+
+---
+
 ## Self-Review 檢查結果
 
 **Spec 覆蓋**：
