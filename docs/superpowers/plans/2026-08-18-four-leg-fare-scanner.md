@@ -1756,6 +1756,417 @@ git commit -m "docs(spec): 補上 Phase 1 實測結果與速率限制觀察"
 
 ---
 
+## Task 13: 掃描限定直飛航班
+
+**Files:**
+- Modify: `scripts/gf_url.py`
+- Modify: `scripts/fare_scan.py`
+- Modify: `tests/test_gf_url.py`
+
+使用者要求只看直飛。實測已確認 `tfs` 的每個 `[3]` 段內加 `[5]=0` 即為「僅顯示直達航班」，
+且限定直飛**不會變貴也不會沒票**（SEA 線同價；VIE 線同價、選項由 4 個減為 2 個）。
+
+- [ ] **Step 1: 寫失敗測試**
+
+在 `tests/test_gf_url.py` 檔尾追加（並把最上方 import 改為 `from gf_url import build_tfs, build_url`，若已是則不動）：
+
+```python
+# 使用者在 Google Flights 點「僅顯示直達航班」後產生的真實網址。
+# 注意 Google 只把旗標加在第一段（UI 的篩選只套用當前段）。
+GOOGLE_NONSTOP_FIRST_LEG = (
+    "CBwQAhogEgoyMDI2LTEyLTIzKABqBwgBEgNQVVNyBwgBEgNUUEUaHhIKMjAyNy0wMi0yNmoH"
+    "CAESA1RQRXIHCAESA1NFQRoeEgoyMDI3LTAzLTA3agcIARIDU0VBcgcIARIDVFBFGh4SCjIw"
+    "MjctMDQtMjBqBwgBEgNUUEVyBwgBEgNJQ05AAUgBcAGCAQsI____________AZgBAw"
+)
+
+# 四段全部限定直飛（本專案實際要用的形式）
+ALL_NONSTOP = (
+    "CBwQAhogEgoyMDI2LTEyLTIzKABqBwgBEgNQVVNyBwgBEgNUUEUaIBIKMjAyNy0wMi0yNigA"
+    "agcIARIDVFBFcgcIARIDU0VBGiASCjIwMjctMDMtMDcoAGoHCAESA1NFQXIHCAESA1RQRRog"
+    "EgoyMDI3LTA0LTIwKABqBwgBEgNUUEVyBwgBEgNJQ05AAUgBcAGCAQsI____________AZgBAw"
+)
+
+
+def test_僅第一段限直飛可重現Google產生的網址():
+    assert build_tfs(GROUND_TRUTH_LEGS, nonstop=[0]) == GOOGLE_NONSTOP_FIRST_LEG
+
+
+def test_四段全限直飛():
+    assert build_tfs(GROUND_TRUTH_LEGS, nonstop=True) == ALL_NONSTOP
+
+
+def test_預設不限直飛時與原本相同():
+    # 既有行為不可被破壞
+    assert build_tfs(GROUND_TRUTH_LEGS) == REAL_TFS
+    assert build_tfs(GROUND_TRUTH_LEGS, nonstop=False) == REAL_TFS
+
+
+def test_build_url可帶直飛參數():
+    u = build_url(GROUND_TRUTH_LEGS, nonstop=True)
+    assert ALL_NONSTOP in u
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_gf_url.py -v`
+Expected: FAIL — `TypeError: build_tfs() got an unexpected keyword argument 'nonstop'`
+
+- [ ] **Step 3: 實作**
+
+在 `scripts/gf_url.py` 中，把 `_leg` 與 `build_tfs`、`build_url` 三個函式改為：
+
+```python
+def _leg(date, origin, dest, nonstop=False):
+    body = _str_field(2, date)
+    if nonstop:
+        # [5]=0 等同 UI 的「僅顯示直達航班」（0 次轉機）。
+        # 實測位置在日期之後、出發地之前，順序不可調換。
+        body += _varint_field(5, 0)
+    return body + _msg_field(13, _location(origin)) + _msg_field(14, _location(dest))
+
+
+def build_tfs(legs, adults=1, cabin=CABIN_ECONOMY, nonstop=False):
+    """legs: [(date, origin_iata, dest_iata), ...]，回傳 base64url 字串。
+
+    nonstop: True 代表每段都限定直達；也可傳段索引的可迭代物件
+    （如 [0]）只限定特定段。
+    """
+    if nonstop is True:
+        ns = set(range(len(legs)))
+    elif nonstop is False or nonstop is None:
+        ns = set()
+    else:
+        ns = set(nonstop)
+
+    body = _varint_field(1, 28) + _varint_field(2, 2)
+    for i, (date, origin, dest) in enumerate(legs):
+        body += _msg_field(3, _leg(date, origin, dest, i in ns))
+    body += (_varint_field(8, adults)
+             + _varint_field(9, cabin)
+             + _varint_field(14, 1)
+             + _msg_field(16, _varint_field(1, (1 << 64) - 1))
+             + _varint_field(19, TRIP_MULTI_CITY))
+    return base64.urlsafe_b64encode(body).decode().rstrip("=")
+
+
+def build_url(legs, currency="KRW", lang="zh-TW", adults=1, nonstop=False):
+    """產生可直接開啟的 Google Flights 查詢網址。"""
+    tfs = build_tfs(legs, adults=adults, nonstop=nonstop)
+    return f"{BASE}?tfs={tfs}&tfu={TFU}&hl={lang}&curr={currency}"
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_gf_url.py -v`
+Expected: PASS，8 passed（原 4 個 + 新增 4 個）
+
+- [ ] **Step 5: 掃描器改為只查直飛**
+
+在 `scripts/fare_scan.py` 中，把 `quick_scan` 與 `detail_scan` 內所有
+`build_url(legs, currency="KRW")` 改為 `build_url(legs, currency="KRW", nonstop=True)`。
+兩個函式各有兩處（`page.goto` 一處、回傳 dict 的 `url` 欄位一處），共四處。
+
+改完確認：
+
+Run: `grep -c 'nonstop=True' scripts/fare_scan.py`
+Expected: `4`
+
+- [ ] **Step 6: 實跑驗證**
+
+Run: `python3 -u scripts/fare_scan.py --once`
+Expected: `status : ok`，價格約 ￦1,770,000 上下，第一段 18:55–20:25 直達
+
+- [ ] **Step 7: 舊資料改名保留，重新掃描**
+
+既有 `~/four-leg-fares.json` 是不限轉機時掃的，語意已不同，必須重掃。
+先改名保留（不要刪除，日後可比對限直飛前後的差異）：
+
+```bash
+mv ~/four-leg-fares.json ~/four-leg-fares-anystop-backup.json
+```
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add scripts/gf_url.py scripts/fare_scan.py tests/test_gf_url.py
+git commit -m "feat(fare): 掃描限定直飛航班
+
+tfs 每段加 [5]=0 即 UI 的「僅顯示直達航班」，以真實網址逐字元驗證。
+實測限直飛不會變貴也不會沒票（SEA 同價；VIE 同價、選項 4→2）。
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+```
+
+---
+
+## Task 14: 前端改為四段日期條與聯動篩選
+
+**Files:**
+- Modify: `four-leg-fare.html`
+
+使用者回饋：兩兩矩陣不直覺。改為一段一列、每天一格標「選這天的最低總價」，
+點選後其他三列即時重算為「已選條件下的最低價」，對應實際的決策流程。
+同時補上資料掃描時間（使用者問過「這是即時價格嗎」，畫面必須答得出來）。
+
+- [ ] **Step 1: 改寫 four-leg-fare.html**
+
+保留既有的檔案載入、Firebase 載入、卡片列表，新增日期條與篩選器。
+把 `<body>` 內容整個替換為：
+
+```html
+<h1>四腿票比價</h1>
+<div class="sub" id="meta">載入中…</div>
+
+<div class="bar">
+  <label>亞洲進 <select id="fIn"><option value="">全部</option></select></label>
+  <label>亞洲出 <select id="fOut"><option value="">全部</option></select></label>
+  <label>目的地 <select id="fDest"><option value="">全部</option></select></label>
+  <label><input type="checkbox" id="fNonstop"> 只看四段全直飛</label>
+  <button id="clear">清除選取</button>
+  <label class="filebtn">載入本機檔案
+    <input type="file" id="loadFile" accept=".json" hidden>
+  </label>
+  <button id="setup">設定資料庫</button>
+</div>
+
+<div id="grid"></div>
+<div class="sub" id="picked"></div>
+<div id="list"></div>
+
+<script>
+const LS_KEY = "fourLegFareDB";
+const LEG_NAMES = ["腿1 亞洲→TPE", "腿2 TPE→長程", "腿3 長程→TPE", "腿4 TPE→亞洲"];
+let RECORDS = [];
+let sel = [null, null, null, null];   // 各段已選日期
+
+function dbUrl(){ return localStorage.getItem(LS_KEY) || ""; }
+function fmtTWD(n){ return n ? "NT$" + n.toLocaleString() : "—"; }
+function fmtKRW(n){ return "￦" + n.toLocaleString(); }
+
+// ---- 篩選（下拉與直飛勾選，與日期選取無關）----
+function passFilters(r){
+  const fi = fIn.value, fo = fOut.value, fd = fDest.value;
+  if (fi && r.legs[0].from !== fi) return false;
+  if (fo && r.legs[3].to !== fo) return false;
+  if (fd && r.legs[1].to !== fd) return false;
+  if (fNonstop.checked && r.allNonstop !== true) return false;
+  return true;
+}
+
+// ---- 某段某日期，在「其他段已選條件」下的最低價 ----
+function lowestFor(legIdx, date){
+  let best = null;
+  for (const r of RECORDS){
+    if (!passFilters(r)) continue;
+    if (r.legs[legIdx].date !== date) continue;
+    let ok = true;
+    for (let i = 0; i < 4; i++){
+      if (i !== legIdx && sel[i] && r.legs[i].date !== sel[i]){ ok = false; break; }
+    }
+    if (!ok) continue;
+    if (best === null || r.priceTWD < best) best = r.priceTWD;
+  }
+  return best;
+}
+
+function datesOf(legIdx){
+  return [...new Set(RECORDS.filter(passFilters).map(r => r.legs[legIdx].date))].sort();
+}
+
+function renderGrid(){
+  const rows = [];
+  for (let i = 0; i < 4; i++){
+    const dates = datesOf(i);
+    if (!dates.length) continue;
+    const prices = dates.map(d => lowestFor(i, d));
+    const valid = prices.filter(p => p !== null);
+    const lo = Math.min(...valid), hi = Math.max(...valid);
+    const cells = dates.map((d, k) => {
+      const p = prices[k];
+      const isSel = sel[i] === d;
+      const isBest = p !== null && p === lo;
+      // 色階：最便宜偏綠、最貴偏紅
+      let bg = "transparent";
+      if (p !== null && hi > lo){
+        const t = (p - lo) / (hi - lo);
+        bg = `hsl(${Math.round(130 - 130 * t)}, 62%, ${92 - 6 * t}%)`;
+      } else if (p !== null){ bg = "hsl(130,62%,92%)"; }
+      return `<button class="cell${isSel ? " sel" : ""}${p === null ? " dead" : ""}"
+        style="background:${bg}" data-leg="${i}" data-date="${d}">
+        <span class="d">${d.slice(5)}</span>
+        <span class="p">${p === null ? "—" : p.toLocaleString()}</span>
+        ${isBest ? '<span class="star">★</span>' : ""}
+      </button>`;
+    }).join("");
+    rows.push(`<div class="legrow"><div class="legname">${LEG_NAMES[i]}</div>
+      <div class="cells">${cells}</div></div>`);
+  }
+  grid.innerHTML = rows.join("") || '<div class="empty">沒有資料</div>';
+  grid.querySelectorAll(".cell").forEach(b => {
+    b.onclick = () => {
+      const i = +b.dataset.leg;
+      sel[i] = (sel[i] === b.dataset.date) ? null : b.dataset.date;
+      renderAll();
+    };
+  });
+}
+
+function matched(){
+  return RECORDS.filter(r => passFilters(r) &&
+    [0,1,2,3].every(i => !sel[i] || r.legs[i].date === sel[i]));
+}
+
+function renderPicked(){
+  const rows = matched();
+  if (!rows.length){ picked.textContent = "目前條件下沒有符合的組合"; return; }
+  const lo = Math.min(...rows.map(r => r.priceTWD));
+  const chosen = sel.map((d, i) => d ? d.slice(5) : "任選").join(" / ");
+  picked.innerHTML = `目前選取：<b>${fmtTWD(lo)}</b>　${chosen}　（${rows.length} 組符合）`;
+}
+
+function renderList(){
+  const rows = matched().sort((a,b) => a.priceTWD - b.priceTWD).slice(0, 40);
+  const lo = rows.length ? rows[0].priceTWD : null;
+  list.innerHTML = rows.map(r => card(r, r.priceTWD === lo)).join("")
+    || '<div class="empty">沒有符合條件的組合</div>';
+}
+
+function card(r, isBest){
+  const legs = r.legs.map(l => {
+    const known = l.depart && l.arrive;
+    const time = known
+      ? `${l.depart} – ${l.arrive}${l.arrivePlusDays ? "<sup>+" + l.arrivePlusDays + "</sup>" : ""}`
+      : "時刻待補";
+    let tag;
+    if (l.nonstop === true) tag = '<span class="tag nonstop">直飛</span>';
+    else if (l.nonstop === false) tag = `<span class="tag via">經 ${l.via || "轉機"}</span>`;
+    else tag = '<span class="tag unknown">未知</span>';
+    return `<div class="leg"><span class="route">${l.from}→${l.to}</span>
+      <span class="time${known ? "" : " pending"}">${l.date}　${time}</span>${tag}</div>`;
+  }).join("");
+  return `<div class="card${isBest ? " best" : ""}">
+    <div class="price">${fmtTWD(r.priceTWD)}<small>${fmtKRW(r.priceKRW)}</small></div>
+    <div class="legs">${legs}</div>
+    <div class="links">
+      <a href="${r.url || "https://www.google.com/travel/flights"}" target="_blank" rel="noopener">Google Flights 複查（即時價）</a>
+      <a href="https://www.evaair.com/zh-tw/index.html" target="_blank" rel="noopener">長榮訂票</a>
+    </div></div>`;
+}
+
+function buildFilters(){
+  const fill = (el, vals) => {
+    const cur = el.value;
+    el.innerHTML = '<option value="">全部</option>' +
+      vals.map(v => `<option value="${v}">${v}</option>`).join("");
+    if (vals.includes(cur)) el.value = cur;
+  };
+  fill(fIn,   [...new Set(RECORDS.map(r => r.legs[0].from))].sort());
+  fill(fOut,  [...new Set(RECORDS.map(r => r.legs[3].to))].sort());
+  fill(fDest, [...new Set(RECORDS.map(r => r.legs[1].to))].sort());
+}
+
+function renderMeta(){
+  if (!RECORDS.length){ meta.textContent = "沒有資料"; return; }
+  const times = RECORDS.map(r => r.scannedAt).filter(Boolean).sort();
+  const fx = RECORDS.find(r => r.fxRate);
+  const when = times.length
+    ? new Date(times[times.length - 1]).toLocaleString("zh-TW",
+        {month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit"})
+    : "未知";
+  const nsCount = RECORDS.filter(r => r.allNonstop === true).length;
+  meta.innerHTML = `${RECORDS.length} 組　最後掃描 ${when}` +
+    `${fx ? `　匯率 ${fx.fxRate}` : ""}　` +
+    `<span class="warn">價格為掃描當下的快照，非即時；要看即時價請點卡片的「Google Flights 複查」</span>` +
+    `${nsCount < RECORDS.length ? `<br><span class="warn">僅 ${nsCount} 組已確認四段全直飛（其餘尚未詳掃）</span>` : ""}`;
+}
+
+function renderAll(){ buildFilters(); renderGrid(); renderPicked(); renderList(); renderMeta(); }
+
+function ingest(data){
+  RECORDS = Object.entries(data).map(([id, v]) => ({id, ...v}))
+    .filter(v => v.status === "ok" && v.priceKRW);
+  sel = [null, null, null, null];
+  renderAll();
+}
+
+loadFile.onchange = async (ev) => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  try { ingest(JSON.parse(await f.text())); }
+  catch (e){ meta.textContent = "檔案讀取失敗：" + e.message; }
+};
+
+[fIn, fOut, fDest, fNonstop].forEach(el => el.onchange = renderAll);
+clear.onclick = () => { sel = [null,null,null,null]; renderAll(); };
+setup.onclick = () => {
+  const v = prompt("Firebase Realtime Database 網址", dbUrl());
+  if (v !== null){ localStorage.setItem(LS_KEY, v.trim().replace(/\/$/,"")); load(); }
+};
+
+async function load(){
+  const base = dbUrl();
+  if (!base){
+    meta.textContent = "尚未載入資料";
+    list.innerHTML = '<div class="empty">點「載入本機檔案」選擇 ~/four-leg-fares.json<br>' +
+      '或點「設定資料庫」填入 Firebase 網址</div>';
+    return;
+  }
+  try {
+    const r = await fetch(base + "/fares.json");
+    ingest(await r.json() || {});
+  } catch (e){ meta.textContent = "讀取失敗：" + e.message; }
+}
+load();
+</script>
+```
+
+- [ ] **Step 2: 補上日期條所需樣式**
+
+在 `<style>` 內追加：
+
+```css
+  .bar label{font-size:14px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .warn{color:#b06000;font-size:13px}
+  .legrow{background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;margin-bottom:8px}
+  .legname{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .cells{display:flex;gap:6px;flex-wrap:wrap}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:2px;
+    border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;
+    font-family:inherit;position:relative;min-width:78px}
+  .cell .d{font-size:13px;color:var(--muted)}
+  .cell .p{font-size:15px;font-weight:600;color:var(--ink)}
+  .cell.sel{border-color:var(--accent);border-width:2px;box-shadow:0 0 0 2px #1a73e822}
+  .cell.dead{opacity:.35;cursor:default}
+  .cell .star{position:absolute;top:2px;right:4px;font-size:10px;color:var(--best)}
+  #picked{margin:10px 0 16px;font-size:15px}
+```
+
+- [ ] **Step 3: 用 Playwright 驗證**
+
+寫一段暫存的 Playwright 腳本（放系統暫存目錄，不要留在 repo），開啟頁面、
+用 `set_input_files` 載入 `~/four-leg-fares.json`，然後驗證：
+
+1. 四列日期條都出現，格子數與各段日期數相符
+2. 點擊腿3 的某一天後，腿2 的價格數字**有變化**（證明聯動生效）
+3. 再點同一格會取消選取
+4. `#meta` 含「最後掃描」與「非即時」字樣
+5. 主控台無 JS 錯誤
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add four-leg-fare.html
+git commit -m "feat(fare): 前端改為四段日期條與聯動篩選
+
+一段一列、每天標最低總價，點選後其他段即時重算，取代兩兩矩陣。
+補上掃描時間與「非即時」提示，並加入亞洲進出、目的地、全直飛篩選。
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+```
+
+---
+
 ## Self-Review 檢查結果
 
 **Spec 覆蓋**：
