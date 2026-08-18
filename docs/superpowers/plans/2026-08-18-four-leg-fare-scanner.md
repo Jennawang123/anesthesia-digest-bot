@@ -198,6 +198,9 @@ def build_url(legs, currency="KRW", lang="zh-TW", adults=1):
 Run: `python3 -m pytest tests/test_gf_url.py -v`
 Expected: PASS，4 passed
 
+若 live 測試出現 `SSL: CERTIFICATE_VERIFY_FAILED`，那不是 API 或網路問題，
+而是 python.org 版 Python 未安裝 CA bundle。見 Task 5 附註。
+
 - [ ] **Step 5: Commit**
 
 ```bash
@@ -689,8 +692,8 @@ from fx_rate import fetch_krw_twd, to_twd  # noqa: E402
 
 
 def test_換算取整數():
-    # 1,774,600 KRW × 0.022492 = 39,915.x
-    assert to_twd(1774600, 0.022492) == 39915
+    # 1,774,600 KRW × 0.022492 = 39,914.3032
+    assert to_twd(1774600, 0.022492) == 39914
 
 
 def test_換算四捨五入():
@@ -732,6 +735,7 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'fx_rate'`
 """
 
 import json
+import math
 import urllib.request
 
 API = "https://open.er-api.com/v6/latest/KRW"
@@ -748,10 +752,14 @@ def fetch_krw_twd(timeout=15):
 
 
 def to_twd(krw, rate):
-    """把韓元換算成台幣整數。rate 為 None 時回傳 None。"""
+    """把韓元換算成台幣整數。rate 為 None 時回傳 None。
+
+    用 math.floor(x + 0.5) 而非 round()：Python 的 round() 是銀行家捨入，
+    round(50.5) == 50、round(101 * 0.5) == 50，與「四捨五入」的預期不符。
+    """
     if rate is None:
         return None
-    return round(krw * rate)
+    return math.floor(krw * rate + 0.5)
 ```
 
 - [ ] **Step 4: 執行測試確認通過**
@@ -763,6 +771,9 @@ Expected: PASS，3 passed（`test_實際取得匯率` 被 deselect）
 
 Run: `python3 -m pytest tests/test_fx_rate.py -v`
 Expected: PASS，4 passed
+
+若 live 測試出現 `SSL: CERTIFICATE_VERIFY_FAILED`，那不是 API 或網路問題，
+而是 python.org 版 Python 未安裝 CA bundle。見 Task 5 附註。
 
 - [ ] **Step 5: 註冊 live marker 避免警告**
 
