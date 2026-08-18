@@ -82,6 +82,7 @@ async def quick_scan(context, legs):
                 for i, (d, o, t) in enumerate(legs)
             ],
             "detail": "quick",
+            "url": build_url(legs, currency="KRW"),
         }
     except Exception as e:
         return {"status": "error", "error": str(e)[:200]}
@@ -228,6 +229,7 @@ async def detail_scan(context, legs):
             ],
             "allNonstop": all(c["nonstop"] for c in collected),
             "detail": "full",
+            "url": build_url(legs, currency="KRW"),
         }
     except Exception as e:
         return {"status": "error", "error": str(e)[:200]}
