@@ -187,6 +187,93 @@ async def scan_batch(combos, store, db_url, rate, fx_at,
     print(f"\n完成 {counters['done']} 組，{counters['ok']} 組有票")
 
 
+async def detail_scan(context, legs):
+    """逐段點選，補齊四段時刻與直飛狀態。約 48 秒／組。
+
+    每段都選總價最低者。實測各選項總價相同，所以此處選擇不影響
+    總價，只影響取得的時刻。
+    """
+    page = await context.new_page()
+    try:
+        await page.goto(build_url(legs, currency="KRW"),
+                        wait_until="domcontentloaded", timeout=60000)
+        collected = []
+        for seg in range(len(legs)):
+            rows = await read_rows(page)
+            if not rows:
+                return {"status": "no_result"}
+            parsed = [(p, i) for i, p in
+                      ((i, parse_row(r)) for i, r in enumerate(rows)) if p]
+            if not parsed:
+                return {"status": "no_result"}
+            best, idx = min(parsed, key=lambda x: x[0]["price"])
+            collected.append(best)
+            if seg == len(legs) - 1:
+                break
+            items = page.locator("li").filter(has_text="整趟行程")
+            await items.nth(idx).click()
+            await page.wait_for_timeout(3000)
+
+        return {
+            "status": "ok",
+            "priceKRW": collected[0]["price"],
+            "carrier": collected[0]["carrier"],
+            "legs": [
+                {"date": d, "from": o, "to": t,
+                 "depart": c["depart"], "arrive": c["arrive"],
+                 "arrivePlusDays": c["arrive_plus_days"],
+                 "duration": c["duration"],
+                 "nonstop": c["nonstop"], "via": c["via"]}
+                for (d, o, t), c in zip(legs, collected)
+            ],
+            "allNonstop": all(c["nonstop"] for c in collected),
+            "detail": "full",
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)[:200]}
+    finally:
+        await page.close()
+
+
+async def run_detail(top_n, store, db_url, rate, fx_at, delay=3.0):
+    """對最便宜的前 N 組執行詳掃。"""
+    from playwright.async_api import async_playwright
+
+    ok = store.all_ok()
+    ranked = sorted(ok.items(), key=lambda kv: kv[1]["priceKRW"])
+    targets = [(cid, rec) for cid, rec in ranked
+               if rec.get("detail") != "full"][:top_n]
+    print(f"最便宜前 {top_n} 組中，{len(targets)} 組尚未詳掃")
+    if not targets:
+        return
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        ctx = await browser.new_context(
+            locale="zh-TW", user_agent=UA,
+            viewport={"width": 1600, "height": 1400})
+        for n, (cid, rec) in enumerate(targets, 1):
+            legs = [(l["date"], l["from"], l["to"]) for l in rec["legs"]]
+            result = await detail_scan(ctx, legs)
+            if result["status"] == "ok":
+                result["priceTWD"] = to_twd(result["priceKRW"], rate)
+                result["fxRate"] = rate
+                result["fxAt"] = fx_at
+                result["scannedAt"] = datetime.now(timezone.utc).isoformat()
+                store.put(cid, result)
+                if db_url:
+                    try:
+                        push_firebase(db_url, cid, result)
+                    except Exception as e:
+                        print(f"  Firebase 寫入失敗：{str(e)[:80]}")
+                mark = "全直飛" if result["allNonstop"] else "含轉機"
+                print(f"  [{n}/{len(targets)}] ￦{result['priceKRW']:,} {mark}")
+            else:
+                print(f"  [{n}/{len(targets)}] {result['status']}")
+            await asyncio.sleep(delay)
+        await browser.close()
+
+
 def main():
     ap = argparse.ArgumentParser(description="四腿票掃描器")
     ap.add_argument("--once", action="store_true", help="只掃一組驗證環境")
@@ -194,10 +281,23 @@ def main():
                     help="掃 Phase 1：韓國進出 × VIE/MXP，864 組")
     ap.add_argument("--delay", type=float, default=3.0, help="每組間隔秒數")
     ap.add_argument("--concurrency", type=int, default=2, help="並行數")
+    ap.add_argument("--detail", type=int, metavar="N",
+                    help="對最便宜的前 N 組補四段時刻")
     args = ap.parse_args()
 
     if args.once:
         asyncio.run(run_once())
+        return
+
+    if args.detail:
+        store = LocalStore(STORE_PATH)
+        db_url = read_db_url()
+        try:
+            rate, fx_at = fetch_krw_twd()
+        except Exception:
+            rate, fx_at = None, ""
+        asyncio.run(run_detail(args.detail, store, db_url, rate, fx_at,
+                               delay=args.delay))
         return
 
     if args.phase1:
