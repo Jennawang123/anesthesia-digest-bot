@@ -120,15 +120,103 @@ async def run_once():
         print(f"匯率     : {rate} ({at})")
 
 
+# 連續這麼多組查無結果就中止：正常情況不可能整片沒票，
+# 較可能是 tfs 格式失效或被速率限制。靜默記成「沒票」會讓
+# 整批資料變成無聲的錯誤。
+CONSECUTIVE_EMPTY_ABORT = 15
+
+
+async def scan_batch(combos, store, db_url, rate, fx_at,
+                     delay=3.0, concurrency=2):
+    """批次快掃。已有結果的跳過，每筆立即落地。"""
+    from playwright.async_api import async_playwright
+
+    todo = [c for c in combos if not store.has(c["id"])]
+    print(f"待掃 {len(todo)} / 共 {len(combos)} 組"
+          f"（已完成 {len(combos) - len(todo)}）")
+    if not todo:
+        return
+
+    sem = asyncio.Semaphore(concurrency)
+    counters = {"done": 0, "ok": 0, "empty_streak": 0, "aborted": False}
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        ctx = await browser.new_context(
+            locale="zh-TW", user_agent=UA,
+            viewport={"width": 1600, "height": 1400})
+
+        async def worker(combo):
+            if counters["aborted"]:
+                return
+            async with sem:
+                result = await quick_scan(ctx, combo["legs"])
+                await asyncio.sleep(delay)
+
+            if result["status"] == "ok":
+                result["priceTWD"] = to_twd(result["priceKRW"], rate)
+                result["fxRate"] = rate
+                result["fxAt"] = fx_at
+                counters["ok"] += 1
+                counters["empty_streak"] = 0
+            elif result["status"] == "no_result":
+                counters["empty_streak"] += 1
+
+            result["scannedAt"] = datetime.now(timezone.utc).isoformat()
+            store.put(combo["id"], result)
+            if db_url and result["status"] == "ok":
+                try:
+                    push_firebase(db_url, combo["id"], result)
+                except Exception as e:
+                    print(f"  Firebase 寫入失敗：{str(e)[:80]}")
+
+            counters["done"] += 1
+            if counters["done"] % 10 == 0:
+                print(f"  {counters['done']}/{len(todo)} 完成，"
+                      f"{counters['ok']} 組有票")
+
+            if counters["empty_streak"] >= CONSECUTIVE_EMPTY_ABORT:
+                counters["aborted"] = True
+                print(f"\n!! 連續 {CONSECUTIVE_EMPTY_ABORT} 組查無結果，中止。\n"
+                      f"   可能是 tfs 格式失效或被速率限制，"
+                      f"請先用 --once 確認鏈路是否還通。")
+
+        await asyncio.gather(*(worker(c) for c in todo))
+        await browser.close()
+
+    print(f"\n完成 {counters['done']} 組，{counters['ok']} 組有票")
+
+
 def main():
     ap = argparse.ArgumentParser(description="四腿票掃描器")
     ap.add_argument("--once", action="store_true", help="只掃一組驗證環境")
+    ap.add_argument("--phase1", action="store_true",
+                    help="掃 Phase 1：韓國進出 × VIE/MXP，864 組")
+    ap.add_argument("--delay", type=float, default=3.0, help="每組間隔秒數")
+    ap.add_argument("--concurrency", type=int, default=2, help="並行數")
     args = ap.parse_args()
 
     if args.once:
         asyncio.run(run_once())
-    else:
-        ap.print_help()
+        return
+
+    if args.phase1:
+        combos = generate(PHASE1)
+        store = LocalStore(STORE_PATH)
+        db_url = read_db_url()
+        print(f"結果檔：{STORE_PATH}")
+        print(f"Firebase：{'已設定' if db_url else '未設定（僅本機儲存）'}")
+        try:
+            rate, fx_at = fetch_krw_twd()
+            print(f"匯率：KRW→TWD {rate}（{fx_at}）")
+        except Exception as e:
+            rate, fx_at = None, ""
+            print(f"匯率取得失敗，台幣欄位留空：{str(e)[:80]}")
+        asyncio.run(scan_batch(combos, store, db_url, rate, fx_at,
+                               delay=args.delay, concurrency=args.concurrency))
+        return
+
+    ap.print_help()
 
 
 if __name__ == "__main__":
