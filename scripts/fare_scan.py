@@ -57,7 +57,7 @@ async def quick_scan(context, legs):
     """快掃一組行程，回傳結果 dict。"""
     page = await context.new_page()
     try:
-        await page.goto(build_url(legs, currency="KRW"),
+        await page.goto(build_url(legs, currency="KRW", nonstop=True),
                         wait_until="domcontentloaded", timeout=60000)
         rows = await read_rows(page)
         if not rows:
@@ -82,7 +82,7 @@ async def quick_scan(context, legs):
                 for i, (d, o, t) in enumerate(legs)
             ],
             "detail": "quick",
-            "url": build_url(legs, currency="KRW"),
+            "url": build_url(legs, currency="KRW", nonstop=True),
         }
     except Exception as e:
         return {"status": "error", "error": str(e)[:200]}
@@ -196,7 +196,7 @@ async def detail_scan(context, legs):
     """
     page = await context.new_page()
     try:
-        await page.goto(build_url(legs, currency="KRW"),
+        await page.goto(build_url(legs, currency="KRW", nonstop=True),
                         wait_until="domcontentloaded", timeout=60000)
         collected = []
         for seg in range(len(legs)):
@@ -229,7 +229,7 @@ async def detail_scan(context, legs):
             ],
             "allNonstop": all(c["nonstop"] for c in collected),
             "detail": "full",
-            "url": build_url(legs, currency="KRW"),
+            "url": build_url(legs, currency="KRW", nonstop=True),
         }
     except Exception as e:
         return {"status": "error", "error": str(e)[:200]}

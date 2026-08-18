@@ -64,17 +64,31 @@ def _location(iata):
     return _varint_field(1, LOC_AIRPORT) + _str_field(2, iata)
 
 
-def _leg(date, origin, dest):
-    return (_str_field(2, date)
-            + _msg_field(13, _location(origin))
-            + _msg_field(14, _location(dest)))
+def _leg(date, origin, dest, nonstop=False):
+    body = _str_field(2, date)
+    if nonstop:
+        # [5]=0 等同 UI 的「僅顯示直達航班」（0 次轉機）。
+        # 實測位置在日期之後、出發地之前，順序不可調換。
+        body += _varint_field(5, 0)
+    return body + _msg_field(13, _location(origin)) + _msg_field(14, _location(dest))
 
 
-def build_tfs(legs, adults=1, cabin=CABIN_ECONOMY):
-    """legs: [(date, origin_iata, dest_iata), ...]，回傳 base64url 字串。"""
+def build_tfs(legs, adults=1, cabin=CABIN_ECONOMY, nonstop=False):
+    """legs: [(date, origin_iata, dest_iata), ...]，回傳 base64url 字串。
+
+    nonstop: True 代表每段都限定直達；也可傳段索引的可迭代物件
+    （如 [0]）只限定特定段。
+    """
+    if nonstop is True:
+        ns = set(range(len(legs)))
+    elif nonstop is False or nonstop is None:
+        ns = set()
+    else:
+        ns = set(nonstop)
+
     body = _varint_field(1, 28) + _varint_field(2, 2)
-    for date, origin, dest in legs:
-        body += _msg_field(3, _leg(date, origin, dest))
+    for i, (date, origin, dest) in enumerate(legs):
+        body += _msg_field(3, _leg(date, origin, dest, i in ns))
     body += (_varint_field(8, adults)
              + _varint_field(9, cabin)
              + _varint_field(14, 1)
@@ -83,7 +97,7 @@ def build_tfs(legs, adults=1, cabin=CABIN_ECONOMY):
     return base64.urlsafe_b64encode(body).decode().rstrip("=")
 
 
-def build_url(legs, currency="KRW", lang="zh-TW", adults=1):
+def build_url(legs, currency="KRW", lang="zh-TW", adults=1, nonstop=False):
     """產生可直接開啟的 Google Flights 查詢網址。"""
-    tfs = build_tfs(legs, adults=adults)
+    tfs = build_tfs(legs, adults=adults, nonstop=nonstop)
     return f"{BASE}?tfs={tfs}&tfu={TFU}&hl={lang}&curr={currency}"
