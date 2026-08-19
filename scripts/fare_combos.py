@@ -8,6 +8,8 @@
     腿4  TPE → <亞洲出>      回到出發區域，形成 open-jaw
 
 Phase 1（韓國進出 × 歐洲兩點）為 4 × 2 × 108 = 864 組。
+Phase 2 韓國 × 美西 864 組、Phase 3 泰國 × 五個長程點 540 組、
+Phase 4 韓國 × AMS 432 組。
 """
 
 import hashlib
@@ -34,6 +36,27 @@ PHASE2 = {
     "long_haul": ["LAX", "SFO"],
     "windows": PHASE1["windows"],
 }
+
+
+# Phase 3：泰國進出。BKK 只有一個機場，故 open-jaw 只有 BKK→BKK 一種，
+# 長程一次涵蓋全部五個點（含新加的 AMS）。1×5×108 = 540 組。
+PHASE3 = {
+    "asia_in": ["BKK"],
+    "asia_out": ["BKK"],
+    "long_haul": ["VIE", "MXP", "AMS", "LAX", "SFO"],
+    "windows": PHASE1["windows"],
+}
+
+
+# Phase 4：把 AMS 補進既有的韓國進出，其餘目的地已在 Phase 1／2 掃過。
+# 4×1×108 = 432 組。
+PHASE4 = {
+    "asia_in": ["ICN", "PUS"],
+    "asia_out": ["ICN", "PUS"],
+    "long_haul": ["AMS"],
+    "windows": PHASE1["windows"],
+}
+
 
 def date_windows(start, end):
     """把起訖日展開成每日字串清單（含頭含尾）。"""

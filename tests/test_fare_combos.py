@@ -4,7 +4,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from fare_combos import PHASE1, PHASE2, combo_id, date_windows, generate  # noqa: E402
+from fare_combos import (PHASE1, PHASE2, PHASE3, PHASE4, combo_id,  # noqa: E402
+                         date_windows, generate)
 
 PHASE1 = {
     "asia_in": ["ICN", "PUS"],
@@ -74,3 +75,48 @@ def test_phase2與phase1的組合id不重疊():
 
 def test_phase2日期窗與phase1相同():
     assert PHASE2["windows"] == PHASE1["windows"]
+
+
+def test_phase3為泰國進出且涵蓋全部長程點():
+    # BKK 只有一個機場，泰國進出只有 BKK→BKK 一種 open-jaw
+    assert PHASE3["asia_in"] == ["BKK"]
+    assert PHASE3["asia_out"] == ["BKK"]
+    assert PHASE3["long_haul"] == ["VIE", "MXP", "AMS", "LAX", "SFO"]
+
+
+def test_phase3總組合數為540():
+    # 城市對 1×1=1，目的地 5，日期 108 → 540
+    assert len(generate(PHASE3)) == 540
+
+
+def test_phase4為韓國進出加AMS():
+    # AMS 補進既有的韓國進出，不重掃已有的 VIE/MXP/LAX/SFO
+    assert PHASE4["asia_in"] == ["ICN", "PUS"]
+    assert PHASE4["long_haul"] == ["AMS"]
+
+
+def test_phase4總組合數為432():
+    # 城市對 2×2=4，目的地 1，日期 108 → 432
+    assert len(generate(PHASE4)) == 432
+
+
+def test_新增兩階段與既有階段id皆不重疊():
+    # 四個階段共用同一個結果檔，id 不可碰撞
+    sets = [{c["id"] for c in generate(cfg)}
+            for cfg in (PHASE1, PHASE2, PHASE3, PHASE4)]
+    for i in range(len(sets)):
+        for j in range(i + 1, len(sets)):
+            assert not (sets[i] & sets[j])
+
+
+def test_新增兩階段的日期窗沿用phase1():
+    assert PHASE3["windows"] == PHASE1["windows"]
+    assert PHASE4["windows"] == PHASE1["windows"]
+
+
+def test_腿1出發地與腿4目的地同國():
+    # 境外票的前提：回到出發國才構成 open-jaw
+    for cfg, group in ((PHASE3, {"BKK"}), (PHASE4, {"ICN", "PUS"})):
+        for c in generate(cfg):
+            assert c["legs"][0][1] in group
+            assert c["legs"][3][2] in group

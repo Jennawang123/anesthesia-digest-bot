@@ -4,6 +4,7 @@
 用法：
     python3 scripts/fare_scan.py --once          # 只掃一組，驗證環境
     python3 scripts/fare_scan.py --phase1        # 掃 Phase 1 全部 864 組
+    python3 scripts/fare_scan.py --phase3 --phase4  # 一次掃多個階段
     python3 scripts/fare_scan.py --detail 20     # 對最便宜前 20 組補時刻
     python3 scripts/fare_scan.py --refresh 50    # 每日重掃最便宜前 50 組
 
@@ -25,12 +26,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from fare_combos import PHASE1, PHASE2, generate
+from fare_combos import PHASE1, PHASE2, PHASE3, PHASE4, generate
 from fare_store import (LocalStore, merge_refresh, push_firebase,
                         read_db_url)
 from fx_rate import fetch_krw_twd, to_twd
 from gf_parse import parse_row
 from gf_url import build_url
+
+PHASES = {"phase1": PHASE1, "phase2": PHASE2,
+          "phase3": PHASE3, "phase4": PHASE4}
 
 STORE_PATH = Path.home() / "four-leg-fares.json"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -344,6 +348,10 @@ def main():
                     help="掃 Phase 1：韓國進出 × VIE/MXP，864 組")
     ap.add_argument("--phase2", action="store_true",
                     help="掃 Phase 2：韓國進出 × LAX/SFO，864 組")
+    ap.add_argument("--phase3", action="store_true",
+                    help="掃 Phase 3：泰國 BKK 進出 × 五個長程點，540 組")
+    ap.add_argument("--phase4", action="store_true",
+                    help="掃 Phase 4：韓國進出 × AMS，432 組")
     ap.add_argument("--delay", type=float, default=3.0, help="每組間隔秒數")
     ap.add_argument("--concurrency", type=int, default=2, help="並行數")
     ap.add_argument("--detail", type=int, metavar="N",
@@ -379,8 +387,10 @@ def main():
                                delay=args.delay))
         return
 
-    if args.phase1 or args.phase2:
-        combos = generate(PHASE2 if args.phase2 else PHASE1)
+    picked = [k for k in PHASES if getattr(args, k)]
+    if picked:
+        # 可一次指定多個階段，例如 --phase3 --phase4 連續掃完
+        combos = [c for k in picked for c in generate(PHASES[k])]
         store = LocalStore(STORE_PATH)
         db_url = read_db_url()
         print(f"結果檔：{STORE_PATH}")
