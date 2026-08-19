@@ -20,6 +20,10 @@
   .card.best{border-color:var(--best);border-width:2px}
   .price{font-size:22px;font-weight:700}
   .price small{font-size:13px;color:var(--muted);font-weight:400;margin-left:8px}
+  .trend{font-size:13px;font-weight:600;margin-left:10px}
+  .trend.up{color:#c5221f}
+  .trend.down{color:var(--best)}
+  .trend.flat{color:var(--muted);font-weight:400}
   .legs{margin-top:10px;display:grid;gap:6px}
   .leg{display:grid;grid-template-columns:96px 1fr auto;gap:10px;
        font-size:14px;align-items:center}
@@ -93,6 +97,8 @@ function passFilters(r){
 }
 
 // ---- 某段某日期，在「其他段已選條件」下的最低價 ----
+// 比價一律以韓元為準：每筆記錄存的是自己掃描當下的匯率，
+// 重掃過的組合匯率較新，台幣金額彼此不可比。顯示仍用台幣。
 function lowestFor(legIdx, date){
   let best = null;
   for (const r of RECORDS){
@@ -103,7 +109,7 @@ function lowestFor(legIdx, date){
       if (i !== legIdx && sel[i] && r.legs[i].date !== sel[i]){ ok = false; break; }
     }
     if (!ok) continue;
-    if (best === null || r.priceTWD < best) best = r.priceTWD;
+    if (best === null || r.priceKRW < best.priceKRW) best = r;
   }
   return best;
 }
@@ -117,11 +123,12 @@ function renderGrid(){
   for (let i = 0; i < 4; i++){
     const dates = datesOf(i);
     if (!dates.length) continue;
-    const prices = dates.map(d => lowestFor(i, d));
-    const valid = prices.filter(p => p !== null);
+    const best = dates.map(d => lowestFor(i, d));
+    const valid = best.filter(r => r !== null).map(r => r.priceKRW);
     const lo = Math.min(...valid), hi = Math.max(...valid);
     const cells = dates.map((d, k) => {
-      const p = prices[k];
+      const rec = best[k];
+      const p = rec === null ? null : rec.priceKRW;
       const isSel = sel[i] === d;
       const isBest = p !== null && p === lo;
       // 色階：最便宜偏綠、最貴偏紅
@@ -133,7 +140,7 @@ function renderGrid(){
       return `<button class="cell${isSel ? " sel" : ""}${p === null ? " dead" : ""}"
         style="background:${bg}" data-leg="${i}" data-date="${d}">
         <span class="d">${d.slice(5)}</span>
-        <span class="p">${p === null ? "—" : p.toLocaleString()}</span>
+        <span class="p">${rec === null ? "—" : rec.priceTWD.toLocaleString()}</span>
         ${isBest ? '<span class="star">★</span>' : ""}
       </button>`;
     }).join("");
@@ -158,15 +165,15 @@ function matched(){
 function renderPicked(){
   const rows = matched();
   if (!rows.length){ picked.textContent = "目前條件下沒有符合的組合"; return; }
-  const lo = Math.min(...rows.map(r => r.priceTWD));
+  const lo = rows.reduce((a, b) => a.priceKRW <= b.priceKRW ? a : b).priceTWD;
   const chosen = sel.map((d, i) => d ? d.slice(5) : "任選").join(" / ");
   picked.innerHTML = `目前選取：<b>${fmtTWD(lo)}</b>　${chosen}　（${rows.length} 組符合）`;
 }
 
 function renderList(){
-  const rows = matched().sort((a,b) => a.priceTWD - b.priceTWD).slice(0, 40);
-  const lo = rows.length ? rows[0].priceTWD : null;
-  list.innerHTML = rows.map(r => card(r, r.priceTWD === lo)).join("")
+  const rows = matched().sort((a,b) => a.priceKRW - b.priceKRW).slice(0, 40);
+  const lo = rows.length ? rows[0].priceKRW : null;
+  list.innerHTML = rows.map(r => card(r, r.priceKRW === lo)).join("")
     || '<div class="empty">沒有符合條件的組合</div>';
 }
 
@@ -183,8 +190,26 @@ function card(r, isBest){
     return `<div class="leg"><span class="route">${l.from}→${l.to}</span>
       <span class="time${known ? "" : " pending"}">${l.date}　${time}</span>${tag}</div>`;
   }).join("");
+  const hist = r.history || [];
+  let trend = "";
+  if (hist.length){
+    // 漲跌以韓元判定（票價本身），金額顯示台幣；
+    // 只有匯率變動而票價沒變時算持平，不該報成漲跌。
+    const prev = hist[hist.length - 1];
+    const dKRW = prev.priceKRW ? r.priceKRW - prev.priceKRW : 0;
+    if (dKRW){
+      const d = (prev.priceTWD && r.priceTWD)
+        ? r.priceTWD - prev.priceTWD : dKRW;
+      trend = `<span class="trend ${dKRW > 0 ? "up" : "down"}">`
+            + `${dKRW > 0 ? "▲" : "▼"} ${Math.abs(d).toLocaleString()}</span>`;
+    } else {
+      trend = '<span class="trend flat">— 持平</span>';
+    }
+  }
+  const priceLine = `<div class="price">${fmtTWD(r.priceTWD)}`
+    + `<small>${fmtKRW(r.priceKRW)}</small>${trend}</div>`;
   return `<div class="card${isBest ? " best" : ""}">
-    <div class="price">${fmtTWD(r.priceTWD)}<small>${fmtKRW(r.priceKRW)}</small></div>
+    ${priceLine}
     <div class="legs">${legs}</div>
     <div class="links">
       <a href="${r.url || "https://www.google.com/travel/flights"}" target="_blank" rel="noopener">Google Flights 複查（即時價）</a>

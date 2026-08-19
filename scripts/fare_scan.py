@@ -5,6 +5,7 @@
     python3 scripts/fare_scan.py --once          # 只掃一組，驗證環境
     python3 scripts/fare_scan.py --phase1        # 掃 Phase 1 全部 864 組
     python3 scripts/fare_scan.py --detail 20     # 對最便宜前 20 組補時刻
+    python3 scripts/fare_scan.py --refresh 50    # 每日重掃最便宜前 50 組
 
 兩段式掃描（依據見 spec 的「完整四段資訊的取得成本」）：
     快掃 約 6 秒／組，只讀第一段列表，取整趟總價
@@ -25,7 +26,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fare_combos import PHASE1, PHASE2, generate
-from fare_store import LocalStore, push_firebase, read_db_url
+from fare_store import (LocalStore, merge_refresh, push_firebase,
+                        read_db_url)
 from fx_rate import fetch_krw_twd, to_twd
 from gf_parse import parse_row
 from gf_url import build_url
@@ -282,6 +284,59 @@ async def run_detail(top_n, store, db_url, rate, fx_at, delay=3.0):
         await browser.close()
 
 
+async def run_refresh(top_n, store, db_url, rate, fx_at,
+                      delay=3.0, concurrency=2):
+    """重掃最便宜的前 N 組，累積價格歷史。供每日排程使用。"""
+    from playwright.async_api import async_playwright
+
+    ok = store.all_ok()
+    targets = sorted(ok.items(), key=lambda kv: kv[1]["priceKRW"])[:top_n]
+    print(f"重掃最便宜的 {len(targets)} 組")
+    if not targets:
+        print("尚無資料可重掃，請先執行 --phase1 / --phase2")
+        return
+
+    sem = asyncio.Semaphore(concurrency)
+    stats = {"done": 0, "up": 0, "down": 0, "same": 0, "fail": 0}
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        ctx = await browser.new_context(
+            locale="zh-TW", user_agent=UA,
+            viewport={"width": 1600, "height": 1400})
+
+        async def worker(cid, rec):
+            legs = [(l["date"], l["from"], l["to"]) for l in rec["legs"]]
+            old_price = rec["priceKRW"]
+            async with sem:
+                result = await quick_scan(ctx, legs)
+                await asyncio.sleep(delay)
+            if result["status"] == "ok":
+                result["priceTWD"] = to_twd(result["priceKRW"], rate)
+                result["fxRate"] = rate
+                result["fxAt"] = fx_at
+                diff = result["priceKRW"] - old_price
+                stats["up" if diff > 0 else "down" if diff < 0 else "same"] += 1
+            else:
+                stats["fail"] += 1
+            result["scannedAt"] = datetime.now(timezone.utc).isoformat()
+            # 快掃只有第一段時刻，直接覆蓋會洗掉詳掃結果，故先合併
+            merged = merge_refresh(store.get(cid), result)
+            store.put_with_history(cid, merged)
+            if db_url and merged["status"] == "ok":
+                try:
+                    push_firebase(db_url, cid, store.get(cid))
+                except Exception as e:
+                    print(f"  Firebase 寫入失敗：{str(e)[:80]}")
+            stats["done"] += 1
+
+        await asyncio.gather(*(worker(cid, rec) for cid, rec in targets))
+        await browser.close()
+
+    print(f"完成 {stats['done']} 組：漲 {stats['up']}、跌 {stats['down']}、"
+          f"平 {stats['same']}、失敗 {stats['fail']}")
+
+
 def main():
     ap = argparse.ArgumentParser(description="四腿票掃描器")
     ap.add_argument("--once", action="store_true", help="只掃一組驗證環境")
@@ -293,10 +348,24 @@ def main():
     ap.add_argument("--concurrency", type=int, default=2, help="並行數")
     ap.add_argument("--detail", type=int, metavar="N",
                     help="對最便宜的前 N 組補四段時刻")
+    ap.add_argument("--refresh", type=int, metavar="N",
+                    help="重掃最便宜的前 N 組並累積價格歷史（供每日排程）")
     args = ap.parse_args()
 
     if args.once:
         asyncio.run(run_once())
+        return
+
+    if args.refresh:
+        store = LocalStore(STORE_PATH)
+        db_url = read_db_url()
+        try:
+            rate, fx_at = fetch_krw_twd()
+        except Exception as e:
+            rate, fx_at = None, ""
+            print(f"匯率取得失敗，台幣欄位留空：{str(e)[:80]}")
+        asyncio.run(run_refresh(args.refresh, store, db_url, rate, fx_at,
+                                delay=args.delay, concurrency=args.concurrency))
         return
 
     if args.detail:

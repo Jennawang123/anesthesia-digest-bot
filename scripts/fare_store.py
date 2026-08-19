@@ -23,6 +23,8 @@ DONE_STATUSES = {"ok", "no_result"}
 class LocalStore:
     """本機 JSON 儲存，每次寫入立即落地。"""
 
+    HISTORY_MAX = 30
+
     def __init__(self, path):
         self.path = Path(path)
         if self.path.exists():
@@ -44,10 +46,60 @@ class LocalStore:
         self.path.write_text(
             json.dumps(self.data, ensure_ascii=False, indent=1))
 
+    def put_with_history(self, combo_id, record):
+        """更新記錄並把舊價格推入 history。
+
+        重掃時用這個而非 put()，才能累積出價格趨勢。
+
+        若新結果沒有價格（例如當天暫時查無票），保留原記錄不動——
+        否則一次查詢失敗就會把已知的價格洗掉。
+        """
+        old = self.data.get(combo_id)
+        if not record.get("priceKRW"):
+            if old:
+                return          # 保留最後已知的價格
+            self.put(combo_id, record)
+            return
+
+        if old and old.get("priceKRW"):
+            hist = list(old.get("history") or [])
+            hist.append({
+                "priceKRW": old["priceKRW"],
+                "priceTWD": old.get("priceTWD"),
+                "scannedAt": old.get("scannedAt"),
+            })
+            record["history"] = hist[-self.HISTORY_MAX:]
+        self.put(combo_id, record)
+
     def all_ok(self):
         """回傳所有成功且有價格的記錄。"""
         return {k: v for k, v in self.data.items()
                 if v.get("status") == "ok" and v.get("priceKRW")}
+
+
+# 重掃時要保留的詳掃欄位，快掃結果沒有這些。
+_DETAIL_KEYS = ("legs", "detail", "allNonstop")
+
+
+def merge_refresh(old, new):
+    """把重掃（快掃）結果併回舊記錄。
+
+    重掃只讀第一段列表，後三段沒有時刻；若直接覆蓋，詳掃補好的
+    四段時刻會被洗掉，而最便宜的前 N 組正是詳掃過的那批。
+
+    價格沒變視為同一班機，保留舊的時刻與 detail；價格變了代表換了
+    班次或 fare bucket，舊時刻不可信，改採新結果並讓 detail 退回
+    quick，下次 --detail 會重補。
+    """
+    if not old:
+        return new
+    if old.get("detail") != "full" or old.get("priceKRW") != new.get("priceKRW"):
+        return new
+    merged = dict(new)
+    for k in _DETAIL_KEYS:
+        if k in old:
+            merged[k] = old[k]
+    return merged
 
 
 def read_db_url():
