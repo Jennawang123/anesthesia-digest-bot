@@ -135,6 +135,74 @@ async def run_once():
 # 整批資料變成無聲的錯誤。
 CONSECUTIVE_EMPTY_ABORT = 15
 
+# 連續這麼多組查詢失敗也中止。error 會在續跑時重試，不像 no_result
+# 那樣污染資料，但斷網後每組都要等 60 秒逾時，白跑幾百組。
+# （2026-08-20 實際踩到：掃到一半斷網，209 組連續 ERR_INTERNET_DISCONNECTED
+# 還一路跑了幾小時。）
+CONSECUTIVE_ERROR_ABORT = 15
+
+
+async def run_workers(todo, scan, handle, concurrency=2, delay=3.0,
+                      empty_abort=CONSECUTIVE_EMPTY_ABORT,
+                      error_abort=CONSECUTIVE_ERROR_ABORT,
+                      progress_every=10, total=None):
+    """並行跑掃描；連續查無結果達門檻即中止，已排隊的組合也一併放棄。
+
+    中止旗標必須在「取得 semaphore 之後」再檢查一次：asyncio.gather
+    會一口氣把所有 worker 排進 event loop，它們早在旗標被設起之前
+    就通過了進入點的檢查，只擋進入點等於沒擋。
+    （2026-08-20 實際踩到：連續 200 組空白仍繼續掃，全被寫成
+    no_result，而 no_result 算「已完成」會讓續跑永久跳過。）
+
+    連續查詢失敗（多半是斷網）同樣中止，理由見 CONSECUTIVE_ERROR_ABORT。
+
+    scan(combo) 為 async callable，handle(combo, result) 負責落地。
+    """
+    sem = asyncio.Semaphore(concurrency)
+    c = {"done": 0, "ok": 0, "empty_streak": 0, "error_streak": 0,
+         "aborted": False, "skipped": 0}
+    total = total if total is not None else len(todo)
+
+    async def worker(combo):
+        async with sem:
+            if c["aborted"]:
+                c["skipped"] += 1
+                return
+            result = await scan(combo)
+            if delay:
+                await asyncio.sleep(delay)
+
+        status = result.get("status")
+        if status == "ok":
+            c["ok"] += 1
+            c["empty_streak"] = 0
+            c["error_streak"] = 0
+        elif status == "no_result":
+            c["empty_streak"] += 1
+            c["error_streak"] = 0
+        elif status == "error":
+            c["error_streak"] += 1
+
+        handle(combo, result)
+        c["done"] += 1
+        if progress_every and c["done"] % progress_every == 0:
+            print(f"  {c['done']}/{total} 完成，{c['ok']} 組有票")
+
+        if c["empty_streak"] >= empty_abort and not c["aborted"]:
+            c["aborted"] = True
+            print(f"\n!! 連續 {empty_abort} 組查無結果，中止。\n"
+                  f"   可能是 tfs 格式失效或被速率限制，"
+                  f"請先用 --once 確認鏈路是否還通。")
+        elif c["error_streak"] >= error_abort and not c["aborted"]:
+            c["aborted"] = True
+            last = str(result.get("error", ""))[:80]
+            print(f"\n!! 連續 {error_abort} 組查詢失敗，中止。\n"
+                  f"   最後一則錯誤：{last}\n"
+                  f"   多半是網路斷線；連線恢復後直接重跑即可續掃。")
+
+    await asyncio.gather(*(worker(x) for x in todo))
+    return c
+
 
 async def scan_batch(combos, store, db_url, rate, fx_at,
                      delay=3.0, concurrency=2):
@@ -147,31 +215,17 @@ async def scan_batch(combos, store, db_url, rate, fx_at,
     if not todo:
         return
 
-    sem = asyncio.Semaphore(concurrency)
-    counters = {"done": 0, "ok": 0, "empty_streak": 0, "aborted": False}
-
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         ctx = await browser.new_context(
             locale="zh-TW", user_agent=UA,
             viewport={"width": 1600, "height": 1400})
 
-        async def worker(combo):
-            if counters["aborted"]:
-                return
-            async with sem:
-                result = await quick_scan(ctx, combo["legs"])
-                await asyncio.sleep(delay)
-
+        def handle(combo, result):
             if result["status"] == "ok":
                 result["priceTWD"] = to_twd(result["priceKRW"], rate)
                 result["fxRate"] = rate
                 result["fxAt"] = fx_at
-                counters["ok"] += 1
-                counters["empty_streak"] = 0
-            elif result["status"] == "no_result":
-                counters["empty_streak"] += 1
-
             result["scannedAt"] = datetime.now(timezone.utc).isoformat()
             store.put(combo["id"], result)
             if db_url and result["status"] == "ok":
@@ -180,21 +234,14 @@ async def scan_batch(combos, store, db_url, rate, fx_at,
                 except Exception as e:
                     print(f"  Firebase 寫入失敗：{str(e)[:80]}")
 
-            counters["done"] += 1
-            if counters["done"] % 10 == 0:
-                print(f"  {counters['done']}/{len(todo)} 完成，"
-                      f"{counters['ok']} 組有票")
-
-            if counters["empty_streak"] >= CONSECUTIVE_EMPTY_ABORT:
-                counters["aborted"] = True
-                print(f"\n!! 連續 {CONSECUTIVE_EMPTY_ABORT} 組查無結果，中止。\n"
-                      f"   可能是 tfs 格式失效或被速率限制，"
-                      f"請先用 --once 確認鏈路是否還通。")
-
-        await asyncio.gather(*(worker(c) for c in todo))
+        counters = await run_workers(
+            todo, lambda c: quick_scan(ctx, c["legs"]), handle,
+            concurrency=concurrency, delay=delay, total=len(todo))
         await browser.close()
 
     print(f"\n完成 {counters['done']} 組，{counters['ok']} 組有票")
+    if counters["aborted"]:
+        print(f"（因連續查無結果中止，{counters['skipped']} 組未掃）")
 
 
 async def detail_scan(context, legs):
