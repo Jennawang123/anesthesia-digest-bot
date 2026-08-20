@@ -5,7 +5,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from fare_store import LocalStore, merge_refresh  # noqa: E402
+from fare_store import (LocalStore, merge_detail,  # noqa: E402
+                        merge_refresh)
 
 
 def test_寫入後可讀回(tmp_path):
@@ -117,3 +118,31 @@ def test_重掃價格變動時採用新結果():
     assert m["detail"] == "quick"
     assert m["priceKRW"] == 130
     assert "allNonstop" not in m
+
+
+def test_詳掃不改動排序用的快掃價():
+    # 詳掃是逐段點選後的具體報價，與快掃讀列表最低總價的量測方式不同。
+    # 若讓它覆蓋 priceKRW，詳掃過的組會因價格微幅變高被沒詳掃的擠下去，
+    # 比價表前幾名永遠顯示「時刻待補」（2026-08-20 實際踩到）
+    old = {"status": "ok", "priceKRW": 1578542, "priceTWD": 36163,
+           "detail": "quick", "legs": [{"depart": "10:00"}, {}, {}, {}]}
+    new = {"status": "ok", "priceKRW": 1578705, "detail": "full",
+           "allNonstop": True, "legs": [{"depart": "10:00"}] * 4}
+    m = merge_detail(old, new)
+    assert m["priceKRW"] == 1578542          # 排序基準不動
+    assert m["priceTWD"] == 36163
+    assert m["detailPriceKRW"] == 1578705    # 詳掃價另存供參考
+    assert m["detail"] == "full"
+    assert len(m["legs"][3]) > 0             # 四段時刻採用詳掃結果
+
+
+def test_詳掃保留既有價格歷史():
+    old = {"status": "ok", "priceKRW": 100, "priceTWD": 2,
+           "history": [{"priceKRW": 90, "scannedAt": "2026-08-18T00:00:00"}]}
+    new = {"status": "ok", "priceKRW": 105, "detail": "full", "legs": []}
+    assert merge_detail(old, new)["history"] == old["history"]
+
+
+def test_首次就詳掃時直接採用():
+    new = {"status": "ok", "priceKRW": 105, "detail": "full", "legs": []}
+    assert merge_detail(None, new) == new

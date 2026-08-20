@@ -27,8 +27,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fare_combos import PHASE1, PHASE2, PHASE3, PHASE4, generate
-from fare_store import (LocalStore, merge_refresh, push_firebase,
-                        read_db_url)
+from fare_store import (LocalStore, merge_detail, merge_refresh,
+                        push_firebase, read_db_url)
 from fx_rate import fetch_krw_twd, to_twd
 from gf_parse import parse_row
 from gf_url import build_url
@@ -321,10 +321,12 @@ async def run_detail(top_n, store, db_url, rate, fx_at, delay=3.0):
                 result["fxRate"] = rate
                 result["fxAt"] = fx_at
                 result["scannedAt"] = datetime.now(timezone.utc).isoformat()
-                store.put(cid, result)
+                # 詳掃只負責補時刻，排序用的快掃價與 history 都保留
+                merged = merge_detail(store.get(cid), result)
+                store.put(cid, merged)
                 if db_url:
                     try:
-                        push_firebase(db_url, cid, result)
+                        push_firebase(db_url, cid, merged)
                     except Exception as e:
                         print(f"  Firebase 寫入失敗：{str(e)[:80]}")
                 mark = "全直飛" if result["allNonstop"] else "含轉機"

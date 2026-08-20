@@ -102,6 +102,30 @@ def merge_refresh(old, new):
     return merged
 
 
+def merge_detail(old, new):
+    """把詳掃結果併回既有記錄。
+
+    詳掃是逐段點選後的具體航班報價，與快掃讀列表最低總價的量測方式
+    不同（實測差約 163 韓元）。排序基準必須全檔一致，故 priceKRW
+    沿用快掃價，詳掃價另存 detailPriceKRW——否則詳掃過的組價格微幅
+    變高就被沒詳掃的擠下去，比價表前幾名永遠是「時刻待補」。
+    （2026-08-20 實際踩到：--detail 20 跑完，前 25 名仍全部待補。）
+
+    順帶保住 history，避免詳掃洗掉每日重掃累積的價格趨勢。
+    """
+    if not old:
+        return new
+    merged = dict(new)
+    if old.get("priceKRW"):
+        merged["detailPriceKRW"] = new.get("priceKRW")
+        merged["priceKRW"] = old["priceKRW"]
+        if old.get("priceTWD"):
+            merged["priceTWD"] = old["priceTWD"]
+    if old.get("history"):
+        merged["history"] = old["history"]
+    return merged
+
+
 def read_db_url():
     """讀 Firebase Database URL。找不到時回傳 None（僅本機儲存）。"""
     url = os.environ.get("FOUR_LEG_FARE_DB", "").strip()
