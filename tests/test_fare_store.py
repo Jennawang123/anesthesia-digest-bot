@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from fare_store import (LocalStore, merge_detail,  # noqa: E402
-                        merge_refresh)
+                        merge_refresh, pick_detail_targets)
 
 
 def test_寫入後可讀回(tmp_path):
@@ -146,3 +146,28 @@ def test_詳掃保留既有價格歷史():
 def test_首次就詳掃時直接採用():
     new = {"status": "ok", "priceKRW": 105, "detail": "full", "legs": []}
     assert merge_detail(None, new) == new
+
+
+def test_詳掃挑最便宜且未詳掃的組():
+    recs = {
+        "a": {"priceKRW": 100, "detail": "full"},
+        "b": {"priceKRW": 200, "detail": "quick"},
+        "c": {"priceKRW": 150, "detail": "quick"},
+    }
+    assert [k for k, _ in pick_detail_targets(recs, 5)] == ["c", "b"]
+
+
+def test_詳掃跳過屢次失敗的組():
+    # 詳掃打不開的行程會卡在最前面，每次 --detail 都挑到同幾組，
+    # 排在後面的永遠補不到時刻（2026-08-20 實際踩到：前 3 名連兩次失敗）
+    recs = {
+        "bad": {"priceKRW": 100, "detail": "quick", "detailFails": 2},
+        "ok1": {"priceKRW": 200, "detail": "quick"},
+        "retry": {"priceKRW": 150, "detail": "quick", "detailFails": 1},
+    }
+    assert [k for k, _ in pick_detail_targets(recs, 5)] == ["retry", "ok1"]
+
+
+def test_詳掃目標數量受限於top_n():
+    recs = {str(i): {"priceKRW": i, "detail": "quick"} for i in range(10)}
+    assert len(pick_detail_targets(recs, 3)) == 3

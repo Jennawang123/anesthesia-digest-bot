@@ -126,6 +126,19 @@ def merge_detail(old, new):
     return merged
 
 
+# 詳掃連續失敗這麼多次就放棄該組：有些行程逐段點選時就是打不開，
+# 不跳過的話每次 --detail 都挑到同幾組，後面的永遠補不到時刻。
+DETAIL_MAX_FAILS = 2
+
+
+def pick_detail_targets(records, top_n, max_fails=DETAIL_MAX_FAILS):
+    """挑出最便宜、尚未詳掃、且沒有屢次失敗的前 N 組。"""
+    ranked = sorted(records.items(), key=lambda kv: kv[1]["priceKRW"])
+    return [(cid, rec) for cid, rec in ranked
+            if rec.get("detail") != "full"
+            and rec.get("detailFails", 0) < max_fails][:top_n]
+
+
 def read_db_url():
     """讀 Firebase Database URL。找不到時回傳 None（僅本機儲存）。"""
     url = os.environ.get("FOUR_LEG_FARE_DB", "").strip()

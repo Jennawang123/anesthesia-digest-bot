@@ -58,6 +58,25 @@ PHASE4 = {
 }
 
 
+
+# Phase 5／6：加拿大 YVR 與德國 MUC。單點試掃顯示 PUS×YVR 有機會
+# 比 PUS×LAX 便宜，MUC 則偏貴，全掃過才知道日期組合能壓到多少。
+PHASE5 = {
+    "asia_in": ["ICN", "PUS"],
+    "asia_out": ["ICN", "PUS"],
+    "long_haul": ["YVR", "MUC"],
+    "windows": PHASE1["windows"],
+}
+
+
+PHASE6 = {
+    "asia_in": ["BKK"],
+    "asia_out": ["BKK"],
+    "long_haul": ["YVR", "MUC"],
+    "windows": PHASE1["windows"],
+}
+
+
 def date_windows(start, end):
     """把起訖日展開成每日字串清單（含頭含尾）。"""
     d0 = date.fromisoformat(start)

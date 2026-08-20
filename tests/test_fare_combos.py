@@ -4,8 +4,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from fare_combos import (PHASE1, PHASE2, PHASE3, PHASE4, combo_id,  # noqa: E402
-                         date_windows, generate)
+from fare_combos import (PHASE1, PHASE2, PHASE3, PHASE4,  # noqa: E402
+                         PHASE5, PHASE6, combo_id, date_windows,
+                         generate)
 
 PHASE1 = {
     "asia_in": ["ICN", "PUS"],
@@ -120,3 +121,23 @@ def test_腿1出發地與腿4目的地同國():
         for c in generate(cfg):
             assert c["legs"][0][1] in group
             assert c["legs"][3][2] in group
+
+
+def test_phase5為韓國進出加YVR與MUC():
+    assert PHASE5["asia_in"] == ["ICN", "PUS"]
+    assert PHASE5["long_haul"] == ["YVR", "MUC"]
+    assert len(generate(PHASE5)) == 864
+
+
+def test_phase6為泰國進出加YVR與MUC():
+    assert PHASE6["asia_in"] == ["BKK"]
+    assert PHASE6["long_haul"] == ["YVR", "MUC"]
+    assert len(generate(PHASE6)) == 216
+
+
+def test_六個階段的id互不重疊():
+    sets = [{c["id"] for c in generate(cfg)}
+            for cfg in (PHASE1, PHASE2, PHASE3, PHASE4, PHASE5, PHASE6)]
+    for i in range(len(sets)):
+        for j in range(i + 1, len(sets)):
+            assert not (sets[i] & sets[j])

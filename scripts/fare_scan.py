@@ -26,15 +26,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from fare_combos import PHASE1, PHASE2, PHASE3, PHASE4, generate
+from fare_combos import (PHASE1, PHASE2, PHASE3, PHASE4, PHASE5,
+                         PHASE6, generate)
 from fare_store import (LocalStore, merge_detail, merge_refresh,
-                        push_firebase, read_db_url)
+                        pick_detail_targets, push_firebase,
+                        read_db_url)
 from fx_rate import fetch_krw_twd, to_twd
 from gf_parse import parse_row
 from gf_url import build_url
 
 PHASES = {"phase1": PHASE1, "phase2": PHASE2,
-          "phase3": PHASE3, "phase4": PHASE4}
+          "phase3": PHASE3, "phase4": PHASE4,
+          "phase5": PHASE5, "phase6": PHASE6}
 
 STORE_PATH = Path.home() / "four-leg-fares.json"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -300,10 +303,7 @@ async def run_detail(top_n, store, db_url, rate, fx_at, delay=3.0):
     """對最便宜的前 N 組執行詳掃。"""
     from playwright.async_api import async_playwright
 
-    ok = store.all_ok()
-    ranked = sorted(ok.items(), key=lambda kv: kv[1]["priceKRW"])
-    targets = [(cid, rec) for cid, rec in ranked
-               if rec.get("detail") != "full"][:top_n]
+    targets = pick_detail_targets(store.all_ok(), top_n)
     print(f"最便宜前 {top_n} 組中，{len(targets)} 組尚未詳掃")
     if not targets:
         return
@@ -332,7 +332,12 @@ async def run_detail(top_n, store, db_url, rate, fx_at, delay=3.0):
                 mark = "全直飛" if result["allNonstop"] else "含轉機"
                 print(f"  [{n}/{len(targets)}] ￦{result['priceKRW']:,} {mark}")
             else:
-                print(f"  [{n}/{len(targets)}] {result['status']}")
+                # 記下失敗次數，屢次打不開的組下次不再擋住後面的
+                rec = dict(store.get(cid) or {})
+                rec["detailFails"] = rec.get("detailFails", 0) + 1
+                store.put(cid, rec)
+                print(f"  [{n}/{len(targets)}] {result['status']}"
+                      f"（第 {rec['detailFails']} 次失敗）")
             await asyncio.sleep(delay)
         await browser.close()
 
@@ -401,6 +406,10 @@ def main():
                     help="掃 Phase 3：泰國 BKK 進出 × 五個長程點，540 組")
     ap.add_argument("--phase4", action="store_true",
                     help="掃 Phase 4：韓國進出 × AMS，432 組")
+    ap.add_argument("--phase5", action="store_true",
+                    help="掃 Phase 5：韓國進出 × YVR/MUC，864 組")
+    ap.add_argument("--phase6", action="store_true",
+                    help="掃 Phase 6：泰國 BKK 進出 × YVR/MUC，216 組")
     ap.add_argument("--delay", type=float, default=3.0, help="每組間隔秒數")
     ap.add_argument("--concurrency", type=int, default=2, help="並行數")
     ap.add_argument("--detail", type=int, metavar="N",
