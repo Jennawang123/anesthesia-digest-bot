@@ -20,6 +20,10 @@
   .card.best{border-color:var(--best);border-width:2px}
   .price{font-size:22px;font-weight:700}
   .price small{font-size:13px;color:var(--muted);font-weight:400;margin-left:8px}
+  .carrier{font-size:12px;font-weight:600;margin-left:10px;padding:2px 8px;
+           border-radius:10px;background:#fef7e0;color:#a16207;
+           vertical-align:middle}
+  .carrier.eva{background:#e6f4ea;color:var(--best)}
   .trend{font-size:13px;font-weight:600;margin-left:10px}
   .trend.up{color:#c5221f}
   .trend.down{color:var(--best)}
@@ -206,8 +210,14 @@ function card(r, isBest){
       trend = '<span class="trend flat">— 持平</span>';
     }
   }
+  // 境外票四段開在同一 PNR，通常得是同一家航空；報價來自哪家很關鍵，
+  // 長榮以外的最低價買不成長榮境外票，故非長榮另用琥珀色標出。
+  const air = r.carrier
+    ? `<span class="carrier${r.carrier === "長榮航空" ? " eva" : ""}">`
+      + `${r.carrier}</span>`
+    : "";
   const priceLine = `<div class="price">${fmtTWD(r.priceTWD)}`
-    + `<small>${fmtKRW(r.priceKRW)}</small>${trend}</div>`;
+    + `<small>${fmtKRW(r.priceKRW)}</small>${air}${trend}</div>`;
   return `<div class="card${isBest ? " best" : ""}">
     ${priceLine}
     <div class="legs">${legs}</div>
