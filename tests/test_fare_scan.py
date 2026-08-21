@@ -89,3 +89,28 @@ def test_有票會同時重置兩種連續計數():
                            error_abort=15, concurrency=1)
     assert c["aborted"] is False
     assert len(calls) == 100
+
+
+def test_網路未就緒時會等待重試():
+    # launchd 在 09:30 觸發時機器常剛喚醒、Wi-Fi 還沒連上
+    from fare_scan import wait_for_network
+    seq = iter([False, False, True])
+    slept = []
+    assert wait_for_network(probe=lambda: next(seq), tries=5, interval=60,
+                            sleep=slept.append) is True
+    assert slept == [60, 60]
+
+
+def test_網路一直不通就放棄():
+    from fare_scan import wait_for_network
+    slept = []
+    assert wait_for_network(probe=lambda: False, tries=3, interval=60,
+                            sleep=slept.append) is False
+    assert len(slept) == 2      # 最後一次失敗後不必再等
+
+
+def test_網路本來就通不會等待():
+    from fare_scan import wait_for_network
+    slept = []
+    assert wait_for_network(probe=lambda: True, sleep=slept.append) is True
+    assert slept == []

@@ -21,6 +21,7 @@
 import argparse
 import asyncio
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -46,6 +47,33 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
 # 列表載入的輪詢設定：每 2.5 秒檢查一次，最多等 60 秒
 POLL_INTERVAL_MS = 2500
 POLL_MAX_TRIES = 24
+
+def _online(timeout=10):
+    """打 Google 的 204 端點確認出得去。"""
+    import urllib.request
+    try:
+        req = urllib.request.Request(
+            "https://www.google.com/generate_204", headers={"User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status in (200, 204)
+    except Exception:
+        return False
+
+
+def wait_for_network(probe=_online, tries=15, interval=60, sleep=time.sleep):
+    """等網路就緒，最多等 tries × interval。
+
+    launchd 在 09:30 觸發時機器常是剛喚醒、Wi-Fi 還沒連上，直接開跑
+    會整批 DNS 失敗——2026-08-20、08-21 兩天的每日重掃都是 50 組
+    全滅，log 只留下 nodename nor servname provided。
+    """
+    for n in range(tries):
+        if probe():
+            return True
+        if n < tries - 1:
+            sleep(interval)
+    return False
+
 
 ROWS_JS = """() => [...document.querySelectorAll('li')]
     .map(e => (e.innerText || '').replace(/\\n+/g, ' | '))
@@ -354,8 +382,9 @@ async def run_refresh(top_n, store, db_url, rate, fx_at,
         print("尚無資料可重掃，請先執行 --phase1 / --phase2")
         return
 
-    sem = asyncio.Semaphore(concurrency)
-    stats = {"done": 0, "up": 0, "down": 0, "same": 0, "fail": 0}
+    stats = {"up": 0, "down": 0, "same": 0}
+    todo = [{"id": cid, "legs": rec["legs"], "priceKRW": rec["priceKRW"]}
+            for cid, rec in targets]
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -363,36 +392,37 @@ async def run_refresh(top_n, store, db_url, rate, fx_at,
             locale="zh-TW", user_agent=UA,
             viewport={"width": 1600, "height": 1400})
 
-        async def worker(cid, rec):
-            legs = [(l["date"], l["from"], l["to"]) for l in rec["legs"]]
-            old_price = rec["priceKRW"]
-            async with sem:
-                result = await quick_scan(ctx, legs)
-                await asyncio.sleep(delay)
+        async def scan(combo):
+            legs = [(l["date"], l["from"], l["to"]) for l in combo["legs"]]
+            return await quick_scan(ctx, legs)
+
+        def handle(combo, result):
             if result["status"] == "ok":
                 result["priceTWD"] = to_twd(result["priceKRW"], rate)
                 result["fxRate"] = rate
                 result["fxAt"] = fx_at
-                diff = result["priceKRW"] - old_price
+                diff = result["priceKRW"] - combo["priceKRW"]
                 stats["up" if diff > 0 else "down" if diff < 0 else "same"] += 1
-            else:
-                stats["fail"] += 1
             result["scannedAt"] = datetime.now(timezone.utc).isoformat()
             # 快掃只有第一段時刻，直接覆蓋會洗掉詳掃結果，故先合併
-            merged = merge_refresh(store.get(cid), result)
-            store.put_with_history(cid, merged)
+            merged = merge_refresh(store.get(combo["id"]), result)
+            store.put_with_history(combo["id"], merged)
             if db_url and merged["status"] == "ok":
                 try:
-                    push_firebase(db_url, cid, store.get(cid))
+                    push_firebase(db_url, combo["id"], store.get(combo["id"]))
                 except Exception as e:
                     print(f"  Firebase 寫入失敗：{str(e)[:80]}")
-            stats["done"] += 1
 
-        await asyncio.gather(*(worker(cid, rec) for cid, rec in targets))
+        counters = await run_workers(todo, scan, handle,
+                                     concurrency=concurrency, delay=delay,
+                                     progress_every=0)
         await browser.close()
 
-    print(f"完成 {stats['done']} 組：漲 {stats['up']}、跌 {stats['down']}、"
-          f"平 {stats['same']}、失敗 {stats['fail']}")
+    fail = counters["done"] - counters["ok"]
+    print(f"完成 {counters['done']} 組：漲 {stats['up']}、跌 {stats['down']}、"
+          f"平 {stats['same']}、失敗 {fail}")
+    if counters["aborted"]:
+        print(f"（連續失敗中止，{counters['skipped']} 組未重掃）")
 
 
 def main():
@@ -423,6 +453,9 @@ def main():
         return
 
     if args.refresh:
+        if not wait_for_network():
+            print("網路持續不通，這次重掃略過。")
+            return
         store = LocalStore(STORE_PATH)
         db_url = read_db_url()
         try:
@@ -447,6 +480,9 @@ def main():
 
     picked = [k for k in PHASES if getattr(args, k)]
     if picked:
+        if not wait_for_network():
+            print("網路持續不通，中止。")
+            return
         # 可一次指定多個階段，例如 --phase3 --phase4 連續掃完
         combos = [c for k in picked for c in generate(PHASES[k])]
         store = LocalStore(STORE_PATH)
