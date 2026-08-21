@@ -21,9 +21,11 @@
   .price{font-size:22px;font-weight:700}
   .price small{font-size:13px;color:var(--muted);font-weight:400;margin-left:8px}
   .carrier{font-size:12px;font-weight:600;margin-left:10px;padding:2px 8px;
-           border-radius:10px;background:#fef7e0;color:#a16207;
+           border-radius:10px;background:#eef0f3;color:#455060;
            vertical-align:middle}
   .carrier.eva{background:#e6f4ea;color:var(--best)}
+  .carrier.jx{background:#ede7f6;color:#5b3fa8}
+  .carrier.ci{background:#e8f0fe;color:#1a56c4}
   .trend{font-size:13px;font-weight:600;margin-left:10px}
   .trend.up{color:#c5221f}
   .trend.down{color:var(--best)}
@@ -233,11 +235,11 @@ function card(r, isBest, rank, loKRW){
       trend = '<span class="trend flat">— 持平</span>';
     }
   }
-  // 境外票四段開在同一 PNR，通常得是同一家航空；報價來自哪家很關鍵，
-  // 長榮以外的最低價買不成長榮境外票，故非長榮另用琥珀色標出。
+  // 四段開在同一 PNR，得是同一家航空；使用者不限定航空，
+  // 徽章只做辨識用，不再把非長榮當成警告。
+  const CARRIER_CLASS = {"長榮航空":"eva", "星宇航空":"jx", "中華航空":"ci"};
   const air = r.carrier
-    ? `<span class="carrier${r.carrier === "長榮航空" ? " eva" : ""}">`
-      + `${r.carrier}</span>`
+    ? `<span class="carrier ${CARRIER_CLASS[r.carrier] || ""}">${r.carrier}</span>`
     : "";
   // 名次與差價都以韓元計；差價換算台幣時用該筆自己的匯率，
   // 直接相減台幣會把不同掃描日的匯率差當成價差。
@@ -269,13 +271,14 @@ const cityLabel = c => CITY[c] ? `${c}　${CITY[c]}` : c;
 // ---- 目的地判讀 ----
 // 數字全部由目前資料即時算，會隨每日重掃更新；
 // 下面這段文字是我看完全庫後的判斷，資料換了要回來重寫。
+// 使用者不限定航空，一律以最低價為準，長榮只當參考。
 const DEST_NOTE = {
-  MXP: "歐洲線的價格底，而且是長榮自己的票。最低價在韓國進出，釜山比首爾再省 ￦5,000；泰國進出反而貴 ￦30 萬，別繞。不挑城市的話，米蘭進出再轉歐鐵通常最划算。",
-  LAX: "美西兩個門戶的長榮票同價，選哪邊看行程不看價。便宜票全在泰國進出，韓國進出要多付 ￦17.8 萬。星宇、華航報得更低，但那是別家的票，不能當長榮境外票買。",
-  SFO: "與 LAX 同價同結構，長榮最低同樣是泰國進出。北加州行程直接選它，不必為了省錢改飛 LAX。",
-  YVR: "韓國進出的北美最便宜點，比同樣韓國進出的 LAX/SFO 省 ￦4.6 萬——你說的加拿大稅金較低，在資料上成立。而且價格極平坦，幾乎所有日期同價，日期彈性全庫最高。但泰國進出就沒有這個優勢，反而更貴。",
-  VIE: "長榮最低價落在泰國進出，韓國進出要再加 ￦7.9 萬。華航有明顯更低的報價，不堅持長榮的話值得看。中歐轉車方便，但價格贏不了米蘭。",
-  AMS: "韓國進出還算合理，泰國進出的長榮票貴到不能看，那條線的低價全是華航。要飛阿姆斯特丹就從韓國走。",
+  LAX: "全庫最低價就在這裡，星宇 BKK 進出、四段全直飛。台北往返洛杉磯的去程只要 11 小時多，是所有長程線裡最短的。便宜票全在泰國進出，韓國進出要多付一大截。",
+  SFO: "與 LAX 幾乎同價同結構，也是星宇 BKK 進出。北加州行程直接選它，價差小到不必為此改飛 LAX。",
+  MXP: "歐洲線的價格底，且只有長榮飛得出這個價。最低價走韓國進出，釜山比首爾再省一點；泰國進出反而貴 ￦30 萬，別繞。不挑城市的話，米蘭進出再轉歐鐵通常最划算。",
+  VIE: "華航 BKK 進出的報價明顯低於其他家，是歐洲第二便宜的落點。中歐轉車方便，但仍贏不了米蘭。",
+  YVR: "韓國進出的北美最便宜點，比同樣韓國進出的 LAX/SFO 省 ￦4.6 萬——加拿大稅金較低在資料上成立。價格極平坦，幾乎所有日期同價，日期彈性全庫最高。但泰國進出就沒有這個優勢。",
+  AMS: "低價全在華航 BKK 進出這條線上。要飛阿姆斯特丹就從曼谷走，韓國進出得多付 ￦26 萬。",
   MUC: "每週 4 班的直飛樞紐是真的，但價格離散度全庫最大——最低價之外的日期迅速跳到兩倍以上，等於只有極少數日子買得下去。要飛 MUC 得遷就它的日子，不是你挑日期。",
 };
 
@@ -292,16 +295,15 @@ function poolFor(dest){
 function destStats(dest){
   const rs = poolFor(dest).sort((a,b) => a.priceKRW - b.priceKRW);
   if (!rs.length) return null;
-  const eva = rs.filter(r => r.carrier === "長榮航空");
-  const other = rs.find(r => r.carrier && r.carrier !== "長榮航空");
+  const best = rs[0];
   const med = rs[Math.floor(rs.length / 2)].priceKRW;
-  const best = eva[0] || rs[0];
+  // 次低的另一家航空：同價位有沒有第二個選擇，影響改期／艙等時的餘裕
+  const alt = rs.find(r => r.carrier && r.carrier !== best.carrier);
   return {
-    dest, n: rs.length, best,
-    evaMin: eva.length ? eva[0].priceKRW : null,
+    dest, n: rs.length, best, alt,
     origin: best.legs[0].from,
     ratio: med / best.priceKRW,
-    other: (other && other.priceKRW < best.priceKRW) ? other : null,
+    nonstop: best.allNonstop === true ? "full" : (best.nonstopQuery === true ? "query" : null),
   };
 }
 
@@ -321,17 +323,20 @@ function renderInsight(){
   if (!fDest.value){
     const rows = all.map((s, i) => {
       const [lab] = flatLabel(s.ratio);
+      const L = s.best.legs;
+      const win = [0,1,2,3].map(k => L[k].date.slice(5)).join(" / ");
       return `<tr class="${i === 0 ? "top" : ""}"><td>${cityLabel(s.dest)}</td>
         <td>${fmtTWD(s.best.priceTWD)}</td><td>${fmtKRW(s.best.priceKRW)}</td>
-        <td>${cityLabel(s.origin)}</td><td>${lab}</td>
-        <td>${s.other ? s.other.carrier + " " + fmtKRW(s.other.priceKRW) : "—"}</td></tr>`;
+        <td>${s.best.carrier || "—"}</td><td>${cityLabel(s.origin)}</td>
+        <td>${win}</td><td>${lab}</td></tr>`;
     }).join("");
     insight.innerHTML = `<div class="insight">
       <h3>長程目的地比較（點上面的「目的地」看單一城市的判讀）</h3>
       <div class="tablewrap"><table>
-       <tr><th>目的地</th><th>長榮最低</th><th>韓元</th><th>亞洲進出</th>
-           <th>日期彈性</th><th>更低價的他航</th></tr>${rows}</table></div>
-      <p class="sub" style="margin-top:10px">依長榮最低價排序。他航報價買不到長榮境外票，僅供參考。</p>
+       <tr><th>目的地</th><th>最低價</th><th>韓元</th><th>航空</th>
+           <th>亞洲進出</th><th>最便宜日期</th><th>日期彈性</th></tr>${rows}</table></div>
+      <p class="sub" style="margin-top:10px">不分航空，依韓元最低價排序。
+        台幣是各筆掃描當下的匯率換算，跨列不完全可比。四段同一 PNR，故一趟就是同一家。</p>
     </div>`;
     return;
   }
@@ -341,16 +346,21 @@ function renderInsight(){
   const [lab, why] = flatLabel(s.ratio);
   const rate = s.best.fxRate || 0.0226;
   const over = s.best.priceKRW - floor;
+  const L = s.best.legs;
+  const win = [0,1,2,3].map(k => L[k].date.slice(5)).join(" / ");
   const facts = [
-    `長榮最低 <b>${fmtTWD(s.best.priceTWD)}</b>（${fmtKRW(s.best.priceKRW)}）`
-      + `，亞洲端走 <b>${cityLabel(s.origin)}</b>`,
+    `最低 <b>${fmtTWD(s.best.priceTWD)}</b>（${fmtKRW(s.best.priceKRW)}）`
+      + `　<b>${s.best.carrier || "航空未知"}</b>`
+      + (s.nonstop === "full" ? "，四段全直飛（已詳掃確認）"
+        : s.nonstop === "query" ? "，查詢已限直飛（尚未詳掃確認）" : ""),
+    `亞洲端走 <b>${cityLabel(s.origin)}</b>，最便宜日期 <b>${win}</b>`,
     over > 0
       ? `比目前最便宜的 ${cityLabel(all[0].dest)} 貴 <b>${fmtTWD(Math.round(over * rate))}</b>`
       : `<b>目前所有長程目的地裡最便宜</b>`,
     `${lab}——${why}`,
-    s.other
-      ? `有更低的他航報價：${s.other.carrier} ${fmtKRW(s.other.priceKRW)}（非長榮票）`
-      : `長榮就是這條線的最低價`,
+    s.alt
+      ? `次低的另一家：${s.alt.carrier} ${fmtKRW(s.alt.priceKRW)}`
+      : `這條線的低價全是同一家`,
     `樣本 ${s.n} 組`,
   ].map(t => `<div>${t}</div>`).join("");
   insight.innerHTML = `<div class="insight">
