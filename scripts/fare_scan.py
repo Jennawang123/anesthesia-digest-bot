@@ -30,8 +30,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fare_combos import (PHASE1, PHASE2, PHASE3, PHASE4, PHASE5,
                          PHASE6, generate)
 from fare_store import (LocalStore, merge_detail, merge_refresh,
-                        pick_detail_targets, push_firebase,
-                        read_db_url)
+                        pick_detail_targets,
+                        pick_detail_targets_per_route,
+                        push_firebase, read_db_url)
 from fx_rate import fetch_krw_twd, to_twd
 from gf_parse import parse_row
 from gf_url import build_url
@@ -327,12 +328,11 @@ async def detail_scan(context, legs):
         await page.close()
 
 
-async def run_detail(top_n, store, db_url, rate, fx_at, delay=3.0):
-    """對最便宜的前 N 組執行詳掃。"""
+async def run_detail(targets, store, db_url, rate, fx_at, delay=3.0):
+    """對指定的組合逐段點選補時刻。"""
     from playwright.async_api import async_playwright
 
-    targets = pick_detail_targets(store.all_ok(), top_n)
-    print(f"最便宜前 {top_n} 組中，{len(targets)} 組尚未詳掃")
+    print(f"待詳掃 {len(targets)} 組")
     if not targets:
         return
 
@@ -444,6 +444,8 @@ def main():
     ap.add_argument("--concurrency", type=int, default=2, help="並行數")
     ap.add_argument("--detail", type=int, metavar="N",
                     help="對最便宜的前 N 組補四段時刻")
+    ap.add_argument("--detail-per-route", type=int, metavar="N",
+                    help="每條航線各補最便宜的 N 組時刻")
     ap.add_argument("--refresh", type=int, metavar="N",
                     help="重掃最便宜的前 N 組並累積價格歷史（供每日排程）")
     args = ap.parse_args()
@@ -467,14 +469,22 @@ def main():
                                 delay=args.delay, concurrency=args.concurrency))
         return
 
-    if args.detail:
+    if args.detail or args.detail_per_route:
+        if not wait_for_network():
+            print("網路持續不通，中止。")
+            return
         store = LocalStore(STORE_PATH)
         db_url = read_db_url()
         try:
             rate, fx_at = fetch_krw_twd()
         except Exception:
             rate, fx_at = None, ""
-        asyncio.run(run_detail(args.detail, store, db_url, rate, fx_at,
+        if args.detail_per_route:
+            targets = pick_detail_targets_per_route(store.all_ok(),
+                                                    args.detail_per_route)
+        else:
+            targets = pick_detail_targets(store.all_ok(), args.detail)
+        asyncio.run(run_detail(targets, store, db_url, rate, fx_at,
                                delay=args.delay))
         return
 

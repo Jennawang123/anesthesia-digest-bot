@@ -6,7 +6,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from fare_store import (LocalStore, merge_detail,  # noqa: E402
-                        merge_refresh, pick_detail_targets)
+                        merge_refresh, pick_detail_targets,
+                        pick_detail_targets_per_route)
 
 
 def test_寫入後可讀回(tmp_path):
@@ -171,3 +172,38 @@ def test_詳掃跳過屢次失敗的組():
 def test_詳掃目標數量受限於top_n():
     recs = {str(i): {"priceKRW": i, "detail": "quick"} for i in range(10)}
     assert len(pick_detail_targets(recs, 3)) == 3
+
+
+def _rec(price, asia, dest, **kw):
+    return {"priceKRW": price, "detail": "quick",
+            "legs": [{"from": asia, "to": "TPE"}, {"from": "TPE", "to": dest},
+                     {"from": dest, "to": "TPE"}, {"from": "TPE", "to": asia}],
+            **kw}
+
+
+def test_每條航線各挑最便宜的N組詳掃():
+    # 只挑全域前 N 組時，時刻全落在同一條航線上，使用者一篩別條就全是待補
+    recs = {
+        "a1": _rec(100, "BKK", "LAX"), "a2": _rec(110, "BKK", "LAX"),
+        "a3": _rec(120, "BKK", "LAX"),
+        "b1": _rec(900, "PUS", "MUC"), "b2": _rec(950, "PUS", "MUC"),
+    }
+    got = pick_detail_targets_per_route(recs, 2)
+    assert sorted(k for k, _ in got) == ["a1", "a2", "b1", "b2"]
+
+
+def test_已詳掃的組佔用該航線配額():
+    recs = {
+        "done": _rec(100, "BKK", "LAX", detail="full"),
+        "next": _rec(110, "BKK", "LAX"),
+        "more": _rec(120, "BKK", "LAX"),
+    }
+    assert [k for k, _ in pick_detail_targets_per_route(recs, 2)] == ["next"]
+
+
+def test_每航線挑選同樣跳過屢次失敗的組():
+    recs = {
+        "bad": _rec(100, "PUS", "MUC", detailFails=2),
+        "ok1": _rec(110, "PUS", "MUC"),
+    }
+    assert [k for k, _ in pick_detail_targets_per_route(recs, 1)] == ["ok1"]

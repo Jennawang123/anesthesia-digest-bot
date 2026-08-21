@@ -227,11 +227,20 @@ function card(r, isBest){
     </div></div>`;
 }
 
+// 下拉選單只列代碼認不出是哪裡，補上中文城市名；value 仍是 IATA 代碼
+const CITY = {
+  ICN: "首爾", PUS: "釜山", BKK: "曼谷", NRT: "東京成田", HND: "東京羽田",
+  KIX: "大阪", TPE: "台北", LAX: "洛杉磯", SFO: "舊金山", SEA: "西雅圖",
+  YVR: "溫哥華", VIE: "維也納", MXP: "米蘭", AMS: "阿姆斯特丹",
+  MUC: "慕尼黑",
+};
+const cityLabel = c => CITY[c] ? `${c}　${CITY[c]}` : c;
+
 function buildFilters(){
   const fill = (el, vals) => {
     const cur = el.value;
     el.innerHTML = '<option value="">全部</option>' +
-      vals.map(v => `<option value="${v}">${v}</option>`).join("");
+      vals.map(v => `<option value="${v}">${cityLabel(v)}</option>`).join("");
     if (vals.includes(cur)) el.value = cur;
   };
   fill(fIn,   [...new Set(RECORDS.map(r => r.legs[0].from))].sort());

@@ -139,6 +139,44 @@ def pick_detail_targets(records, top_n, max_fails=DETAIL_MAX_FAILS):
             and rec.get("detailFails", 0) < max_fails][:top_n]
 
 
+def _route(rec):
+    legs = rec.get("legs") or []
+    if len(legs) < 2:
+        return None
+    return (legs[0].get("from"), legs[1].get("to"))
+
+
+def pick_detail_targets_per_route(records, per_route,
+                                  max_fails=DETAIL_MAX_FAILS):
+    """每條航線（亞洲端×目的地）各挑最便宜的幾組來詳掃。
+
+    只挑全域最便宜的前 N 組時，補到的時刻幾乎全落在同一條航線上，
+    使用者一篩到別條航線看到的還是「時刻待補」——全部 3738 組都
+    詳掃要 50 小時，不可能，故改為每條航線都留幾組有時刻的樣本。
+
+    已經詳掃過的組佔用該航線的配額，否則每次執行都會再挑新的一批。
+    """
+    done = {}
+    for rec in records.values():
+        if rec.get("detail") == "full":
+            key = _route(rec)
+            done[key] = done.get(key, 0) + 1
+
+    buckets = {}
+    for cid, rec in sorted(records.items(), key=lambda kv: kv[1]["priceKRW"]):
+        if rec.get("detail") == "full":
+            continue
+        if rec.get("detailFails", 0) >= max_fails:
+            continue
+        key = _route(rec)
+        if key is None:
+            continue
+        bucket = buckets.setdefault(key, [])
+        if done.get(key, 0) + len(bucket) < per_route:
+            bucket.append((cid, rec))
+    return [t for bucket in buckets.values() for t in bucket]
+
+
 def read_db_url():
     """讀 Firebase Database URL。找不到時回傳 None（僅本機儲存）。"""
     url = os.environ.get("FOUR_LEG_FARE_DB", "").strip()
