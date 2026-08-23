@@ -345,7 +345,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0823a</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0824a</span></div>
     </div>
   </div>
   <div class="content">
@@ -405,6 +405,18 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
               <button type="button" class="btn btn-g" style="flex:0 0 auto;padding:11px 14px" onclick="geoLookup('c')">📍 查詢</button>
             </div>
             <p class="hint geo-res" id="c_geo_result" style="text-align:left;margin-top:6px"></p>
+          </div>
+          <div class="fg">
+            <label class="lb">行程時區</label>
+            <select class="inp" id="c_tz" onchange="saveCfg()">
+            <option value="">自動（依這台裝置）</option>
+            <option value="Atlantic/Reykjavik">冰島（雷克雅維克）</option>
+            <option value="Europe/Oslo">挪威（奧斯陸）</option>
+            <option value="Asia/Taipei">台北</option>
+            <option value="Europe/London">倫敦</option>
+            <option value="Europe/Paris">中歐（巴黎／羅馬）</option>
+            </select>
+            <p class="hint" style="text-align:left;margin-top:6px">決定「今天」是哪一天——行程頁自動跳到的那一天、記帳的預設日期都看它。留「自動」的話，人到了當地、手機時區一換就會跟著對。</p>
           </div>
           <button class="btn btn-b btn-w" onclick="saveCfg()">儲存設定</button>
         </div>
@@ -599,8 +611,16 @@ let curActOrder=0;
 
 // ─── Utils ───────────────────────────────────────────
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const japanDate=(d=new Date())=>d.toLocaleDateString('en-CA',{timeZone:'Asia/Tokyo'});
-const today=()=>japanDate();
+// 「今天」是哪一天：行程頁自動跳到的那一天、記帳的預設日期都看它。
+// 原本這裡寫死 Asia/Tokyo（從日本行 fork 過來時留下的），而冰島 UTC+0、挪威夏令 UTC+2，
+// 兩邊都跟日本差了一整天——人到當地，裝置時區本來就會自動切過去，寫死反而讓它算錯。
+// 所以預設跟著裝置走；要釘死某個時區時（例如人還在台灣、但想以當地日期為準）才在
+// 設定頁指定，存在 /config.tz 跨裝置同步。
+const tripDate=(d=new Date())=>{
+  try{return d.toLocaleDateString('en-CA',CFG.tz?{timeZone:CFG.tz}:undefined);}
+  catch(e){return d.toLocaleDateString('en-CA');}   // 時區字串無效時不要讓整個 app 掛掉
+};
+const today=()=>tripDate();
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const fmtD=d=>{if(!d)return'';return new Date(d+'T12:00:00').toLocaleDateString('zh-TW',{month:'short',day:'numeric',weekday:'short'});};
 // 兩點間大圓距離（公里）。安全資訊的 fallback 距離與 sanityCheck 的距離門檻都用它。
@@ -1376,7 +1396,7 @@ function syncWeather(sched){
 // 裝置專屬設定（Firebase 網址）留在 localStorage；
 // 旅程本身的設定（標題/成員/出發日/天數/照片/主要城市）存在 Firebase /config，
 // 這樣換裝置不用重填，也不會兩台各存一份互相打架。
-const TRIP_KEYS=['title','members','start','days','photo','city','cityQuery','lat','lng'];
+const TRIP_KEYS=['title','members','start','days','photo','city','cityQuery','lat','lng','tz'];
 // 本機只留連線資訊：Firebase 網址 + API Key（其餘旅程設定一律以 /config 為準）
 function saveDevice(){localStorage.setItem('iceland_trip',JSON.stringify({url:CFG.url,apiKey:CFG.apiKey||''}));}
 // ─── 離線快照 ───────────────────────────────────────
@@ -1494,6 +1514,9 @@ function applyTripCfg(cfg){
   setIf('c_days',CFG.days||'');
   setIf('c_photo',CFG.photo||'');
   setIf('c_city',CFG.cityQuery||'');
+  // 下拉不套用 setIf 的「不覆寫已有值」規則：它的空值就是「自動」這個有效選項，
+  // 用 setIf 的話從別台裝置改過來的設定永遠同步不進這個欄位。
+  {const tzEl=document.getElementById('c_tz');if(tzEl)tzEl.value=CFG.tz||'';}
   const gr=document.getElementById('c_geo_result');
   if(curTab!=='cfg'||!gr.textContent)gr.textContent=CFG.city?`📍 目前定位：${CFG.city} (${Number(CFG.lat||0).toFixed(2)}, ${Number(CFG.lng||0).toFixed(2)})`:'';
 }
@@ -2679,6 +2702,11 @@ function saveCfg(){
   const dateChanged=newStart!==CFG.start||newDays!==CFG.days;
   CFG.start=newStart;CFG.days=newDays;
   CFG.photo=document.getElementById('c_photo').value.trim();
+  const tzEl=document.getElementById('c_tz');
+  const newTz=tzEl?(tzEl.value||null):CFG.tz;
+  // 時區換了，「今天是第幾天」就跟著換，行程頁得重畫一次才看得到
+  const tzChanged=(newTz||'')!==(CFG.tz||'');
+  CFG.tz=newTz;
   const newCityName=document.getElementById('c_city').value.trim();
   let cityChanged=false;
   if(newCityName&&newCityName!==CFG.cityQuery){
@@ -2693,6 +2721,7 @@ function saveCfg(){
   if(dateChanged)fixDates(false);
   // 主要城市或日期變了，天氣的 baseline 就過期了，強制重抓
   if(cityChanged||dateChanged){dayCityWxKey=null;syncWeather(lastSched);}
+  if(tzChanged)renderSched(lastSched);
   toast('✅ 設定已儲存'+(dateChanged?' · 行程日期已更新':''));
 }
 function changeFB(){if(!confirm('變更 Firebase 將重新載入，確定？'))return;localStorage.removeItem('iceland_trip');location.reload();}
@@ -3117,6 +3146,26 @@ function _selftest(){
     ok('住宿不顯示公休日', NO_CLOSED_CATS.includes('hotel'));
     ok('餐廳仍顯示公休日', !NO_CLOSED_CATS.includes('food'));
     ok('景點仍顯示公休日', !NO_CLOSED_CATS.includes('sight'));
+  }
+
+  // ---- 行程時區 ----
+  {
+    const saved=CFG.tz;
+    const d=new Date('2026-09-14T23:30:00Z');   // UTC 出發日深夜
+    CFG.tz='Atlantic/Reykjavik';                // UTC+0 全年不調，當地還是出發日
+    ok('冰島時區回出發日', tripDate(d)==='2026-09-14');
+    CFG.tz='Asia/Taipei';                       // UTC+8，台北已經是隔天早上
+    ok('台北時區回隔天', tripDate(d)==='2026-09-15');
+    CFG.tz='Europe/Oslo';                       // 挪威九月仍是夏令 UTC+2，已跨日
+    ok('挪威時區回隔天', tripDate(d)==='2026-09-15');
+    CFG.tz='';                                  // 自動：跟著裝置，只驗格式
+    ok('自動模式回 YYYY-MM-DD', /^\d{4}-\d{2}-\d{2}$/.test(tripDate(d)));
+    CFG.tz=null;
+    ok('未設定時也不出錯', /^\d{4}-\d{2}-\d{2}$/.test(tripDate(d)));
+    CFG.tz='Not/AZone';                         // 打錯的時區字串不能讓整個 app 掛掉
+    ok('無效時區安全退回裝置時區', /^\d{4}-\d{2}-\d{2}$/.test(tripDate(d)));
+    ok('tz 會被同步到 /config', TRIP_KEYS.includes('tz'));
+    CFG.tz=saved;
   }
 
   console.log(out.join('\n')+`\n\n通過 ${pass} / 失敗 ${fail}`);
