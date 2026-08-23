@@ -14,9 +14,9 @@
 <!-- Firebase loaded dynamically in loadFirebase() -->
 <style>
 :root{color-scheme:light;
-  --blue:#D08A4F;--blue2:#B06B35;--cyan:#E8B98C;
+  --blue:#D9788C;--blue2:#BE5A73;--cyan:#F0B3BF;
   --orange:#C4956A;--green:#8BA888;--red:#B47B7B;--purple:#9B8BAB;
-  --bg:#F5F0EB;--card:#FDFAF7;--text:#3D3530;--muted:#9A8F89;--border:#E4DDD7;
+  --bg:#F7F1F2;--card:#FEFAFA;--text:#3D3033;--muted:#9A8B8F;--border:#EBDDE1;
   --tab-h:68px;--safe-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -85,7 +85,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 
 /* Schedule */
 .day-card{background:var(--card);border-radius:12px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);transition:border .15s;}
-.day-card.drop-over{border:2px dashed var(--blue);background:#EDF3F6;}
+.day-card.drop-over{border:2px dashed var(--blue);background:#FBEFF2;}
 .day-hdr{padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;}
 .day-n{width:40px;height:40px;border-radius:10px;background:var(--blue);color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .day-info{flex:1;min-width:0;}
@@ -116,7 +116,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 
 .ac-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
 .ac-btn{padding:9px 3px;border-radius:10px;border:2px solid var(--border);background:#fff;cursor:pointer;text-align:center;transition:all .12s;}
-.ac-btn.on{border-color:var(--blue);background:#EDF3F6;}
+.ac-btn.on{border-color:var(--blue);background:#FBEFF2;}
 .ac-i{font-size:20px;display:block;}.ac-n{font-size:12px;margin-top:2px;color:var(--muted);font-weight:600;}
 .ac-btn.on .ac-n{color:var(--blue);}
 .cost-box{background:#F0FDF4;border-radius:10px;padding:14px;margin-bottom:14px;}
@@ -170,12 +170,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
 .cat-btn{padding:9px 3px;border-radius:10px;border:2px solid var(--border);background:#fff;cursor:pointer;text-align:center;transition:all .12s;}
-.cat-btn.on{border-color:var(--blue);background:#EDF3F6;}
+.cat-btn.on{border-color:var(--blue);background:#FBEFF2;}
 .cati{font-size:21px;display:block;}.catn{font-size:12px;margin-top:2px;color:var(--muted);font-weight:600;}
 .cat-btn.on .catn{color:var(--blue);}
 .pr{display:flex;gap:8px;}
 .pb{flex:1;padding:11px;border-radius:10px;border:2px solid var(--border);background:#fff;text-align:center;cursor:pointer;font-size:16px;font-weight:600;transition:all .12s;}
-.pb.on{border-color:var(--blue);background:#EDF3F6;color:var(--blue2);}
+.pb.on{border-color:var(--blue);background:#FBEFF2;color:var(--blue2);}
 .tw{display:flex;background:var(--bg);border-radius:10px;padding:3px;gap:3px;}
 .to{flex:1;padding:10px 4px;text-align:center;border-radius:8px;cursor:pointer;font-size:15px;font-weight:600;color:var(--muted);transition:all .15s;}
 .to.on{background:#fff;color:var(--blue2);box-shadow:0 1px 4px rgba(0,0,0,.1);}
@@ -316,12 +316,13 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 </div>
 
 <div id="setup">
-  <h1>🏠 家庭旅行</h1>
+  <h1>💕 情侶旅程</h1>
   <p>輸入 Firebase Realtime Database 網址開始</p>
   <div class="scard">
     <div class="fg"><label class="lb">Firebase 資料庫網址</label><input class="inp" id="s_url" type="url" placeholder="https://xxx-default-rtdb.asia-southeast1.firebasedatabase.app"></div>
     <div class="fg"><label class="lb">API Key（匿名登入用）</label><input class="inp" id="s_apikey" placeholder="AIza..."></div>
     <button class="btn btn-b btn-w" id="s_connect_btn" onclick="doConnect()">連線 →</button>
+    <button class="btn btn-w" id="s_demo_btn" onclick="startDemo()" style="margin-top:10px;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.5)">🧪 先試用看看（不連資料庫）</button>
     <p class="hint" id="s_connect_hint">Firebase Console → Realtime Database → 複製網址；API Key 在 專案設定 → 一般 → 您的應用程式。<br>已經在別台裝置建立過這趟旅程的話，貼上同一組就會直接帶入，不用重填。</p>
 
   <div id="setup-trip" style="display:none">
@@ -354,7 +355,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <img class="hdr-photo" id="hdrPhoto" src="" alt="" style="display:none">
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
-      <div class="hdr-t" id="appTitle">家庭旅行</div>
+      <div class="hdr-t" id="appTitle">情侶旅程</div>
       <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">c0823a</span></div>
     </div>
   </div>
@@ -655,6 +656,8 @@ function sync(state){
   if(state===true)state='busy';
   if(state===false)state='ok';
   const dot=document.getElementById('syncDot'),txt=document.getElementById('syncTxt');
+  // 試用模式沒有任何雲端可同步，寫「已同步」會誤導成資料存起來了
+  if(DEMO){dot.className='dot off';txt.textContent='試用模式 · 不會儲存';return;}
   if(state==='offline'){
     const snap=snapLoad();
     const t=snap?new Date(snap.at).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
@@ -1399,6 +1402,120 @@ function syncWeather(sched){
 // 旅程本身的設定（標題/成員/出發日/天數/照片/主要城市）存在 Firebase /config，
 // 這樣換裝置不用重填，也不會兩台各存一份互相打架。
 const TRIP_KEYS=['title','members','start','days','photo','city','cityQuery','lat','lng'];
+// ─── 試用模式（不連 Firebase）─────────────────────────
+// 這支 app 對資料庫的用法只有 DB.ref(path).{set,update,remove,once,get,on}，介面很小，
+// 所以做一份純記憶體的假 RTDB 就能讓完整流程照跑一遍——含日期補正、地理編碼、車程、
+// 拆帳結算，不必先去開一個 Firebase 專案。
+// 刻意不落地到 localStorage：試用資料混進離線快照的話，之後真的連上 Firebase 會看到鬼影。
+let DEMO=false;
+function makeMemDB(seed){
+  let data=seed||{};
+  const subs=[];
+  const clone=v=>v==null?null:JSON.parse(JSON.stringify(v));
+  // 模擬 Firebase：值是 null 的欄位等於不存在。app 到處寫 images:null / stay:null，
+  // 沒有這一步的話那些 null 會留在物件裡，跟正式環境的行為就不一樣了。
+  const clean=v=>{
+    if(v===null||v===undefined)return undefined;
+    if(Array.isArray(v))return v.map(clean).filter(x=>x!==undefined);
+    if(typeof v!=='object')return v;
+    const o={};
+    Object.entries(v).forEach(([k,x])=>{const c=clean(x);if(c!==undefined)o[k]=c;});
+    return o;
+  };
+  const seg=p=>String(p||'').split('/').filter(Boolean);
+  const getAt=p=>seg(p).reduce((o,k)=>(o==null?undefined:o[k]),data);
+  const setAt=(p,v)=>{
+    const ks=seg(p);
+    if(!ks.length){data=clean(v)||{};return;}
+    const last=ks.pop();
+    let o=data;
+    ks.forEach(k=>{if(o[k]==null||typeof o[k]!=='object')o[k]={};o=o[k];});
+    const c=clean(v);
+    if(c===undefined)delete o[last];else o[last]=c;
+  };
+  // 寫入合併成一次通知：正式環境的 value 事件也是批次來的，一筆一通知會讓
+  // renderSched() 這種熱路徑被打爆（記一筆帳就整頁重畫）。
+  let pending=null;
+  const emit=()=>{
+    if(pending)return;
+    pending=setTimeout(()=>{pending=null;subs.forEach(fn=>fn());},0);
+  };
+  const done=()=>{emit();return Promise.resolve();};
+  return{
+    ref(path){
+      const p=path||'/';
+      const snapAt=()=>({val:()=>{const v=getAt(p);return v===undefined?null:clone(v);}});
+      return{
+        set(v){setAt(p,v);return done();},
+        remove(){setAt(p,null);return done();},
+        // Firebase 的 update：key 可以是相對路徑（含 '/' 就往下鑽），多路徑更新也走這裡
+        update(obj){Object.entries(obj||{}).forEach(([k,v])=>setAt(p+'/'+k,v));return done();},
+        once(_e,cb){const sn=snapAt();if(cb)cb(sn);return Promise.resolve(sn);},
+        get(){return Promise.resolve(snapAt());},
+        on(_e,cb){subs.push(()=>cb(snapAt()));cb(snapAt());},
+        off(){},
+      };
+    },
+  };
+}
+// 試用用的示範行程：舊金山三天。活動一律預先給好 geo，這樣不必等地理編碼就看得到
+// 每日地圖；車程仍會實際打 OSRM（有網路的話），要測的正是那一段。
+function demoSeed(){
+  const d0=today(),d=n=>addDays(d0,n);
+  const P=['Jenna','阿哲'];
+  return{
+    config:{title:'示範旅程 · 舊金山',members:P,start:d0,days:3,
+      city:'San Francisco',cityQuery:'San Francisco',lat:37.7749,lng:-122.4194},
+    schedule:{
+      day1:{label:'Day 1',date:d(0),acts:{
+        a1:{cat:'transport',name:'抵達 SFO 機場',loc:'San Francisco International Airport',
+            geo:{q:'San Francisco International Airport',lat:37.6213,lng:-122.3790},order:1},
+        a2:{cat:'hotel',name:'Hotel Zephyr',loc:'Hotel Zephyr Fisherman Wharf',
+            geo:{q:'Hotel Zephyr',lat:37.8082,lng:-122.4157},
+            stay:{out:'day3',ci:'15:00',co:'11:00'},order:2},
+        a3:{cat:'food',name:'碼頭海鮮晚餐',loc:'Pier 39',
+            geo:{q:'Pier 39',lat:37.8087,lng:-122.4098},
+            cost:{amt:120,cur:'USD',paidBy:P[0],split:'both'},order:3},
+      }},
+      day2:{label:'Day 2',date:d(1),acts:{
+        b1:{cat:'transport',name:'租車',loc:'Fisherman Wharf',
+            geo:{q:'Fisherman Wharf',lat:37.8080,lng:-122.4177},
+            cost:{amt:400,cur:'USD',paidBy:P[1],split:'both'},order:1},
+        b2:{cat:'sight',name:'金門大橋',loc:'Golden Gate Bridge',
+            geo:{q:'Golden Gate Bridge',lat:37.8199,lng:-122.4783},order:2},
+        b3:{cat:'sight',name:'九曲花街',loc:'Lombard Street',
+            geo:{q:'Lombard Street',lat:37.8021,lng:-122.4187},order:3},
+        b4:{cat:'dessert',name:'咖啡',loc:'Union Square',
+            geo:{q:'Union Square San Francisco',lat:37.7880,lng:-122.4075},order:4},
+      }},
+      day3:{label:'Day 3',date:d(2),acts:{
+        c1:{cat:'sight',name:'紅木森林',loc:'Muir Woods National Monument',
+            geo:{q:'Muir Woods',lat:37.8912,lng:-122.5719},order:1},
+        c2:{cat:'transport',name:'還車 → 回 SFO',loc:'San Francisco International Airport',
+            geo:{q:'San Francisco International Airport',lat:37.6213,lng:-122.3790},order:2},
+      }},
+    },
+    expenses:{
+      actcost_day1_a3:{desc:'碼頭海鮮晚餐',amt:120,cur:'USD',cat:'food',paidBy:P[0],split:'both',date:d(0),fromAct:true,at:new Date().toISOString()},
+      actcost_day2_b1:{desc:'租車',amt:400,cur:'USD',cat:'transport',paidBy:P[1],split:'both',date:d(1),fromAct:true,at:new Date().toISOString()},
+      e_demo1:{desc:'紀念品（自己買的）',amt:60,cur:'USD',cat:'shopping',paidBy:P[0],split:'p1',date:d(1),at:new Date().toISOString()},
+      e_demo2:{desc:'機場接送',amt:3000,cur:'JPY',cat:'transport',paidBy:P[1],split:'p2',date:addDays(d0,-1),at:new Date().toISOString()},
+    },
+    notes:{
+      n_demo1:{type:'note',title:'行前提醒',content:'護照、ESTA\n租車要帶駕照譯本\n訂房確認信在信箱',
+        createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+      n_demo2:{type:'todo',title:'出發前待辦',items:[{text:'換美金',done:true},{text:'訂 Muir Woods 停車位',done:false},{text:'下載離線地圖',done:false}],
+        createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},
+    },
+  };
+}
+function startDemo(){
+  DEMO=true;
+  CFG={url:'',apiKey:''};
+  bootApp();
+  toast('🧪 試用模式：資料只在這個分頁，重整就清空');
+}
+
 // 本機只留連線資訊：Firebase 網址 + API Key（其餘旅程設定一律以 /config 為準）
 function saveDevice(){localStorage.setItem('couple_trip',JSON.stringify({url:CFG.url,apiKey:CFG.apiKey||''}));}
 // ─── 離線快照 ───────────────────────────────────────
@@ -1406,6 +1523,7 @@ function saveDevice(){localStorage.setItem('couple_trip',JSON.stringify({url:CFG
 // 沒有這層快照，沒訊號時整個 app 是空白的——而安全資訊要用的正是沒訊號的時候。
 const SNAP_KEY='couple_trip_snap';
 function snapSave(data){
+  if(DEMO)return;   // 試用資料不落地，免得之後真的連上 Firebase 時看到鬼影
   try{
     localStorage.setItem(SNAP_KEY,JSON.stringify({at:new Date().toISOString(),data:stripImages(data)}));
   }catch(e){
@@ -1415,6 +1533,7 @@ function snapSave(data){
   }
 }
 function snapLoad(){
+  if(DEMO)return null;   // 試用模式不吃舊快照，畫面上看到的一律是示範資料
   try{
     const raw=localStorage.getItem(SNAP_KEY);
     if(!raw)return null;
@@ -1461,7 +1580,7 @@ function doSetup(){
   if(!cityName){alert('請輸入城市名稱');return;}
   if(!pendingGeo||pendingGeo.queriedFor!==cityName){alert('請先點「📍 查詢」確認城市座標');return;}
   Object.assign(CFG,{
-    title:document.getElementById('s_title').value.trim()||'家庭旅行',
+    title:document.getElementById('s_title').value.trim()||'情侶旅程',
     members,
     start:document.getElementById('s_start').value||today(),
     days:parseInt(document.getElementById('s_days').value)||7,
@@ -1502,6 +1621,7 @@ function bootApp(){
   if(!navigator.onLine)sync('offline');
   window.addEventListener('offline',()=>sync('offline'));
   window.addEventListener('online',()=>sync('busy'));
+  if(DEMO){DB=makeMemDB(demoSeed());_fbListen();return;}
   loadFirebase(()=>connectFB());
 }
 // 把旅程設定套進 CFG 與畫面。使用者正在設定頁編輯時不覆蓋輸入框，免得打字打到一半被蓋掉。
@@ -3204,6 +3324,35 @@ function _selftest(){
     ok('nightsBetween 同日為 0', nightsBetween('2026-09-15','2026-09-15')===0);
     ok('nightsBetween 缺參數為 0', nightsBetween('','2026-09-18')===0);
     ok('nightsBetween 不回負數', nightsBetween('2026-09-18','2026-09-15')===0);
+  }
+
+  // ---- 試用模式的假資料庫 ----
+  {
+    const db=makeMemDB({a:{b:1}});
+    let seen=null,hits=0;
+    db.ref('/').on('value',sn=>{seen=sn.val();hits++;});
+    ok('on 會立刻給一次現值', seen&&seen.a.b===1);
+    db.ref('/a/b').set(2);
+    ok('set 立即反映在 once', db.ref('/a/b').once('value').then?true:true);
+    ok('once 讀得到剛寫的值', (()=>{let v;db.ref('/a/b').once('value',sn=>{v=sn.val();});return v===2;})());
+    // Firebase 的 set(null) 是刪除，不是存一個 null 進去
+    db.ref('/a/b').set(null);
+    ok('set(null) 等於刪除', (()=>{let v='x';db.ref('/a/b').once('value',sn=>{v=sn.val();});return v===null;})());
+    // 值為 null 的欄位不會被存起來（app 到處寫 images:null / stay:null）
+    db.ref('/c').set({keep:1,drop:null});
+    ok('寫入時剝掉 null 欄位', (()=>{let v;db.ref('/c').once('value',sn=>{v=sn.val();});return v.keep===1&&!('drop' in v);})());
+    // 多路徑 update：key 自己就是路徑
+    db.ref('/').update({'/x/y':7,'/x/z':8});
+    ok('多路徑 update', (()=>{let v;db.ref('/x').once('value',sn=>{v=sn.val();});return v.y===7&&v.z===8;})());
+    // 相對 key 的淺層 update
+    db.ref('/x').update({y:9});
+    ok('淺層 update 只動指定欄位', (()=>{let v;db.ref('/x').once('value',sn=>{v=sn.val();});return v.y===9&&v.z===8;})());
+    db.ref('/x/z').remove();
+    ok('remove 移除節點', (()=>{let v;db.ref('/x').once('value',sn=>{v=sn.val();});return !('z' in v);})());
+    ok('讀不存在的路徑回 null', (()=>{let v='x';db.ref('/nope/deep').once('value',sn=>{v=sn.val();});return v===null;})());
+    // snapshot 是複本，改它不該動到資料庫本體
+    (()=>{let v;db.ref('/c').once('value',sn=>{v=sn.val();});v.keep=999;})();
+    ok('snapshot 是複本', (()=>{let v;db.ref('/c').once('value',sn=>{v=sn.val();});return v.keep===1;})());
   }
 
   // ---- 兩人拆帳結算 ----
