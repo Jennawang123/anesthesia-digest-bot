@@ -345,7 +345,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0810c</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0823a</span></div>
     </div>
   </div>
   <div class="content">
@@ -1099,13 +1099,40 @@ function nearestFacilities(base){
   return {police:pick(i=>i.a==='police'),hospital:pick(i=>i.a==='hospital'||i.a==='clinic')};
 }
 // 車程。直線距離在冰島會嚴重低估（實測 1.15-1.24x），而且「62 公里」不會讓人知道那是一小時的路。
+//
+// OSRM 公用 demo server 只有路網幾何模型，沒有任何真實行車資料，時間會從兩個方向失真：
+// (1) 它一律把 OSM 的 maxspeed 打八折——實測冰島 1 號公路 maxspeed=90 被算成 71.5 km/h，
+//     而 Google 依實際行駛紀錄跑出約 78 km/h；
+// (2) 沒有 maxspeed 標籤的路一律給 5 km/h，那是步行速度。冰島大量景點的進場路正是這種
+//     ——查過 OSM，小冰河湖那段是 highway=track/surface=gravel/tracktype=grade2、
+//     Sólheimajökull 那段是 highway=secondary/surface=gravel，都沒有 access 限制，
+//     車開得進去，只是路況慢。於是最後 1.8 公里被算成 22 分鐘。
+// 2026-08-23 羽毛河峽谷→小冰河湖實測：OSRM 123 分，Google 94 分，差額正好就是這兩項。
+// 所以不直接用 route.duration，改抓逐段 annotation 自己加總。校正後同一條路線算出 95 分。
+//
+// ⚠️ 別誤以為這是「座標定位錯了」而跑去改景點座標：那些路真的可以開，把 pin 移到岔路口
+// 只會讓地圖標記離景點 1-2 公里。Google 對這類碎石路畫虛線是它不導航，不是不能開。
+const DRIVE_MIN_KMH=25;   // grade2 碎石路的合理速度；OSRM 對缺 maxspeed 的路給的 5 km/h 是步行速度
+const DRIVE_TIME_FIX=0.9; // 回沖 OSRM 的八折；0.9 而非 1/0.8，因為實際平均速度本來就低於限速
+// 拿不到 annotation（OSRM 換版或忽略參數）就退回原始 duration 套同一個係數——
+// 少一個欄位不該讓整段車程算不出來，那會讓 UI 退回沒有參考價值的直線距離。
+function driveMinutes(route){
+  let sec=0,ok=false;
+  for(const leg of route.legs||[]){
+    const sp=leg.annotation?.speed,di=leg.annotation?.distance;
+    if(!Array.isArray(sp)||!Array.isArray(di)||sp.length!==di.length)return Math.round(route.duration/60*DRIVE_TIME_FIX);
+    ok=true;
+    for(let i=0;i<sp.length;i++)sec+=di[i]/Math.max(sp[i],DRIVE_MIN_KMH/3.6);
+  }
+  return ok?Math.round(sec/60*DRIVE_TIME_FIX):Math.round(route.duration/60*DRIVE_TIME_FIX);
+}
 async function osrmDrive(fromLat,fromLng,toLat,toLng){
   try{
-    const r=await fetch(`${OSRM_URL}${fromLng},${fromLat};${toLng},${toLat}?overview=false`);
+    const r=await fetch(`${OSRM_URL}${fromLng},${fromLat};${toLng},${toLat}?overview=false&annotations=speed,distance`);
     if(!r.ok)return null;
     const d=await r.json();
     if(d.code!=='Ok'||!d.routes?.length)return null;
-    return {km:+(d.routes[0].distance/1000).toFixed(1),min:Math.round(d.routes[0].duration/60)};
+    return {km:+(d.routes[0].distance/1000).toFixed(1),min:driveMinutes(d.routes[0])};
   }catch(e){return null;}
 }
 // ─── 行程與行程之間的車程 ───────────────────────────
