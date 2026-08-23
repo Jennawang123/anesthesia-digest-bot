@@ -342,6 +342,21 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
             <p class="hint geo-res" id="c_geo_result" style="text-align:left;margin-top:6px"></p>
           </div>
           <div class="fg"><label class="lb">Gemini API Key</label><input class="inp" id="c_gemini" type="password" placeholder="AIza…"></div>
+          <div class="fg">
+            <label class="lb">行程時區</label>
+            <select class="inp" id="c_tz" onchange="saveCfg()">
+            <option value="">自動（依這台裝置）</option>
+            <option value="Asia/Taipei">台北</option>
+            <option value="Asia/Tokyo">東京</option>
+            <option value="America/Los_Angeles">美西（洛杉磯）</option>
+            <option value="America/New_York">美東（紐約）</option>
+            <option value="Europe/London">倫敦</option>
+            <option value="Europe/Paris">中歐（巴黎／羅馬）</option>
+            <option value="Atlantic/Reykjavik">雷克雅維克</option>
+            <option value="Australia/Sydney">雪梨</option>
+            </select>
+            <p class="hint" style="text-align:left;margin-top:6px">決定「今天」是哪一天——行程頁自動跳到的那一天、記帳的預設日期都看它。留「自動」的話，人到了當地、手機時區一換就會跟著對。</p>
+          </div>
           <button class="btn btn-b btn-w" onclick="saveCfg()">儲存設定</button>
         </div>
         <div class="slbl" style="margin-top:8px">行程日期</div>
@@ -508,8 +523,16 @@ let curActOrder=0;
 
 // ─── Utils ───────────────────────────────────────────
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const japanDate=(d=new Date())=>d.toLocaleDateString('en-CA',{timeZone:'Asia/Tokyo'});
-const today=()=>japanDate();
+// 「今天」是哪一天：行程頁自動跳到的那一天、記帳的預設日期都看它。
+// 原本這裡寫死 Asia/Tokyo（日本行留下的），換一個國家就得改一次程式——而且人到了
+// 當地，裝置時區本來就會自動切過去，寫死反而讓它算錯。
+// 所以預設跟著裝置走；要釘死某個時區時（例如人還在台灣、但想以當地日期為準）才在
+// 設定頁指定，存在 /config.tz 跨裝置同步。
+const tripDate=(d=new Date())=>{
+  try{return d.toLocaleDateString('en-CA',CFG.tz?{timeZone:CFG.tz}:undefined);}
+  catch(e){return d.toLocaleDateString('en-CA');}   // 時區字串無效時不要讓整個 app 掛掉
+};
+const today=()=>tripDate();
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const fmtD=d=>{if(!d)return'';return new Date(d+'T12:00:00').toLocaleDateString('zh-TW',{month:'short',day:'numeric',weekday:'short'});};
 const fmtDt=iso=>{const d=new Date(iso);return d.toLocaleDateString('zh-TW',{month:'short',day:'numeric'})+' '+d.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});};
@@ -707,7 +730,7 @@ function syncWeather(sched){
 // 裝置專屬設定（Firebase 網址、Gemini Key）留在 localStorage；
 // 旅程本身的設定（標題/成員/出發日/天數/照片/主要城市）存在 Firebase /config，
 // 這樣換裝置不用重填，也不會兩台各存一份互相打架。
-const TRIP_KEYS=['title','members','start','days','photo','city','cityQuery','lat','lng'];
+const TRIP_KEYS=['title','members','start','days','photo','city','cityQuery','lat','lng','tz'];
 function saveDevice(){localStorage.setItem('family_trip',JSON.stringify({url:CFG.url,geminiKey:CFG.geminiKey}));}
 function tripCfgFromCFG(){const o={};TRIP_KEYS.forEach(k=>{if(CFG[k]!==undefined)o[k]=CFG[k];});return o;}
 
@@ -790,6 +813,9 @@ function applyTripCfg(cfg){
   setIf('c_days',CFG.days||'');
   setIf('c_photo',CFG.photo||'');
   setIf('c_city',CFG.cityQuery||'');
+  // 下拉不套用 setIf 的「不覆寫已有值」規則：它的空值就是「自動」這個有效選項，
+  // 用 setIf 的話從別台裝置改過來的設定永遠同步不進這個欄位。
+  {const tzEl=document.getElementById('c_tz');if(tzEl)tzEl.value=CFG.tz||'';}
   const gr=document.getElementById('c_geo_result');
   if(curTab!=='cfg'||!gr.textContent)gr.textContent=CFG.city?`📍 目前定位：${CFG.city} (${Number(CFG.lat||0).toFixed(2)}, ${Number(CFG.lng||0).toFixed(2)})`:'';
 }
@@ -1505,6 +1531,11 @@ function saveCfg(){
   const dateChanged=newStart!==CFG.start||newDays!==CFG.days;
   CFG.start=newStart;CFG.days=newDays;
   CFG.photo=document.getElementById('c_photo').value.trim();
+  const tzEl=document.getElementById('c_tz');
+  const newTz=tzEl?(tzEl.value||null):CFG.tz;
+  // 時區換了，「今天是第幾天」就跟著換，行程頁得重畫一次才看得到
+  const tzChanged=(newTz||'')!==(CFG.tz||'');
+  CFG.tz=newTz;
   const newCityName=document.getElementById('c_city').value.trim();
   let cityChanged=false;
   if(newCityName&&newCityName!==CFG.cityQuery){
@@ -1520,6 +1551,7 @@ function saveCfg(){
   if(dateChanged)fixDates(false);
   // 主要城市或日期變了，天氣的 baseline 就過期了，強制重抓
   if(cityChanged||dateChanged){dayCityWxKey=null;syncWeather(lastSched);}
+  if(tzChanged)renderSched(lastSched);
   toast('✅ 設定已儲存'+(dateChanged?' · 行程日期已更新':''));
 }
 function changeFB(){if(!confirm('變更 Firebase 將重新載入，確定？'))return;localStorage.removeItem('family_trip');location.reload();}
