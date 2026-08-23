@@ -77,6 +77,12 @@ iOS 清掉 localStorage 時會連同 Firebase 網址一起沒、字級退回正�
 
 兩支各自跑。
 
+## 實作時與本規格的三處偏離
+
+1. **`.leaflet-marker-num` 從白名單移除**。它的 `iconSize:[26,26]` / `iconAnchor:[13,13]` 寫死在 JS 的 `L.divIcon()` 裡（`iceland-trip.html` 的 `L.marker(...)` 那行），只放大 CSS 會讓標記與實際座標錯位。地圖是 220px 的小圖、編號與底下的清單對照著看，不放大可以接受。
+2. **設定頁的「離線資料」狀態與「快照更新於」不縮放**。它們雖然是資料，但位於設定頁，而設定頁整體維持原大小——只放大其中兩行會前後不一致。
+3. **`family-trip-template.html` 新增了 `_selftest()`**（原本完全沒有測試）。這批改寫了 36 條 selector，selector 名稱打錯不會報錯、只會有一兩個元素沒跟著放大，肉眼幾乎看不出來，所以補一支精簡版驗 computed style。
+
 ## 部署
 
 兩支都是 Netlify 手動拖拉部署，commit 不等於上線。冰島版版本號在標題列右下角。
