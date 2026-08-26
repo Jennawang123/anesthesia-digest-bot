@@ -10,8 +10,14 @@
         -T /usr/bin/security -w "$(cat 某個暫存檔)"
 環境變數 DATABASE_URL 若有設會優先採用（方便臨時測試）。
 
-輸出到 ~/Documents/db-backups/YYYY-MM-DD_HHMM/，每張表一個 CSV，
+輸出到 ~/db-backups/YYYY-MM-DD_HHMM/，每張表一個 CSV，
 外加 _manifest.txt 記錄各表筆數。預設保留最近 12 份，更舊的自動刪除。
+
+排程是 launchd 的 com.jenna.dbbackup，每週一、四 10:00 各跑一次（最長間隔
+4 天）。頻率不只為了備份密度：Supabase 免費專案閒置滿 7 天會被自動暫停，
+這支排程的連線同時當作 keep-alive，所以間隔一定要明顯小於 7 天。
+
+失敗時會寫 ~/db-backups/_FAILED.txt 並跳 macOS 通知，下次成功自動刪除。
 
 注意：備份檔絕對不能放進這個 repo（origin 是 public），故輸出路徑寫死在家目錄。
 """
@@ -19,10 +25,13 @@
 import csv
 import os
 import shutil
+import socket
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from sqlalchemy import create_engine, inspect, text
 
@@ -31,6 +40,12 @@ from sqlalchemy import create_engine, inspect, text
 BACKUP_ROOT = Path.home() / "db-backups"
 KEYCHAIN_SERVICE = "jenna-supabase-db"
 KEEP = 12
+
+# launchd 在排定時間觸發時，Mac 常常剛從睡眠喚醒、Wi-Fi 還沒連上，DNS 直接
+# 解不出 pooler 主機名（2026-08-03～08-24 連續四次備份就是這樣靜默失敗的）。
+# 先等網路就緒再開始，不要一觸發就炸。
+DNS_MAX_WAIT = 900   # 最多等 15 分鐘
+DNS_INTERVAL = 20    # 每 20 秒重試一次
 
 
 def read_url():
@@ -51,23 +66,48 @@ def read_url():
     return out.stdout.strip()
 
 
+def wait_for_dns(host):
+    """等到 host 解得出來為止。回傳 True/False，不拋例外。"""
+    deadline = time.time() + DNS_MAX_WAIT
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            socket.getaddrinfo(host, 5432, proto=socket.IPPROTO_TCP)
+            if attempt > 1:
+                print(f"  網路就緒（第 {attempt} 次嘗試）")
+            return True
+        except socket.gaierror as e:
+            if time.time() + DNS_INTERVAL > deadline:
+                print(f"  等不到網路（{host} 解析失敗 {attempt} 次）：{e}")
+                return False
+            print(f"  網路未就緒，{DNS_INTERVAL} 秒後重試（第 {attempt} 次）：{e}")
+            time.sleep(DNS_INTERVAL)
+
+
 def main():
     url = read_url()
     if not url:
         sys.exit("錯誤：拿到空的連線字串。")
     url = url.replace("postgres://", "postgresql://", 1)
 
+    host = urlsplit(url).hostname
+    if host and not wait_for_dns(host):
+        sys.exit("錯誤：網路一直沒就緒，本次備份放棄。")
+
     engine = create_engine(url, pool_pre_ping=True)
     if engine.dialect.name != "postgresql":
         sys.exit("錯誤：這條連線字串不是 Postgres，八成是退回本機 SQLite 了。")
 
-    stamp = datetime.now().strftime("%Y-%m-%d_%H%M")
-    outdir = BACKUP_ROOT / stamp
-    outdir.mkdir(parents=True, exist_ok=True)
-
+    # 先確認連得上、拿得到表，再開資料夾。順序顛倒的話連線失敗會留下一個
+    # 空資料夾，看起來像備份成功過（2026-08 三次空資料夾就是這樣來的）。
     tables = sorted(inspect(engine).get_table_names(schema="public"))
     if not tables:
         sys.exit("錯誤：public schema 一張表都沒有，先確認連對資料庫。")
+
+    stamp = datetime.now().strftime("%Y-%m-%d_%H%M")
+    outdir = BACKUP_ROOT / stamp
+    outdir.mkdir(parents=True, exist_ok=True)
 
     counts = []
     with engine.connect() as conn:
@@ -107,5 +147,52 @@ def prune():
         print(f"  （清理舊備份失敗，不影響本次備份）{e}")
 
 
+FAIL_MARKER = BACKUP_ROOT / "_FAILED.txt"
+
+
+def notify(title, msg):
+    """跳一則 macOS 通知。失敗（例如沒有 GUI session）就算了，不影響流程。"""
+    try:
+        subprocess.run(
+            ["osascript", "-e",
+             f'display notification {msg!r} with title {title!r}'],
+            capture_output=True, timeout=15,
+        )
+    except Exception:
+        pass
+
+
+def announce_failure(reason):
+    """失敗必須留下看得見的痕跡：log、marker 檔、通知，三者都要。
+
+    以前失敗只進 log，而 log 沒人會主動去看，結果連續三週沒備份都沒發現。
+    """
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    print(f"!! 備份失敗 {stamp}：{reason}")
+    try:
+        BACKUP_ROOT.mkdir(parents=True, exist_ok=True)
+        FAIL_MARKER.write_text(
+            f"最後一次失敗：{stamp}\n原因：{reason}\n"
+            f"log：~/Library/Logs/db-backup.log\n"
+            f"（下次備份成功會自動刪掉這個檔）\n",
+            encoding="utf-8",
+        )
+    except Exception as e:
+        print(f"  （連 marker 檔都寫不出來）{e}")
+    notify("資料庫備份失敗", reason)
+
+
 if __name__ == "__main__":
-    main()
+    print(f"\n===== {datetime.now():%Y-%m-%d %H:%M:%S} 開始備份 =====")
+    try:
+        main()
+    except SystemExit as e:
+        # sys.exit("錯誤：…") 走這裡；正常結束是 None 或 0。
+        if e.code not in (None, 0):
+            announce_failure(str(e.code))
+            raise
+    except Exception as e:
+        announce_failure(f"{type(e).__name__}: {e}")
+        raise
+    else:
+        FAIL_MARKER.unlink(missing_ok=True)
