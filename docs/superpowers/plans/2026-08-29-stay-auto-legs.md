@@ -141,18 +141,21 @@ function dayGeoActs(day,did){
     .map(([aid,a])=>({aid,name:a.name||'',lat:a.geo.lat,lng:a.geo.lng}));
   // 連住數晚時，早上是從昨晚住的地方出發、晚上又要開回今晚落腳處，但這兩者都不在
   // 當天的活動清單裡（住宿只記在入住日那一筆）。分別補在陣列最前/最後，地圖才畫得出
-  // 完整路線；兩者是同一間且當天沒有其他活動時，只補一個點，避免地圖上出現原地折返。
+  // 完整路線；兩者是同一間且當天沒有其他活動時，只保留「今晚住」這一端——活動全無的
+  // 純過夜日，講「今晚住哪」比「從哪出發」更貼近實況（沒有下一站可以出發去）。
   const morn=did?morningHotel(lastSched,did):null;
   const cov=did?coveringHotel(lastSched,did):null;
   const noRealActs=list.length===0;
   const sameHotel=morn&&cov&&morn===cov;
-  if(morn?.geo&&typeof morn.geo.lat==='number')
+  if(morn?.geo&&typeof morn.geo.lat==='number'&&!(noRealActs&&sameHotel))
     list.unshift({aid:'stay-in',name:(morn.name||morn.loc||'住宿')+'（今早出發）',lat:morn.geo.lat,lng:morn.geo.lng});
-  if(cov?.geo&&typeof cov.geo.lat==='number'&&!(noRealActs&&sameHotel))
+  if(cov?.geo&&typeof cov.geo.lat==='number')
     list.push({aid:'stay-out',name:(cov.name||cov.loc||'住宿')+'（今晚住）',lat:cov.geo.lat,lng:cov.geo.lng});
   return list;
 }
 ```
+
+> **2026-08-30 訂正**：Task 3 執行後才發現，這裡的 guard 原本寫反了（放在 `cov`／今晚住那個 push 上，保留的其實是 `stay-in`）——跟 Task 3 Step 5 視覺驗證說明裡「day4 預期只有『今晚住』卡」互相矛盾。上面已經是訂正後的版本（guard 移到 `morn`／stay-in 那個 push 上，`noRealActs&&sameHotel` 時保留 `stay-out`）。iceland-trip.html 已在 commit `af2b058` 修正，couple/us 兩支請直接照這個訂正版實作，不要照最初版本。
 
 - [ ] **Step 2: 在 `_selftest()` 的「跨夜住宿」區塊補測試**
 
@@ -184,7 +187,7 @@ function dayGeoActs(day,did){
       const d3=dayGeoActs(sched.day3,'day3');
       ok('中間日地圖首尾都補住宿點', d3.length===3&&d3[0].aid==='stay-in'&&d3[d3.length-1].aid==='stay-out');
       const d4=dayGeoActs(sched.day4,'day4');
-      ok('中間日無活動且同一間住宿只補一個點，不畫原地折返', d4.length===1&&d4[0].aid==='stay-in');
+      ok('中間日無活動且同一間住宿只保留今晚住宿點，不畫原地折返', d4.length===1&&d4[0].aid==='stay-out');
       const d5=dayGeoActs(sched.day5,'day5');
       ok('退房日地圖只補早上出發點，沒有今晚住宿點', d5.length===1&&d5[0].aid==='stay-in');
       lastSched=savedSched;
@@ -294,10 +297,10 @@ EOF
           const sameHotel=morn&&cov&&morn===cov;
           const noRealActs=!acts.length;
           const items=[];
-          if(morn?.geo&&typeof morn.geo.lat==='number')
+          if(morn?.geo&&typeof morn.geo.lat==='number'&&!(noRealActs&&sameHotel))
             items.push({stay:'in',geo:morn.geo,name:morn.name||morn.loc||'住宿'});
           acts.forEach(([aid,act])=>items.push({aid,act}));
-          if(cov?.geo&&typeof cov.geo.lat==='number'&&!(noRealActs&&sameHotel))
+          if(cov?.geo&&typeof cov.geo.lat==='number')
             items.push({stay:'out',geo:cov.geo,name:cov.name||cov.loc||'住宿'});
           if(!items.length)return '<div style="padding:14px 16px;color:var(--muted);font-size:calc(16px*var(--fs));text-align:center">尚無活動</div>';
           return items.map((item,idx)=>{
@@ -545,10 +548,10 @@ EOF
           const sameHotel=morn&&cov&&morn===cov;
           const noRealActs=!acts.length;
           const items=[];
-          if(morn?.geo&&typeof morn.geo.lat==='number')
+          if(morn?.geo&&typeof morn.geo.lat==='number'&&!(noRealActs&&sameHotel))
             items.push({stay:'in',geo:morn.geo,name:morn.name||morn.loc||'住宿'});
           acts.forEach(([aid,act])=>items.push({aid,act}));
-          if(cov?.geo&&typeof cov.geo.lat==='number'&&!(noRealActs&&sameHotel))
+          if(cov?.geo&&typeof cov.geo.lat==='number')
             items.push({stay:'out',geo:cov.geo,name:cov.name||cov.loc||'住宿'});
           if(!items.length)return '<div style="padding:14px 16px;color:var(--muted);font-size:16px;text-align:center">尚無活動</div>';
           return items.map((item,idx)=>{
