@@ -1022,11 +1022,9 @@ function initDnD(){
   const box=document.getElementById('schedBox');
   box.addEventListener('touchstart',e=>{
     const row=e.target.closest('.act-row');
-    if(!row||e.target.closest('button,a,.act-btns'))return;
+    // 只從 ⠿ 把手才能啟動拖曳，避免長按行程列本身就誤觸排序
+    if(!row||!e.target.closest('.act-handle'))return;
     DG.sx=e.touches[0].clientX;DG.sy=e.touches[0].clientY;
-    // 從 ⠿ 把手觸發時不用等 500ms 長按——把手本身就是明確的「拖曳這裡」意圖，
-    // 不會跟滾動/點擊誤觸混淆；行程列其他地方仍需長按才啟動，避免滑動時誤觸拖曳。
-    const fromHandle=!!e.target.closest('.act-handle');
     DG.timer=setTimeout(()=>{
       const did=row.dataset.did,aid=row.dataset.aid;
       // 直接讀本地已同步的 lastSched，不要在這裡等 Firebase 網路來回——
@@ -1044,7 +1042,7 @@ function initDnD(){
       g.style.left=(DG.sx-110)+'px';g.style.top=(DG.sy-22)+'px';
       document.body.appendChild(g);DG.ghost=g;
       document.querySelectorAll('.day-card').forEach(c=>c.classList.add('droppable'));
-    },fromHandle?0:500);
+    },0);
   },{passive:true});
   document.addEventListener('touchmove',e=>{
     const t=e.touches[0];
