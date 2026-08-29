@@ -57,6 +57,17 @@ act.costs = [
 
 改成：對 `actCostList(act)` 的每一筆各畫一行，有描述就帶上（「💰 門票 ¥1,200」），沒描述就跟現在一樣只顯示金額。多筆就疊著顯示，不做摺疊——預期一個活動頂多 2-4 筆，摺疊反而多一次點擊。
 
+## 2026-08-30 訂正：couple/us 的拆帳欄位
+
+寫 plan 時查代碼發現，`couple-trip-template.html`／`us-trip.html` 這兩支的活動花費還有一個 spec 原本沒考慮到的欄位——兩人拆帳用的「怎麼分」（`split`：`both`／`p1`／`p2`，`renderSplitPicker()`／`splitLabel()`／`calcBal()` 這套既有機制）。`iceland-trip.html`／`family-trip-template.html` 沒有這個概念（多成員、無拆帳結算功能）。
+
+決定（使用者拍板）：couple/us 每行**再加一個「怎麼分」下拉**，跟幣別/付款人一樣每行各自選，預設帶入上一行的選擇。所以：
+
+- **iceland／family**：每行「描述＋金額＋幣別下拉＋付款人下拉＋✕」（4 個輸入＋刪除鈕）
+- **couple／us**：每行「描述＋金額＋幣別下拉＋付款人下拉＋怎麼分下拉＋✕」（5 個輸入＋刪除鈕），`<select>` 的 `<option>` 直接複用 `splitLabel()` 產生的文字（均分／{p1}自付／{p2}自付）
+
+`act.costs` 陣列裡，couple/us 每筆物件多一個 `split` 欄位（預設 `'both'`）；iceland/family 的物件沒有這個欄位（跟現在 `act.cost` 的欄位差異一致，不用另外統一）。`moveAct()`／`delAct()` 逐行搬/砍的邏輯兩種檔案共用同一套（多一個欄位不影響搬/砍的索引邏輯），只有「儲存時組物件」與「表單多渲染一個下拉」這兩處要分開處理。
+
 ## 測試
 
 `_selftest()` 新增：
