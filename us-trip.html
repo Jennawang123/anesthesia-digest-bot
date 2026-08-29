@@ -98,6 +98,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .day-card.open .day-body{display:block;}
 
 .act-row{display:flex;align-items:flex-start;padding:11px 16px;border-bottom:1px solid var(--border);gap:10px;cursor:grab;transition:opacity .2s;}
+.stay-card{cursor:default;}
+.stay-card .act-name{color:var(--muted);font-style:italic;}
 .act-handle{width:18px;font-size:16px;color:var(--border);cursor:grab;flex-shrink:0;display:flex;align-items:center;user-select:none;touch-action:none;-webkit-user-drag:none;-webkit-touch-callout:none;}
 .act-handle:active{cursor:grabbing;}
 .act-row.drag-over-act{border-top:2px solid var(--blue);}
@@ -2300,8 +2302,31 @@ function renderSched(sched){
       <div class="day-body">
         ${dayGeoActs(day,did).length?`<div id="dmap-${did}"></div>`
           :(acts.length?`<div class="map-hint">🗺️ 這天還沒有定位得到的地點，所以沒有地圖。<br>編輯活動 → 填「定位用地名」可以指定位置</div>`:'')}
-        ${!acts.length?'<div style="padding:14px 16px;color:var(--muted);font-size:16px;text-align:center">尚無活動</div>':
-          acts.map(([aid,act],idx)=>{
+        ${(()=>{
+          const morn=morningHotel(lastSched,did);
+          const cov=coveringHotel(lastSched,did);
+          const sameHotel=morn&&cov&&morn===cov;
+          const noRealActs=!acts.length;
+          const items=[];
+          if(morn?.geo&&typeof morn.geo.lat==='number'&&!(noRealActs&&sameHotel))
+            items.push({stay:'in',geo:morn.geo,name:morn.name||morn.loc||'住宿'});
+          acts.forEach(([aid,act])=>items.push({aid,act}));
+          if(cov?.geo&&typeof cov.geo.lat==='number')
+            items.push({stay:'out',geo:cov.geo,name:cov.name||cov.loc||'住宿'});
+          if(!items.length)return '<div style="padding:14px 16px;color:var(--muted);font-size:16px;text-align:center">尚無活動</div>';
+          return items.map((item,idx)=>{
+            const nxt=items[idx+1];
+            const geo=item.stay?item.geo:item.act.geo;
+            const nxtGeo=nxt?(nxt.stay?nxt.geo:nxt.act.geo):null;
+            const legRow=(geo&&nxtGeo)?legHtml(geo,nxtGeo):'';
+            if(item.stay){
+              const txt=item.stay==='in'?`從 ${esc(item.name)} 出發`:`今晚住 ${esc(item.name)}`;
+              return `<div class="act-row stay-card">
+              <div class="act-ico" style="background:${ACTM.hotel.bg}">🛏️</div>
+              <div class="act-body"><div class="act-name">${txt}</div></div>
+            </div>${legRow}`;
+            }
+            const {aid,act}=item;
             const ac=ACTM[act.cat]||ACTM.other;
             const actIco=act.cat==='custom'?(act.customIco||'✏️'):ac.ico;
             const mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(act.loc||'');
@@ -2310,9 +2335,6 @@ function renderSched(sched){
             const closedTxt=closedLabel(act.closed);
             const isClosed=Array.isArray(act.closed)&&act.closed.includes(dowOf(day.date));
             const stayTxt=act.cat==='hotel'?stayLabel(act,day.date):'';
-            // 兩端都要有座標才畫距離列。少一端就不畫，不用直線硬湊一個看似精確的數字。
-            const nxt=acts[idx+1]?.[1];
-            const legRow=(act.geo&&nxt?.geo)?legHtml(act.geo,nxt.geo):'';
             return `<div class="act-row" draggable="true" data-did="${did}" data-aid="${aid}">
               <div class="act-handle" data-did="${did}" data-aid="${aid}">⠿</div>
               <div class="act-ico" style="background:${ac.bg}">${actIco}</div>
@@ -2331,8 +2353,8 @@ function renderSched(sched){
                 <button class="ib" onclick="delAct('${did}','${aid}')">✕</button>
               </div>
             </div>${legRow}`;
-          }).join('')+lastLegToStay(did,acts)
-        }
+          }).join('');
+        })()}
         <div class="day-add" onclick="openActM('${did}')">＋ 新增活動</div>
         ${safetyHtml(did)}
       </div>
@@ -2421,15 +2443,6 @@ function calcDayKm(day,did){
     else{km+=haversine(pts[i].lat,pts[i].lng,pts[i+1].lat,pts[i+1].lng);approx=true;}
   }
   return {km,approx};
-}
-// 連住數晚時，「當天最後一站 → 今晚住哪」也是要開的一段路，但住宿活動記在入住日、
-// 不在這天的清單裡，上面的相鄰配對配不到它，得另外補這一列。
-function lastLegToStay(did,acts){
-  const cov=coveringHotel(lastSched,did);
-  if(!cov?.geo||typeof cov.geo.lat!=='number')return '';
-  const last=[...acts].reverse().find(([,a])=>a.geo&&typeof a.geo.lat==='number');
-  if(!last)return '';
-  return legHtml(last[1].geo,cov.geo,`到今晚住宿「${esc(cov.name||cov.loc||'住宿')}」`);
 }
 const dayMaps=new Map();      // did → L.map 實例
 const dayMapEls=new Map();    // did → 地圖容器 DOM（renderSched 重畫時暫存）
