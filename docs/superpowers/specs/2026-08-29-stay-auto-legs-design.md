@@ -1,7 +1,8 @@
 # 住宿自動出發／入住卡片設計
 
 日期：2026-08-29
-範圍：`iceland-trip.html`、`family-trip-template.html`、`couple-trip-template.html`、`us-trip.html`（四支共用同一套行程渲染邏輯）
+範圍：`iceland-trip.html`、`couple-trip-template.html`、`us-trip.html`
+不在範圍：`family-trip-template.html`——寫 spec 時誤判四支共用同一套行程渲染邏輯，實際查代碼發現它根本沒有入住/退房日期、`coveringHotel()`、距離計算這套子系統（它的「住宿」只是普通活動分類，沒有跨夜追蹤），這套子系統只存在於從 iceland-trip.html fork 出去的三支（iceland/couple/us）。要幫 family 版補上整套地圖/OSRM/跨夜追蹤是大工程，2026-08-29 使用者拍板不做，先只改這三支。
 
 ## 問題
 
@@ -81,8 +82,8 @@ function morningHotel(sched,did){
 - 入住日之前不算
 - 沒有 `stay.out` 就不跨夜
 
-四支各自跑一次。
+三支各自跑一次。
 
 ## 部署
 
-四支都是 Netlify 手動拖拉部署，commit 不等於上線，需個別手動部署。冰島版有版本號可核對；其餘三支目前沒有版本號機制（不在本次範圍內新增）。
+三支都是 Netlify 手動拖拉部署，commit 不等於上線，需個別手動部署。冰島版有版本號可核對；其餘兩支目前沒有版本號機制（不在本次範圍內新增）。
