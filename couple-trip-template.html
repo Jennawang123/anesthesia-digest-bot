@@ -122,6 +122,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .ac-i{font-size:20px;display:block;}.ac-n{font-size:12px;margin-top:2px;color:var(--muted);font-weight:600;}
 .ac-btn.on .ac-n{color:var(--blue);}
 .cost-box{background:#F0FDF4;border-radius:10px;padding:14px;margin-bottom:14px;}
+.act-cost-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;}
+.act-cost-row .inp{flex:1 1 70px;min-width:0;}
 .cost-box .lb{color:#065F46;}
 
 /* Pie chart */
@@ -532,15 +534,9 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
       <input type="file" id="actImgFile" accept="image/*" style="display:none" onchange="onActImgPick(event)">
     </div>
     <div class="cost-box">
-      <label class="lb">💰 行程花費（選填，自動加入記帳）</label>
-      <div class="fr">
-        <div class="fg" style="flex:0 0 130px"><label class="lb">金額</label><input class="inp" id="a_cost" type="number" placeholder="0.00" step="0.01" min="0"></div>
-        <div class="fg"><label class="lb">幣別</label>
-          <div class="cur-row" id="cur-row-act"></div>
-        </div>
-      </div>
-      <div class="fg"><label class="lb">誰付</label><div class="pr" id="payer-row-act"></div></div>
-      <div class="fg"><label class="lb">怎麼分</label><div class="tw" id="split-row-act"></div></div>
+      <label class="lb">💰 行程花費（選填，自動加入記帳，可加多筆）</label>
+      <div id="act-cost-rows"></div>
+      <button type="button" class="btn btn-g" style="margin-top:6px;font-size:15px;padding:8px 12px" onclick="addActCostRow()">＋ 加一行</button>
     </div>
     <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-act')">取消</button><button class="btn btn-b" style="flex:2" onclick="saveAct()">儲存</button></div>
   </div>
@@ -625,11 +621,18 @@ function mapActCat(actCat){
   if(actCat==='dessert')return'cafe';
   return'activity';
 }
+// 活動花費：新格式是 costs 陣列，舊資料只有單一 cost 物件——讀取端統一轉成陣列，
+// 不管上層是新舊哪種格式。不主動遷移舊資料，使用者下次編輯儲存那筆活動時才會自然轉檔。
+function actCostList(act){
+  if(Array.isArray(act?.costs))return act.costs;
+  if(act?.cost?.amt>0)return [act.cost];
+  return [];
+}
 
 let CFG={},DB=null,curTab='sched',curAcc='exp';
 let weatherByDate=new Map();
 let curCat='food',curPayer=0,curCur=DEF_CUR,curSplit='both';
-let curAC='sight',curACur=DEF_CUR,curAPayer=0,curASplit='both';
+let curAC='sight',curActCosts=[];
 let curNT='text',curImg=null,curPieCur=DEF_CUR,lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[],lastSafety={},lastFacilities={},lastLegs={};
 // 行程頁一次只顯示一天。null = 總覽（只有住宿總整理）。
 // _overviewChosen 用來分辨「還沒選過、應該自動跳到今天」與「使用者自己選了總覽」。
@@ -2198,9 +2201,23 @@ function renderACGrid(){
   document.getElementById('acGrid').innerHTML=ACTS.map(c=>`<div class="ac-btn ${c.id===curAC?'on':''}" id="ac-${c.id}" onclick="selAC('${c.id}')"><span class="ac-i">${c.ico}</span><span class="ac-n">${c.name}</span></div>`).join('');
 }
 function selAC(id){curAC=id;document.querySelectorAll('.ac-btn').forEach(e=>e.classList.remove('on'));document.getElementById('ac-'+id)?.classList.add('on');applyCatFields();}
-function selACur(c){curACur=c;renderCurChips('cur-row-act',c,'selACur');}
-function selAPayer(i){curAPayer=i;renderPayerPicker('payer-row-act',i,'selAPayer');}
-function selASplit(m){curASplit=m;renderSplitPicker('split-row-act',m,'selASplit');}
+function addActCostRow(){
+  const last=curActCosts[curActCosts.length-1];
+  curActCosts.push({desc:'',amt:'',cur:last?.cur||DEF_CUR,paidBy:last?.paidBy||CFG.members[0],split:last?.split||'both'});
+  renderActCostRows();
+}
+function removeActCostRow(i){curActCosts.splice(i,1);renderActCostRows();}
+function renderActCostRows(){
+  document.getElementById('act-cost-rows').innerHTML=curActCosts.map((c,i)=>`
+    <div class="fr act-cost-row">
+      <input class="inp" style="flex:0 0 70px" placeholder="描述" value="${esc(c.desc||'')}" oninput="curActCosts[${i}].desc=this.value">
+      <input class="inp" style="flex:0 0 70px" type="number" step="0.01" min="0" placeholder="0.00" value="${c.amt||''}" oninput="curActCosts[${i}].amt=this.value">
+      <select class="inp" style="flex:0 0 76px" onchange="curActCosts[${i}].cur=this.value">${PRESET_CURRENCIES.map(cc=>`<option value="${cc.code}"${cc.code===c.cur?' selected':''}>${cc.flag} ${cc.code}</option>`).join('')}</select>
+      <select class="inp" style="flex:0 0 76px" onchange="curActCosts[${i}].paidBy=this.value">${CFG.members.map(m=>`<option value="${esc(m)}"${m===c.paidBy?' selected':''}>${esc(m)}</option>`).join('')}</select>
+      <select class="inp" onchange="curActCosts[${i}].split=this.value">${['both','p1','p2'].map(m=>`<option value="${m}"${m===(c.split||'both')?' selected':''}>${splitLabel(m)}</option>`).join('')}</select>
+      <button type="button" class="ib" onclick="removeActCostRow(${i})">✕</button>
+    </div>`).join('');
+}
 
 function renderSched(sched){
   const box=document.getElementById('schedBox');
