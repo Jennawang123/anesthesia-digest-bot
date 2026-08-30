@@ -132,8 +132,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .ac-i{font-size:20px;display:block;}.ac-n{font-size:12px;margin-top:2px;color:var(--muted);font-weight:600;}
 .ac-btn.on .ac-n{color:var(--blue);}
 .cost-box{background:#F0FDF4;border-radius:10px;padding:14px;margin-bottom:14px;}
-.act-cost-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;}
+.act-cost-row{margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--border);}
+.act-cost-row:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.act-cost-row .fr{margin-bottom:6px;flex-wrap:wrap;}
 .act-cost-row .inp{flex:1 1 70px;min-width:0;}
+.act-cost-row .pr .pb{padding:8px;font-size:14px;}
 .cost-box .lb{color:#065F46;}
 
 /* Pie chart */
@@ -2083,18 +2086,24 @@ function renderACGrid(){
 function selAC(id){curAC=id;document.querySelectorAll('.ac-btn').forEach(e=>e.classList.remove('on'));document.getElementById('ac-'+id)?.classList.add('on');applyCatFields();}
 function addActCostRow(){
   const last=curActCosts[curActCosts.length-1];
-  curActCosts.push({desc:'',amt:'',cur:last?.cur||'JPY',paidBy:last?.paidBy||CFG.members[0]});
+  curActCosts.push({desc:'',amt:'',cur:last?.cur||'TWD',paidBy:last?.paidBy||CFG.members[0]});
   renderActCostRows();
 }
+// 開表單時至少要有一行可以直接填，不用先按「＋」才看得到欄位；
+// 但已有資料（編輯既有活動）就不要平白多塞一行空的。
+function ensureActCostRow(){if(!curActCosts.length)addActCostRow();else renderActCostRows();}
 function removeActCostRow(i){curActCosts.splice(i,1);renderActCostRows();}
+function setActCostPayer(i,mi){curActCosts[i].paidBy=CFG.members[mi];renderActCostRows();}
 function renderActCostRows(){
   document.getElementById('act-cost-rows').innerHTML=curActCosts.map((c,i)=>`
-    <div class="fr act-cost-row">
-      <input class="inp" style="flex:0 0 78px" placeholder="描述" value="${esc(c.desc||'')}" oninput="curActCosts[${i}].desc=this.value">
-      <input class="inp" style="flex:0 0 76px" type="number" step="0.01" min="0" placeholder="0.00" value="${c.amt||''}" oninput="curActCosts[${i}].amt=this.value">
-      <select class="inp" style="flex:0 0 84px" onchange="curActCosts[${i}].cur=this.value">${PRESET_CURRENCIES.map(cc=>`<option value="${cc.code}"${cc.code===c.cur?' selected':''}>${cc.flag} ${cc.code}</option>`).join('')}</select>
-      <select class="inp" onchange="curActCosts[${i}].paidBy=this.value">${CFG.members.map(m=>`<option value="${esc(m)}"${m===c.paidBy?' selected':''}>${esc(m)}</option>`).join('')}</select>
-      <button type="button" class="ib" onclick="removeActCostRow(${i})">✕</button>
+    <div class="act-cost-row">
+      <div class="fr">
+        <input class="inp" style="flex:0 0 78px" placeholder="描述" value="${esc(c.desc||'')}" oninput="curActCosts[${i}].desc=this.value">
+        <input class="inp" style="flex:0 0 76px" type="number" step="0.01" min="0" placeholder="0.00" value="${c.amt||''}" oninput="curActCosts[${i}].amt=this.value">
+        <select class="inp" style="flex:0 0 84px" onchange="curActCosts[${i}].cur=this.value">${PRESET_CURRENCIES.map(cc=>`<option value="${cc.code}"${cc.code===c.cur?' selected':''}>${cc.flag} ${cc.code}</option>`).join('')}</select>
+        <button type="button" class="ib" onclick="removeActCostRow(${i})">✕</button>
+      </div>
+      <div class="pr">${CFG.members.map((m,mi)=>`<div class="pb ${m===c.paidBy?'on':''}" onclick="setActCostPayer(${i},${mi})">${esc(m)}</div>`).join('')}</div>
     </div>`).join('');
 }
 
@@ -2492,7 +2501,7 @@ function openActM(did){
   document.getElementById('a_geoq').value='';document.getElementById('a_geo_result').textContent='';
   document.getElementById('a_custom_ico').value='';
   curActImages=[];renderActImgPreviews();
-  curActCosts=[];renderActCostRows();
+  curActCosts=[];ensureActCostRow();
   curAC='sight';renderACGrid();
   curClosed=[];renderDowPicker();
   curStay=null;fillStayInputs(null);
@@ -2516,7 +2525,7 @@ function openActEdit(did,aid){
     curClosed=Array.isArray(a.closed)?[...a.closed]:[];renderDowPicker();
     curStay=a.stay?{...a.stay}:null;fillStayInputs(curStay);
     curActImages=a.images?[...a.images]:[];renderActImgPreviews();
-    curActCosts=actCostList(a).map(c=>({...c}));renderActCostRows();
+    curActCosts=actCostList(a).map(c=>({...c}));ensureActCostRow();
     curActOrder=a.order||0;
     // 一次只顯示一天之後，拖曳只能在當天內排序（別天的卡片根本不在畫面上），
     // 所以跨日移動改由這個選單負責。moveAct 是既有的，連記帳日期一起搬。
