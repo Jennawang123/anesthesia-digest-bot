@@ -1976,10 +1976,11 @@ function moveAct(fromDid,aid,act,toDid){
     const newDate=snap.val()||'';
     DB.ref('/schedule/'+toDid+'/acts/'+aid).set(act);
     DB.ref('/schedule/'+fromDid+'/acts/'+aid).remove();
-    if(act.cost?.amt>0){
-      DB.ref('/expenses/actcost_'+fromDid+'_'+aid).remove();
-      DB.ref('/expenses/actcost_'+toDid+'_'+aid).set({desc:act.name,amt:act.cost.amt,cur:act.cost.cur||'JPY',cat:mapActCat(act.cat),paidBy:act.cost.paidBy||CFG.members[0],date:newDate,fromAct:true,at:new Date().toISOString()});
-    }
+    DB.ref('/expenses/actcost_'+fromDid+'_'+aid).remove();   // 舊格式殘留一併清掉
+    actCostList(act).forEach((c,i)=>{
+      DB.ref('/expenses/actcost_'+fromDid+'_'+aid+'_'+i).remove();
+      DB.ref('/expenses/actcost_'+toDid+'_'+aid+'_'+i).set({desc:c.desc||act.name,amt:c.amt,cur:c.cur||'JPY',cat:mapActCat(act.cat),paidBy:c.paidBy||CFG.members[0],date:newDate,fromAct:true,at:new Date().toISOString()});
+    });
     toast('✅ 已移動到 '+toDid.replace('day','Day '));
   });
 }
@@ -2183,7 +2184,6 @@ function renderSched(sched){
             const ac=ACTM[act.cat]||ACTM.other;
             const actIco=act.cat==='custom'?(act.customIco||'✏️'):ac.ico;
             const mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(act.loc||'');
-            const sym=curSym(act.cost?.cur||'JPY');
             const dp=0;
             const closedTxt=closedLabel(act.closed);
             const isClosed=Array.isArray(act.closed)&&act.closed.includes(dowOf(day.date));
@@ -2199,7 +2199,7 @@ function renderSched(sched){
                 ${stayTxt?`<div class="ov-stay">${stayTxt}</div>`:''}
                 ${act.note?`<div class="act-note-t">💬 ${autolink(act.note)}</div>`:''}
                 ${act.images?.length?`<div class="act-imgs">${act.images.map(b=>`<img class="act-img-thumb" src="${b}" onclick="openLightbox('${b}')">`).join('')}</div>`:''}
-                ${act.cost?.amt>0?`<div class="act-cost">💰 ${sym}${parseFloat(act.cost.amt).toFixed(dp)} ${act.cost.cur||'JPY'}</div>`:''}
+                ${actCostList(act).map(c=>`<div class="act-cost">💰 ${c.desc?esc(c.desc)+' ':''}${curSym(c.cur||'JPY')}${parseFloat(c.amt||0).toFixed(dp)} ${c.cur||'JPY'}</div>`).join('')}
               </div>
               <div class="act-btns">
                 <button class="ib" onclick="openActEdit('${did}','${aid}')">✎</button>
@@ -2488,11 +2488,12 @@ function openActM(did){
   document.getElementById('m-act-t').textContent='新增活動';
   document.getElementById('ma-did').value=did;document.getElementById('ma-aid').value='';
   document.getElementById('a_name').value='';
-  document.getElementById('a_loc').value='';document.getElementById('a_note').value='';document.getElementById('a_cost').value='';
+  document.getElementById('a_loc').value='';document.getElementById('a_note').value='';
   document.getElementById('a_geoq').value='';document.getElementById('a_geo_result').textContent='';
   document.getElementById('a_custom_ico').value='';
   curActImages=[];renderActImgPreviews();
-  curAC='sight';renderACGrid();selAPayer(0);selACur('JPY');
+  curActCosts=[];renderActCostRows();
+  curAC='sight';renderACGrid();
   curClosed=[];renderDowPicker();
   curStay=null;fillStayInputs(null);
   document.getElementById('move-day-row').style.display='none';   // 新增時沒有「移動」可言
@@ -2510,13 +2511,12 @@ function openActEdit(did,aid){
     document.getElementById('a_geo_result').innerHTML=a.geo
       ? `✅ 已定位：${esc(a.geo.q||'')}（${a.geo.lat.toFixed(3)}, ${a.geo.lng.toFixed(3)}）`
       : (a.geoFail?'❌ 目前查不到座標，可填上方的定位用地名再按試查':'');
-    document.getElementById('a_cost').value=a.cost?.amt||'';
     curAC=a.cat||'sight';renderACGrid();
     document.getElementById('a_custom_ico').value=a.customIco||'';
     curClosed=Array.isArray(a.closed)?[...a.closed]:[];renderDowPicker();
     curStay=a.stay?{...a.stay}:null;fillStayInputs(curStay);
     curActImages=a.images?[...a.images]:[];renderActImgPreviews();
-    selACur(a.cost?.cur||'JPY');selAPayer(Math.max(0,CFG.members.indexOf(a.cost?.paidBy)));
+    curActCosts=actCostList(a).map(c=>({...c}));renderActCostRows();
     curActOrder=a.order||0;
     // 一次只顯示一天之後，拖曳只能在當天內排序（別天的卡片根本不在畫面上），
     // 所以跨日移動改由這個選單負責。moveAct 是既有的，連記帳日期一起搬。
@@ -2541,8 +2541,7 @@ function fillStayInputs(s){
 function saveAct(){
   const did=document.getElementById('ma-did').value,aid=document.getElementById('ma-aid').value;
   const name=document.getElementById('a_name').value.trim();if(!name){toast('請輸入活動名稱');return;}
-  const costAmt=parseFloat(document.getElementById('a_cost').value);
-  const hasCost=!isNaN(costAmt)&&costAmt>0;
+  const costs=curActCosts.map(c=>({desc:(c.desc||'').trim(),amt:parseFloat(c.amt),cur:c.cur||'JPY',paidBy:c.paidBy||CFG.members[0]})).filter(c=>!isNaN(c.amt)&&c.amt>0);
   DB.ref('/schedule/'+did).once('value',daySnap=>{
     const dayData=daySnap.val()||{};
     const existingActs=Object.values(dayData.acts||{});
@@ -2565,7 +2564,7 @@ function saveAct(){
         arr:document.getElementById('a_stay_arr').value.trim()||null,
         src:curStay?.src||null,
       }:null,
-      cost:hasCost?{amt:costAmt,cur:curACur,paidBy:CFG.members[curAPayer]}:null,
+      costs:costs.length?costs:null,
       order:isNew?(maxOrder+1):curActOrder};
     const id=aid||('a'+uid());
     // 這裡是整筆 set，obj 沒有 geo 欄位，所以不特別處理的話「改個備註」都會把
@@ -2577,9 +2576,16 @@ function saveAct(){
       if(prev.geoFail)obj.geoFail=prev.geoFail;
     }
     DB.ref('/schedule/'+did+'/acts/'+id).set(obj);
-    const expId='actcost_'+did+'_'+id;
-    if(hasCost){DB.ref('/expenses/'+expId).set({desc:name,amt:costAmt,cur:curACur,cat:mapActCat(curAC),paidBy:CFG.members[curAPayer],date:dayData.date||'',fromAct:true,at:new Date().toISOString()});}
-    else{DB.ref('/expenses/'+expId).remove();}
+    // 舊格式固定 id 的記帳紀錄改成逐行索引，這個路徑往後不會再用到，順手清掉，
+    // 不然舊資料第一次編輯儲存後，這筆連同新的 _0 一起留著會變成多算一筆。
+    DB.ref('/expenses/actcost_'+did+'_'+id).remove();
+    const prevCostCount=actCostList(prev).length;
+    costs.forEach((c,i)=>{
+      DB.ref('/expenses/actcost_'+did+'_'+id+'_'+i).set({desc:c.desc||name,amt:c.amt,cur:c.cur,cat:mapActCat(curAC),paidBy:c.paidBy,date:dayData.date||'',fromAct:true,at:new Date().toISOString()});
+    });
+    // 這次存的行數比之前少，代表使用者刪掉了某幾行，多出來的舊索引要一併刪除，
+    // 否則會留下沒人記得、金額已經跟表單對不上的孤兒記帳項目。
+    for(let i=costs.length;i<prevCostCount;i++)DB.ref('/expenses/actcost_'+did+'_'+id+'_'+i).remove();
     // 編輯模式下若選了別天，先存回原處再整筆搬過去（moveAct 會一併處理記帳的日期）
     const moveTo=document.getElementById('move-day-row').style.display!=='none'
       ? document.getElementById('a_move_day').value : did;
@@ -2592,7 +2598,16 @@ function saveAct(){
     closeM('m-act');toast('✅ 已儲存');
   });
 }
-function delAct(did,aid){if(!confirm('確定刪除此活動？'))return;DB.ref('/schedule/'+did+'/acts/'+aid).remove();DB.ref('/expenses/actcost_'+did+'_'+aid).remove();toast('🗑️ 已刪除');}
+function delAct(did,aid){
+  if(!confirm('確定刪除此活動？'))return;
+  DB.ref('/schedule/'+did+'/acts/'+aid).once('value',snap=>{
+    const n=actCostList(snap.val()).length;
+    DB.ref('/schedule/'+did+'/acts/'+aid).remove();
+    DB.ref('/expenses/actcost_'+did+'_'+aid).remove();
+    for(let i=0;i<n;i++)DB.ref('/expenses/actcost_'+did+'_'+aid+'_'+i).remove();
+    toast('🗑️ 已刪除');
+  });
+}
 
 // ─── Expenses ────────────────────────────────────────
 function renderCatGrid(){
@@ -3092,6 +3107,15 @@ function _selftest(){
   const out=[];let pass=0,fail=0;
   const ok=(name,cond,extra='')=>{cond?pass++:fail++;out.push(`${cond?'✅':'❌'} ${name}${extra&&!cond?'  → '+extra:''}`);};
   const near=(a,b,tol)=>Math.abs(a-b)<=tol;
+
+  // ---- actCostList ----
+  {
+    ok('新格式 costs 陣列直接回傳', actCostList({costs:[{amt:100},{amt:200}]}).length===2);
+    ok('舊格式單一 cost 物件包成一筆陣列', actCostList({cost:{amt:100,cur:'JPY'}})[0].amt===100);
+    ok('cost.amt 是 0 或負值不當作有效花費', actCostList({cost:{amt:0}}).length===0);
+    ok('兩者都沒有回空陣列', actCostList({}).length===0);
+    ok('costs 優先於 cost（新格式蓋過舊格式殘留）', actCostList({cost:{amt:999},costs:[{amt:1}]}).length===1);
+  }
 
   // ---- stripImages ----
   {
