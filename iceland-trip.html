@@ -159,8 +159,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .pie-pct{font-size:calc(16px*var(--fs));color:var(--muted);width:42px;text-align:right;flex-shrink:0;}
 .pie-rate{font-size:calc(15px*var(--fs));color:var(--muted);text-align:center;margin-top:8px;}
 .member-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
-.member-card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
-.member-name{font-size:calc(17px*var(--fs));font-weight:700;color:var(--muted);margin-bottom:8px;}
+.member-card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.06);position:relative;cursor:pointer;}
+.member-card:active{opacity:.65;}
+.member-name{font-size:calc(17px*var(--fs));font-weight:700;color:var(--muted);margin-bottom:8px;padding-right:46px;}
+.member-more{position:absolute;top:13px;right:12px;font-size:calc(15px*var(--fs));font-weight:700;color:var(--blue);}
+.mem-tot{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 13px;background:var(--bg);border-radius:10px;margin-bottom:6px;}
+.mem-tot-c{font-size:calc(16px*var(--fs));font-weight:700;color:var(--muted);}
+.mem-tot-v{font-size:calc(22px*var(--fs));font-weight:800;}
+.mem-cnt{font-size:calc(16px*var(--fs));color:var(--muted);margin:12px 0 2px;}
 
 /* Expense list */
 .edl{font-size:calc(16px*var(--fs));font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:2px 4px;margin-top:8px;margin-bottom:4px;}
@@ -364,7 +370,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0824b</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0906a</span></div>
     </div>
   </div>
   <div class="content">
@@ -2213,6 +2219,7 @@ function renderSched(sched){
               </div>
               <div class="act-btns">
                 <button class="ib" onclick="openActEdit('${did}','${aid}')">✎</button>
+                <button class="ib" onclick="openCopyAct('${did}','${aid}')">⧉</button>
                 <button class="ib" onclick="delAct('${did}','${aid}')">✕</button>
               </div>
             </div>${legRow}`;
@@ -2619,6 +2626,51 @@ function delAct(did,aid){
   });
 }
 
+// 複製活動：整份再來一次，可以留在同一天，也可以丟到別天。
+// 照片不帶（照片是「去過了」的紀錄，不是計畫），花費預設也不帶——
+// 憑空多一筆金額很難察覺，少一筆卻一眼看得出來，所以寧可讓使用者主動勾。
+function openCopyAct(did,aid){
+  const act=(lastSched[did]?.acts||{})[aid];if(!act)return;
+  document.getElementById('mc-did').value=did;document.getElementById('mc-aid').value=aid;
+  document.getElementById('mc-name').textContent=act.name||'';
+  document.getElementById('mc_day').innerHTML=Object.entries(lastSched)
+    .sort((x,y)=>(parseInt(x[0].replace(/\D/g,''))||0)-(parseInt(y[0].replace(/\D/g,''))||0))
+    .map(([d,day])=>`<option value="${d}"${d===did?' selected':''}>D${d.replace(/\D/g,'')}　${fmtD(day.date)}</option>`).join('');
+  const n=actCostList(act).length;
+  document.getElementById('mc_costs').checked=false;
+  document.getElementById('mc-cost-row').style.display=n?'':'none';
+  if(n)document.getElementById('mc-cost-lb').textContent=`一併複製 ${n} 筆花費`;
+  openM('m-copy');
+}
+function doCopyAct(){
+  const did=document.getElementById('mc-did').value,aid=document.getElementById('mc-aid').value;
+  const toDid=document.getElementById('mc_day').value;
+  const withCosts=document.getElementById('mc_costs').checked;
+  DB.ref('/schedule/'+did+'/acts/'+aid).once('value',snap=>{
+    const src=snap.val();if(!src){toast('找不到這筆活動');return;}
+    DB.ref('/schedule/'+toDid).once('value',daySnap=>{
+      const dayData=daySnap.val()||{};
+      const existing=Object.values(dayData.acts||{});
+      const maxOrder=existing.length?Math.max(...existing.map(a=>a.order||0)):0;
+      const costs=withCosts?actCostList(src).map(c=>({...c})):[];
+      const obj={...src,images:null,costs:costs.length?costs:null,order:maxOrder+1};
+      // 座標照抄，同一個地點不必再查一次，/legs 的快取鍵是座標所以也直接命中。
+      // 但跨夜住宿的退房日只對原本那天成立，複製到別天會推出錯的「今晚住哪」，
+      // 寧可清掉讓使用者重設，也不要默默算錯。
+      if(obj.stay)obj.stay={...obj.stay,out:null};
+      const id='a'+uid();
+      DB.ref('/schedule/'+toDid+'/acts/'+id).set(obj);
+      costs.forEach((c,i)=>{
+        DB.ref('/expenses/actcost_'+toDid+'_'+id+'_'+i).set({desc:c.desc||obj.name,amt:parseFloat(c.amt)||0,cur:c.cur||'JPY',cat:mapActCat(obj.cat),paidBy:c.paidBy||CFG.members[0],date:dayData.date||'',fromAct:true,at:new Date().toISOString()});
+      });
+      closeM('m-copy');
+      // 一次只顯示一天，複製到別天不跟過去的話，看起來會像什麼都沒發生。
+      if(toDid!==did){curDay=toDid;_overviewChosen=false;}
+      toast('✅ 已複製'+(toDid!==did?` 到 D${toDid.replace(/\D/g,'')}`:''));
+    });
+  });
+}
+
 // ─── Expenses ────────────────────────────────────────
 function renderCatGrid(){
   document.getElementById('catGrid').innerHTML=CATS.map(c=>`<div class="cat-btn ${c.id===curCat?'on':''}" id="cat-${c.id}" onclick="selCat('${c.id}')"><span class="cati">${c.ico}</span><span class="catn">${c.name}</span></div>`).join('');
@@ -2757,11 +2809,50 @@ function switchPie(cur){curPieCur=cur;renderPie(lastExps);}
 function renderStat(exps){
   renderPie(exps);
   const fmtTotals=m=>[...m.entries()].map(([cur,tot])=>`<div style="font-size:calc(25px*var(--fs));font-weight:800">${curSym(cur)}${Math.round(tot).toLocaleString('zh-TW')}</div><div style="font-size:calc(15px*var(--fs));color:var(--muted)">${cur}</div>`).join('')||'<div style="color:var(--muted);font-size:calc(17px*var(--fs))">無記錄</div>';
-  document.getElementById('personSec').innerHTML=`<div class="member-grid">${CFG.members.map(name=>`
-    <div class="member-card">
+  document.getElementById('personSec').innerHTML=`<div class="member-grid">${CFG.members.map((name,i)=>`
+    <div class="member-card" onclick="openMemberDetail(${i})">
       <div class="member-name">${esc(name)}</div>
+      <div class="member-more">明細 ›</div>
       ${fmtTotals(calcMemberSpend(exps,name))}
     </div>`).join('')}</div>`;
+}
+
+// 統計頁的成員方格點下去，列出這個人付過的每一筆。
+// 刻意做成唯讀：這裡若擺編輯鈕，m-exp 會疊在 m-mem 上面，關掉上層之後
+// 下層列的還是舊數字，看起來像沒存進去。要改就回記帳分頁改。
+// 用索引而不是名字當參數，成員名稱是使用者自己打的，塞進 onclick 字串裡會被引號咬斷。
+function openMemberDetail(idx){
+  const name=CFG.members[idx];if(!name)return;
+  document.getElementById('m-mem-t').textContent=name+' 的花費';
+  const rows=Object.values(lastExps).filter(e=>e.paidBy===name);
+  let body;
+  if(!rows.length){
+    body=`<div class="empty"><div class="empty-i">💰</div><div class="empty-h">還沒有紀錄</div><div class="empty-s">${esc(name)} 目前沒有付過任何一筆</div></div>`;
+  }else{
+    const totHtml=[...calcMemberSpend(lastExps,name).entries()].map(([cur,tot])=>
+      `<div class="mem-tot"><span class="mem-tot-c">${cur}</span><span class="mem-tot-v">${curSym(cur)}${Math.round(tot).toLocaleString('zh-TW')}</span></div>`).join('');
+    const groups={};
+    rows.forEach(e=>{const d=e.date||'';(groups[d]=groups[d]||[]).push(e);});
+    const list=Object.keys(groups).sort().reverse().map(date=>
+      `<div class="edl">${fmtD(date)||'未指定日期'}</div>`+
+      groups[date].map(e=>{
+        const cat=CATM[e.cat]||CATM.other,cur=e.cur||'JPY';
+        return `<div class="er">
+          <div class="ei" style="background:${cat.bg}">${cat.ico}</div>
+          <div class="einfo">
+            <div class="edesc">${esc(e.desc||'')}</div>
+            <div class="emeta">
+              <span class="bdg bcur">${cur}</span>
+              ${e.fromAct?'<span class="bdg bact">📅行程</span>':''}
+            </div>
+          </div>
+          <div class="eright"><div class="eamt">${curSym(cur)}${(e.amt||0).toFixed(0)}</div></div>
+        </div>`;
+      }).join('')).join('');
+    body=totHtml+`<div class="mem-cnt">共 ${rows.length} 筆</div>`+list;
+  }
+  document.getElementById('m-mem-body').innerHTML=body;
+  openM('m-mem');
 }
 
 function renderExp(exps){
@@ -3341,6 +3432,33 @@ window._selftest=_selftest;
 </div>
 
 <!-- Note modal -->
+<!-- 成員花費明細 -->
+<div class="ov" id="m-mem">
+  <div class="sheet">
+    <div class="hdl"></div>
+    <div class="st" id="m-mem-t">花費明細</div>
+    <div id="m-mem-body"></div>
+    <div class="fr" style="margin-top:16px"><button class="btn btn-g btn-w" onclick="closeM('m-mem')">關閉</button></div>
+  </div>
+</div>
+<!-- 複製活動 -->
+<div class="ov" id="m-copy">
+  <div class="sheet">
+    <div class="hdl"></div>
+    <div class="st">複製活動</div>
+    <input type="hidden" id="mc-did"><input type="hidden" id="mc-aid">
+    <div class="fg"><label class="lb">要複製的活動</label><div id="mc-name" style="font-size:calc(19px*var(--fs));font-weight:700"></div></div>
+    <div class="fg"><label class="lb">複製到哪一天</label><select class="inp" id="mc_day"></select></div>
+    <div class="fg" id="mc-cost-row" style="display:none">
+      <label style="display:flex;align-items:center;gap:9px;font-size:calc(17px*var(--fs));font-weight:600">
+        <input type="checkbox" id="mc_costs" style="width:20px;height:20px;flex-shrink:0">
+        <span id="mc-cost-lb"></span>
+      </label>
+    </div>
+    <p class="hint">照片不會複製過去。花費要勾了才會跟著多記一筆。</p>
+    <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-copy')">取消</button><button class="btn btn-b" style="flex:2" onclick="doCopyAct()">複製</button></div>
+  </div>
+</div>
 <div class="ov" id="m-note">
   <div class="sheet">
     <div class="hdl"></div>
