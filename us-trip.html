@@ -363,7 +363,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">美國西南部</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">u0906a</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">u0907a</span></div>
     </div>
   </div>
   <div class="content">
@@ -2806,7 +2806,10 @@ function doCopyAct(){
       const existing=Object.values(dayData.acts||{});
       const maxOrder=existing.length?Math.max(...existing.map(a=>a.order||0)):0;
       const costs=withCosts?actCostList(src).map(c=>({...c})):[];
-      const obj={...src,images:null,costs:costs.length?costs:null,order:maxOrder+1};
+      const obj={...src,images:null,cost:null,costs:costs.length?costs:null,order:maxOrder+1};
+      // cost 是 2026-08-30 之前的舊單筆格式。只清 costs 不清它的話，來源是舊資料
+      // 又沒勾複製花費時，actCostList() 還是讀得到舊那筆——活動卡顯示金額、
+      // /expenses 卻沒有對應紀錄，行程頁與記帳頁對不起來。
       // 座標照抄，同一個地點不必再查一次，/legs 的快取鍵是座標所以也直接命中。
       // 但跨夜住宿的退房日只對原本那天成立，複製到別天會推出錯的「今晚住哪」，
       // 寧可清掉讓使用者重設，也不要默默算錯。
