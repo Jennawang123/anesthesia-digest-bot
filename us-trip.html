@@ -363,7 +363,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">美國西南部</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">u0823a</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">u0906a</span></div>
     </div>
   </div>
   <div class="content">
@@ -2376,6 +2376,7 @@ function renderSched(sched){
               </div>
               <div class="act-btns">
                 <button class="ib" onclick="openActEdit('${did}','${aid}')">✎</button>
+                <button class="ib" onclick="openCopyAct('${did}','${aid}')">⧉</button>
                 <button class="ib" onclick="delAct('${did}','${aid}')">✕</button>
               </div>
             </div>${legRow}`;
@@ -2775,6 +2776,51 @@ function delAct(did,aid){
     DB.ref('/expenses/actcost_'+did+'_'+aid).remove();
     for(let i=0;i<n;i++)DB.ref('/expenses/actcost_'+did+'_'+aid+'_'+i).remove();
     toast('🗑️ 已刪除');
+  });
+}
+
+// 複製活動：整份再來一次，可以留在同一天，也可以丟到別天。
+// 照片不帶（照片是「去過了」的紀錄，不是計畫），花費預設也不帶——
+// 憑空多一筆金額很難察覺，少一筆卻一眼看得出來，所以寧可讓使用者主動勾。
+function openCopyAct(did,aid){
+  const act=(lastSched[did]?.acts||{})[aid];if(!act)return;
+  document.getElementById('mc-did').value=did;document.getElementById('mc-aid').value=aid;
+  document.getElementById('mc-name').textContent=act.name||'';
+  document.getElementById('mc_day').innerHTML=Object.entries(lastSched)
+    .sort((x,y)=>(parseInt(x[0].replace(/\D/g,''))||0)-(parseInt(y[0].replace(/\D/g,''))||0))
+    .map(([d,day])=>`<option value="${d}"${d===did?' selected':''}>D${d.replace(/\D/g,'')}　${fmtD(day.date)}</option>`).join('');
+  const n=actCostList(act).length;
+  document.getElementById('mc_costs').checked=false;
+  document.getElementById('mc-cost-row').style.display=n?'':'none';
+  if(n)document.getElementById('mc-cost-lb').textContent=`一併複製 ${n} 筆花費`;
+  openM('m-copy');
+}
+function doCopyAct(){
+  const did=document.getElementById('mc-did').value,aid=document.getElementById('mc-aid').value;
+  const toDid=document.getElementById('mc_day').value;
+  const withCosts=document.getElementById('mc_costs').checked;
+  DB.ref('/schedule/'+did+'/acts/'+aid).once('value',snap=>{
+    const src=snap.val();if(!src){toast('找不到這筆活動');return;}
+    DB.ref('/schedule/'+toDid).once('value',daySnap=>{
+      const dayData=daySnap.val()||{};
+      const existing=Object.values(dayData.acts||{});
+      const maxOrder=existing.length?Math.max(...existing.map(a=>a.order||0)):0;
+      const costs=withCosts?actCostList(src).map(c=>({...c})):[];
+      const obj={...src,images:null,costs:costs.length?costs:null,order:maxOrder+1};
+      // 座標照抄，同一個地點不必再查一次，/legs 的快取鍵是座標所以也直接命中。
+      // 但跨夜住宿的退房日只對原本那天成立，複製到別天會推出錯的「今晚住哪」，
+      // 寧可清掉讓使用者重設，也不要默默算錯。
+      if(obj.stay)obj.stay={...obj.stay,out:null};
+      const id='a'+uid();
+      DB.ref('/schedule/'+toDid+'/acts/'+id).set(obj);
+      costs.forEach((c,i)=>{
+        DB.ref('/expenses/actcost_'+toDid+'_'+id+'_'+i).set({desc:c.desc||obj.name,amt:parseFloat(c.amt)||0,cur:c.cur||DEF_CUR,cat:mapActCat(obj.cat),paidBy:c.paidBy||CFG.members[0],split:c.split||'both',date:dayData.date||'',fromAct:true,at:new Date().toISOString()});
+      });
+      closeM('m-copy');
+      // 一次只顯示一天，複製到別天不跟過去的話，看起來會像什麼都沒發生。
+      if(toDid!==did){curDay=toDid;_overviewChosen=false;}
+      toast('✅ 已複製'+(toDid!==did?` 到 D${toDid.replace(/\D/g,'')}`:''));
+    });
   });
 }
 
@@ -3634,6 +3680,24 @@ window._selftest=_selftest;
 </div>
 
 <!-- Note modal -->
+<!-- 複製活動 -->
+<div class="ov" id="m-copy">
+  <div class="sheet">
+    <div class="hdl"></div>
+    <div class="st">複製活動</div>
+    <input type="hidden" id="mc-did"><input type="hidden" id="mc-aid">
+    <div class="fg"><label class="lb">要複製的活動</label><div id="mc-name" style="font-size:19px;font-weight:700"></div></div>
+    <div class="fg"><label class="lb">複製到哪一天</label><select class="inp" id="mc_day"></select></div>
+    <div class="fg" id="mc-cost-row" style="display:none">
+      <label style="display:flex;align-items:center;gap:9px;font-size:17px;font-weight:600">
+        <input type="checkbox" id="mc_costs" style="width:20px;height:20px;flex-shrink:0">
+        <span id="mc-cost-lb"></span>
+      </label>
+    </div>
+    <p class="hint">照片不會複製過去。花費要勾了才會跟著多記一筆。</p>
+    <div class="fr"><button class="btn btn-g" style="flex:1" onclick="closeM('m-copy')">取消</button><button class="btn btn-b" style="flex:2" onclick="doCopyAct()">複製</button></div>
+  </div>
+</div>
 <div class="ov" id="m-note">
   <div class="sheet">
     <div class="hdl"></div>
