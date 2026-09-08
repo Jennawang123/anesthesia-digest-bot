@@ -303,6 +303,20 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .note-title{font-size:calc(20px*var(--fs));font-weight:700;color:var(--text);}
 .note-preview{font-size:calc(19px*var(--fs));color:var(--muted);line-height:1.6;margin-bottom:6px;white-space:pre-wrap;word-break:break-word;}
 .note-thumbs{display:flex;gap:6px;flex-wrap:wrap;}
+.note-handle{width:20px;margin-right:6px;font-size:calc(17px*var(--fs));color:var(--border);cursor:grab;flex-shrink:0;display:flex;align-items:center;user-select:none;touch-action:none;-webkit-user-drag:none;-webkit-touch-callout:none;}
+.note-handle:active{cursor:grabbing;}
+.note-card.dragging{opacity:.3;}
+.note-card.drag-over-note{border-top:2px solid var(--blue);}
+/* 收合長文：定高裁切＋底部漸層淡出，讓人看得出來下面還有東西沒顯示 */
+.note-preview.clamped{max-height:calc(19px*var(--fs)*1.6*6);overflow:hidden;position:relative;}
+.note-preview.clamped::after{content:'';position:absolute;left:0;right:0;bottom:0;height:calc(19px*var(--fs)*1.6*1.6);background:linear-gradient(to bottom,rgba(253,250,247,0),var(--card));}
+.note-more{background:none;border:none;padding:2px 0 6px;font-size:calc(17px*var(--fs));font-weight:700;color:var(--blue);cursor:pointer;font-family:inherit;}
+/* ── 匯率換算 ── */
+.fx-card{display:flex;flex-direction:column;gap:8px;}
+.fx-row{display:flex;gap:8px;}
+.fx-row .inp{min-width:0;}
+.fx-out{font-size:calc(27px*var(--fs));font-weight:800;color:var(--text);}
+.fx-rate{font-size:calc(15px*var(--fs));color:var(--muted);}
 /* ── Todo items ── */
 .todo-e-row{display:flex;align-items:center;gap:6px;padding:5px 0;}
 .todo-e-inp{flex:1;min-width:0;}
@@ -370,7 +384,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0907b</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0908a</span></div>
     </div>
   </div>
   <div class="content">
@@ -385,6 +399,15 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 
     <div class="page" id="page-exp">
       <div class="bx">
+        <!-- 在當地看到標價，直接換算成台幣。放最上面，不隨支出清單／統計圖表切換而消失 -->
+        <div class="card fx-card">
+          <div class="fx-row">
+            <input class="inp" id="fx_amt" type="number" inputmode="decimal" placeholder="當地價格" oninput="calcFx()" style="flex:1">
+            <select class="inp" id="fx_cur" onchange="onFxCur()" style="flex:0 0 108px"></select>
+          </div>
+          <div class="fx-out" id="fx_out">≈ NT$0</div>
+          <div class="fx-rate" id="fx_rate"></div>
+        </div>
         <div class="acc-toggle">
           <div class="acc-opt on" id="acc-exp" onclick="switchAcc('exp')">支出清單</div>
           <div class="acc-opt"    id="acc-stat" onclick="switchAcc('stat')">統計圖表</div>
@@ -600,11 +623,20 @@ const ACTS=[
   {id:'custom',ico:'✏️',name:'自訂',bg:'#E4E9E8'},
 ];
 const ACTM=Object.fromEntries(ACTS.map(c=>[c.id,c]));
+// 這趟走冰島＋挪威，兩國的克朗擺最前面。JPY/AUD 是從日本版繼承下來的，
+// 留著只是為了讓舊資料的幣別標籤還顯示得出來，實際上不會用到。
 const PRESET_CURRENCIES=[
-  {code:'JPY',flag:'🇯🇵'},{code:'AUD',flag:'🇦🇺'},{code:'USD',flag:'🇺🇸'},
-  {code:'EUR',flag:'🇪🇺'},{code:'TWD',flag:'🇹🇼'},
+  {code:'ISK',flag:'🇮🇸'},{code:'NOK',flag:'🇳🇴'},{code:'TWD',flag:'🇹🇼'},
+  {code:'EUR',flag:'🇪🇺'},{code:'USD',flag:'🇺🇸'},
+  {code:'JPY',flag:'🇯🇵'},{code:'AUD',flag:'🇦🇺'},
 ];
-function curSym(c){return c==='TWD'?'NT$':c==='JPY'?'¥':c==='EUR'?'€':'$';}
+// 記帳、活動花費的預設幣別。原本整份硬編 'JPY'（日本版留下來的），
+// 到冰島每記一筆都要手動改幣別。
+const DEF_CUR='ISK';
+// 單位很小的幣別，1 單位換台幣不到 0.5 元，匯率只印兩位小數會看不出差別。
+const SMALL_UNIT_CURS=['JPY','ISK'];
+// 冰島克朗與挪威克朗的符號都是 kr，靠旁邊的幣別標籤分辨。
+function curSym(c){return c==='TWD'?'NT$':c==='JPY'?'¥':c==='EUR'?'€':(c==='ISK'||c==='NOK')?'kr':'$';}
 function renderCurChips(containerId,selected,onSelectFn){
   document.getElementById(containerId).innerHTML=PRESET_CURRENCIES.map(c=>
     `<div class="cr ${c.code===selected?'on':''}" onclick="${onSelectFn}('${c.code}')">${c.flag} ${c.code}</div>`
@@ -635,13 +667,14 @@ function actCostList(act){
 
 let CFG={},DB=null,curTab='sched',curAcc='exp';
 let weatherByDate=new Map();
-let curCat='food',curPayer=0,curCur='JPY';
+let curCat='food',curPayer=0,curCur=DEF_CUR;
 let curAC='sight',curActCosts=[];
-let curNT='text',curImg=null,curPieCur='JPY',lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[],lastSafety={},lastFacilities={},lastLegs={};
+let curNT='text',curImg=null,curPieCur=DEF_CUR,lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[],lastSafety={},lastFacilities={},lastLegs={};
 // 行程頁一次只顯示一天。null = 總覽（只有住宿總整理）。
 // _overviewChosen 用來分辨「還沒選過、應該自動跳到今天」與「使用者自己選了總覽」。
 let curDay=null,_overviewChosen=false;
-const FALLBACK_RATES={JPY:0.21,AUD:21,USD:32,EUR:35};
+// 離線時的備用匯率。2026-09-08 查的實際值：ISK 0.2604、NOK 3.4006。
+const FALLBACK_RATES={ISK:0.26,NOK:3.4,JPY:0.21,AUD:21,USD:32,EUR:35};
 const _ratesFetching=new Set();
 const DG={on:false,did:null,aid:null,act:null,srcEl:null,ghost:null,timer:null,sx:0,sy:0};
 let curActOrder=0;
@@ -727,10 +760,36 @@ async function fetchRateFor(cur){
   _ratesFetching.delete(cur);
 }
 function ensureRatesForExpenses(exps){
-  const used=new Set(Object.values(exps).map(e=>e.cur||'JPY').filter(c=>c!=='TWD'));
+  const used=new Set(Object.values(exps).map(e=>e.cur||DEF_CUR).filter(c=>c!=='TWD'));
   return Promise.all([...used].map(fetchRateFor));
 }
 function rateFor(cur){return exchRates[cur]??FALLBACK_RATES[cur]??1;}
+
+// ─── 匯率換算機 ──────────────────────────────────────
+// 用記帳頁本來就有的 fetchRateFor()／rateFor()，不另外接 API，也不另外快取。
+function initFx(){
+  const sel=document.getElementById('fx_cur');if(!sel)return;
+  sel.innerHTML=PRESET_CURRENCIES.filter(c=>c.code!=='TWD')
+    .map(c=>`<option value="${c.code}"${c.code===DEF_CUR?' selected':''}>${c.flag} ${c.code}</option>`).join('');
+  onFxCur();
+}
+function onFxCur(){
+  const cur=document.getElementById('fx_cur').value;
+  calcFx();
+  // 匯率是用到才抓的，換到還沒抓過的幣別會先拿 FALLBACK_RATES 頂著，抓回來再算一次
+  fetchRateFor(cur).then(calcFx);
+}
+function calcFx(){
+  const sel=document.getElementById('fx_cur');if(!sel)return;
+  const cur=sel.value,rate=rateFor(cur);
+  const amt=parseFloat(document.getElementById('fx_amt').value);
+  document.getElementById('fx_out').textContent=
+    isNaN(amt)?'≈ NT$0':'≈ NT$'+Math.round(amt*rate).toLocaleString('zh-TW');
+  // 講明白這個數字是即時匯率還是離線備用值——兩者差很多的時候要看得出來
+  document.getElementById('fx_rate').textContent=
+    `1 ${cur} ≈ NT$${rate.toFixed(SMALL_UNIT_CURS.includes(cur)?4:2)}`
+    +(exchRates[cur]==null?'　·　離線備用匯率':'');
+}
 
 function weatherDesc(code){
   if(code===0)return{icon:'☀️',desc:'晴'};
@@ -1582,7 +1641,7 @@ function bootApp(){
   document.getElementById('c_apikey').value=CFG.apiKey||'';
   applyFontScale();               // CSS 變數在 <head> 已套，這裡補設定頁三格的選中狀態
   if(CFG.title)applyTripCfg(CFG); // 已經知道設定就先畫，否則等 /config 進來
-  renderCatGrid();renderACGrid();initDnD();initActDnD();initLightbox();
+  renderCatGrid();renderACGrid();initDnD();initActDnD();initNoteDnD();initLightbox();initFx();
   // 匯率改成 lazy fetch：由 _fbListen() 收到 expenses 資料後依實際用到的幣別呼叫
   // 先用上次的快照把畫面畫出來，Firebase 連上後再覆蓋。沒訊號時這就是唯一的資料來源。
   const snap=snapLoad();
@@ -1967,6 +2026,78 @@ function initDnD(){
   });
 }
 
+// 記事本排序。跟行程共用同一套操作方式（按住 ⠿ 把手拖），但簡單得多：
+// 只有一個容器、不需要跨天搬移，所以不必挑「放到哪一張日卡」。
+const NG={on:false,nid:null,srcEl:null,ghost:null,timer:null,sx:0,sy:0,lastY:0};
+function initNoteDnD(){
+  const box=document.getElementById('noteList');if(!box)return;
+  const cards=()=>[...box.querySelectorAll('.note-card')];
+  // 「離手指最近的那張卡」，而不是嚴格落在邊界內：卡片之間有間距，手指常常落在縫隙，
+  // 嚴格比對會找不到目標，看起來就像拖曳沒有作用（行程那邊踩過同一個坑）。
+  function nearest(y){
+    let best=null,min=Infinity;
+    cards().forEach(c=>{
+      if(c.dataset.nid===NG.nid)return;
+      const r=c.getBoundingClientRect(),d=Math.abs(y-(r.top+r.bottom)/2);
+      if(d<min){min=d;best=c;}
+    });
+    return best;
+  }
+  function finish(clientY){
+    if(NG.ghost){NG.ghost.remove();NG.ghost=null;}
+    if(NG.srcEl)NG.srcEl.classList.remove('dragging');
+    cards().forEach(c=>c.classList.remove('drag-over-note'));
+    const y=clientY??NG.lastY??NG.sy;
+    const ids=cards().map(c=>c.dataset.nid);
+    if(ids.length<2)return;
+    const tgt=nearest(y);if(!tgt)return;
+    const srcIdx=ids.indexOf(NG.nid),tgtIdx=ids.indexOf(tgt.dataset.nid);
+    if(srcIdx<0||tgtIdx<0||srcIdx===tgtIdx)return;
+    ids.splice(srcIdx,1);ids.splice(tgtIdx,0,NG.nid);
+    // 整批重寫：舊記事沒有 order 欄位，只寫被拖的那一筆的話，它會跟一群 order=0
+    // 的記事混在一起，排出來的順序無法預期。
+    const upd={};ids.forEach((id,i)=>upd['/notes/'+id+'/order']=i);
+    DB.ref('/').update(upd);
+    toast('✅ 已重新排序');
+  }
+  box.addEventListener('touchstart',e=>{
+    const card=e.target.closest('.note-card');
+    if(!card||!e.target.closest('.note-handle'))return;   // 只認把手，捲動記事本才不會誤觸
+    NG.sx=e.touches[0].clientX;NG.sy=e.touches[0].clientY;NG.lastY=NG.sy;
+    NG.timer=setTimeout(()=>{
+      const nid=card.dataset.nid,n=lastNotes[nid];if(!n)return;
+      navigator.vibrate&&navigator.vibrate(40);
+      NG.on=true;NG.nid=nid;NG.srcEl=card;card.classList.add('dragging');
+      const g=document.createElement('div');g.id='drag-ghost';
+      g.innerHTML=`<span>${n.type==='todo'?'✅':'📝'}</span>${esc(n.title||'記事')}`;
+      g.style.left=(NG.sx-110)+'px';g.style.top=(NG.sy-22)+'px';
+      document.body.appendChild(g);NG.ghost=g;
+    },0);
+  },{passive:true});
+  document.addEventListener('touchmove',e=>{
+    const t=e.touches[0];
+    if(Math.abs(t.clientX-NG.sx)>12||Math.abs(t.clientY-NG.sy)>12)clearTimeout(NG.timer);
+    NG.lastY=t.clientY;
+    if(!NG.on)return;
+    e.preventDefault();
+    if(NG.ghost){NG.ghost.style.left=(t.clientX-110)+'px';NG.ghost.style.top=(t.clientY-22)+'px';}
+    const tgt=nearest(t.clientY);
+    cards().forEach(c=>c.classList.toggle('drag-over-note',c===tgt));
+  },{passive:false});
+  document.addEventListener('touchend',e=>{
+    clearTimeout(NG.timer);
+    if(!NG.on){NG.on=false;return;}
+    NG.on=false;finish(e.changedTouches[0]?.clientY);
+  });
+  // iOS 被系統判定成捲動時只送 touchcancel，不接的話 NG.on 會卡在 true、
+  // 浮動小卡也不會消失，放開手指後畫面完全沒反應（行程那邊踩過同一個坑）。
+  document.addEventListener('touchcancel',e=>{
+    clearTimeout(NG.timer);
+    if(!NG.on){NG.on=false;return;}
+    NG.on=false;finish(e.changedTouches[0]?.clientY);
+  });
+}
+
 const ADG={on:false,did:null,aid:null,srcEl:null};
 let _actDragFromHandle=false;
 function initActDnD(){
@@ -2023,7 +2154,7 @@ function moveAct(fromDid,aid,act,toDid){
     DB.ref('/expenses/actcost_'+fromDid+'_'+aid).remove();   // 舊格式殘留一併清掉
     actCostList(act).forEach((c,i)=>{
       DB.ref('/expenses/actcost_'+fromDid+'_'+aid+'_'+i).remove();
-      DB.ref('/expenses/actcost_'+toDid+'_'+aid+'_'+i).set({desc:c.desc||act.name,amt:c.amt,cur:c.cur||'JPY',cat:mapActCat(act.cat),paidBy:c.paidBy||CFG.members[0],date:newDate,fromAct:true,at:new Date().toISOString()});
+      DB.ref('/expenses/actcost_'+toDid+'_'+aid+'_'+i).set({desc:c.desc||act.name,amt:c.amt,cur:c.cur||DEF_CUR,cat:mapActCat(act.cat),paidBy:c.paidBy||CFG.members[0],date:newDate,fromAct:true,at:new Date().toISOString()});
     });
     toast('✅ 已移動到 '+toDid.replace('day','Day '));
   });
@@ -2249,7 +2380,7 @@ function renderSched(sched){
                 ${stayTxt?`<div class="ov-stay">${stayTxt}</div>`:''}
                 ${act.note?`<div class="act-note-t">💬 ${autolink(act.note)}</div>`:''}
                 ${act.images?.length?`<div class="act-imgs">${act.images.map(b=>`<img class="act-img-thumb" src="${b}" onclick="openLightbox('${b}')">`).join('')}</div>`:''}
-                ${actCostList(act).map(c=>`<div class="act-cost">💰 ${c.desc?esc(c.desc)+' ':''}${curSym(c.cur||'JPY')}${parseFloat(c.amt||0).toFixed(dp)} ${c.cur||'JPY'}</div>`).join('')}
+                ${actCostList(act).map(c=>`<div class="act-cost">💰 ${c.desc?esc(c.desc)+' ':''}${curSym(c.cur||DEF_CUR)}${parseFloat(c.amt||0).toFixed(dp)} ${c.cur||DEF_CUR}</div>`).join('')}
               </div>
               <div class="act-btns">
                 <button class="ib" onclick="openActEdit('${did}','${aid}')">✎</button>
@@ -2594,7 +2725,7 @@ function fillStayInputs(s){
 function saveAct(){
   const did=document.getElementById('ma-did').value,aid=document.getElementById('ma-aid').value;
   const name=document.getElementById('a_name').value.trim();if(!name){toast('請輸入活動名稱');return;}
-  const costs=curActCosts.map(c=>({desc:(c.desc||'').trim(),amt:parseFloat(c.amt),cur:c.cur||'JPY',paidBy:c.paidBy||CFG.members[0]})).filter(c=>!isNaN(c.amt)&&c.amt>0);
+  const costs=curActCosts.map(c=>({desc:(c.desc||'').trim(),amt:parseFloat(c.amt),cur:c.cur||DEF_CUR,paidBy:c.paidBy||CFG.members[0]})).filter(c=>!isNaN(c.amt)&&c.amt>0);
   DB.ref('/schedule/'+did).once('value',daySnap=>{
     const dayData=daySnap.val()||{};
     const existingActs=Object.values(dayData.acts||{});
@@ -2702,7 +2833,7 @@ function doCopyAct(){
       const id='a'+uid();
       DB.ref('/schedule/'+toDid+'/acts/'+id).set(obj);
       costs.forEach((c,i)=>{
-        DB.ref('/expenses/actcost_'+toDid+'_'+id+'_'+i).set({desc:c.desc||obj.name,amt:parseFloat(c.amt)||0,cur:c.cur||'JPY',cat:mapActCat(obj.cat),paidBy:c.paidBy||CFG.members[0],date:dayData.date||'',fromAct:true,at:new Date().toISOString()});
+        DB.ref('/expenses/actcost_'+toDid+'_'+id+'_'+i).set({desc:c.desc||obj.name,amt:parseFloat(c.amt)||0,cur:c.cur||DEF_CUR,cat:mapActCat(obj.cat),paidBy:c.paidBy||CFG.members[0],date:dayData.date||'',fromAct:true,at:new Date().toISOString()});
       });
       closeM('m-copy');
       // 一次只顯示一天，複製到別天不跟過去的話，看起來會像什麼都沒發生。
@@ -2723,7 +2854,7 @@ function selCur(c){curCur=c;renderCurChips('cur-row-exp',c,'selCur');}
 function openExpM(){
   document.getElementById('m-exp-t').textContent='新增支出';document.getElementById('me-id').value='';
   document.getElementById('e_desc').value='';document.getElementById('e_amt').value='';document.getElementById('e_date').value=today();
-  curCat='food';renderCatGrid();selPayer(0);selCur('JPY');
+  curCat='food';renderCatGrid();selPayer(0);selCur(DEF_CUR);
   openM('m-exp');setTimeout(()=>document.getElementById('e_desc').focus(),280);
 }
 
@@ -2732,7 +2863,7 @@ function openExpEdit(eid){
     const e=snap.val();if(!e)return;
     document.getElementById('m-exp-t').textContent='編輯支出';document.getElementById('me-id').value=eid;
     document.getElementById('e_desc').value=e.desc||'';document.getElementById('e_amt').value=e.amt||'';document.getElementById('e_date').value=e.date||today();
-    curCat=e.cat||'food';renderCatGrid();selPayer(Math.max(0,CFG.members.indexOf(e.paidBy)));selCur(e.cur||'JPY');
+    curCat=e.cat||'food';renderCatGrid();selPayer(Math.max(0,CFG.members.indexOf(e.paidBy)));selCur(e.cur||DEF_CUR);
     openM('m-exp');
   });
 }
@@ -2750,7 +2881,7 @@ function calcDaySpend(exps,dateStr){
   const totals=new Map();
   Object.values(exps).forEach(e=>{
     if(e.date!==dateStr)return;
-    const cur=e.cur||'JPY';
+    const cur=e.cur||DEF_CUR;
     totals.set(cur,(totals.get(cur)||0)+(e.amt||0));
   });
   totals.forEach((v,k)=>{if(v<=0)totals.delete(k);});
@@ -2761,7 +2892,7 @@ function calcMemberSpend(exps,who){
   const totals=new Map();
   Object.values(exps).forEach(e=>{
     if(e.paidBy!==who)return;
-    const cur=e.cur||'JPY',amt=e.amt||0;
+    const cur=e.cur||DEF_CUR,amt=e.amt||0;
     if(amt>0)totals.set(cur,(totals.get(cur)||0)+amt);
   });
   return totals;
@@ -2775,7 +2906,7 @@ function drawDonut(canvasId,exps,cur){
   const isCombined=cur==='combined';
   const totals={};
   Object.values(exps).forEach(e=>{
-    const eCur=e.cur||'JPY';
+    const eCur=e.cur||DEF_CUR;
     if(!isCombined&&eCur!==cur)return;
     const cat=e.cat||'other';
     let amt=e.amt||0;
@@ -2804,7 +2935,7 @@ function drawDonut(canvasId,exps,cur){
 }
 
 function renderPie(exps){
-  const presentCurs=PRESET_CURRENCIES.filter(c=>Object.values(exps).some(e=>(e.cur||'JPY')===c.code&&(e.amt||0)>0));
+  const presentCurs=PRESET_CURRENCIES.filter(c=>Object.values(exps).some(e=>(e.cur||DEF_CUR)===c.code&&(e.amt||0)>0));
   if(!presentCurs.length){document.getElementById('pieSec').innerHTML='';return;}
 
   // Ensure curPieCur is valid
@@ -2824,7 +2955,7 @@ function renderPie(exps){
       <canvas id="pieCanvas" width="140" height="140" style="flex-shrink:0"></canvas>
       <div class="pie-legend" id="pieLegend"></div>
     </div>
-    <div class="pie-rate" id="pieRate">${presentCurs.filter(c=>c.code!=='TWD'&&exchRates[c.code]).map(c=>`1 ${c.code}≈NT$${exchRates[c.code].toFixed(c.code==='JPY'?4:2)}`).join(' · ')}</div>
+    <div class="pie-rate" id="pieRate">${presentCurs.filter(c=>c.code!=='TWD'&&exchRates[c.code]).map(c=>`1 ${c.code}≈NT$${exchRates[c.code].toFixed(SMALL_UNIT_CURS.includes(c.code)?4:2)}`).join(' · ')}</div>
   </div>`;
 
   const result=drawDonut('pieCanvas',exps,curPieCur);
@@ -2877,7 +3008,7 @@ function openMemberDetail(idx){
     const list=Object.keys(groups).sort().reverse().map(date=>
       `<div class="edl">${fmtD(date)||'未指定日期'}</div>`+
       groups[date].map(e=>{
-        const cat=CATM[e.cat]||CATM.other,cur=e.cur||'JPY';
+        const cat=CATM[e.cat]||CATM.other,cur=e.cur||DEF_CUR;
         return `<div class="er">
           <div class="ei" style="background:${cat.bg}">${cat.ico}</div>
           <div class="einfo">
@@ -2910,14 +3041,14 @@ function renderExp(exps){
     <div class="edl">${fmtD(date)}</div>`+
     groups[date].map(([id,e])=>{
       const cat=CATM[e.cat]||CATM.other;
-      const sym=curSym(e.cur||'JPY'),dp=0;
+      const sym=curSym(e.cur||DEF_CUR),dp=0;
       return`<div class="er">
         <div class="ei" style="background:${cat.bg}">${cat.ico}</div>
         <div class="einfo">
           <div class="edesc">${esc(e.desc||'')}</div>
           <div class="emeta">
             <span class="bdg bpayer">${esc(e.paidBy)}</span>
-            <span class="bdg bcur">${e.cur||'JPY'}</span>
+            <span class="bdg bcur">${e.cur||DEF_CUR}</span>
             ${e.fromAct?'<span class="bdg bact">📅行程</span>':''}
           </div>
         </div>
@@ -2977,8 +3108,26 @@ function saveApiKey(){
 function clearAll(){if(!confirm('⚠️ 確定清空所有資料？'))return;if(!confirm('再次確認：清空全部？'))return;DB.ref('/').update({schedule:{},expenses:{},notes:{}}).then(()=>toast('✅ 已清空'));}
 
 // ─── Notes ───────────────────────────────────────────
+// 手動排序用的欄位。舊資料沒有 order，一律當成 0，所以它們之間仍照建立時間新到舊排；
+// 新記事拿「目前最小值 -1」排到最前面，第一次拖曳時才會把整份重寫成 0..n-1。
+const noteOrd=n=>typeof n.order==='number'?n.order:0;
+// 整筆 set 會把沒帶到的欄位洗掉，所以編輯既有記事時必須把原本的 order 帶回去。
+function nextNoteOrder(existing){
+  if(existing)return noteOrd(existing);
+  const orders=Object.values(lastNotes||{}).map(noteOrd);
+  return orders.length?Math.min(...orders)-1:0;
+}
+// 哪幾則展開了只記在記憶體裡：Firebase 一有任何變動就整頁重畫，不記著的話
+// 讀到一半會突然縮回去；而這是「這台裝置現在在看」的狀態，也沒必要同步給別人。
+const _noteOpen=new Set();
+const NOTE_CLAMP=300;
+function toggleNoteMore(nid){
+  _noteOpen.has(nid)?_noteOpen.delete(nid):_noteOpen.add(nid);
+  renderNotes(lastNotes);
+}
 function renderNotes(notes){
-  const list=Object.entries(notes||{}).sort((a,b)=>(b[1].createdAt||'').localeCompare(a[1].createdAt||''));
+  const list=Object.entries(notes||{}).sort((a,b)=>
+    (noteOrd(a[1])-noteOrd(b[1]))||(b[1].createdAt||'').localeCompare(a[1].createdAt||''));
   const el=document.getElementById('noteList');
   if(!el)return;
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-i">📒</div><div class="empty-h">尚無記事，點 ＋ 新增</div></div>';return;}
@@ -2986,21 +3135,29 @@ function renderNotes(notes){
 }
 function renderNoteCard(nid,n){
   if(n.type==='note'){
-    // 換行要留著（CSS 有 white-space:pre-wrap），截斷長度也放寬，不然多行筆記第二行就被切掉
-    // 網址要能直接點（記事本放的是即時路況、天氣那類到現場才會用的連結）。
-    // autolink 內部已經 esc 過，這裡不能再 esc 一次，否則標籤會被跳脫成字面文字。
+    // 換行要留著（CSS 有 white-space:pre-wrap）。網址要能直接點（記事本放的是即時
+    // 路況、天氣那類到現場才會用的連結）。autolink 內部已經 esc 過，這裡不能再 esc
+    // 一次，否則標籤會被跳脫成字面文字。
+    //
+    // 內文一律整篇渲染，超長時用 CSS 裁切而不是切字串——切字串會把網址攔腰砍斷，
+    // 變成一段點不了的半截連結，而且展開時還得重新 autolink 一次。
     const raw=n.content||'';
-    const preview=autolink(raw.slice(0,300))+(raw.length>300?'…':'');
+    const body=autolink(raw);
+    const long=raw.length>NOTE_CLAMP,open=_noteOpen.has(nid);
     const thumbs=(n.images||[]).map(b=>`<img class="act-img-thumb" src="${b}" onclick="openLightbox('${b}')">`).join('');
-    return`<div class="card note-card">
+    return`<div class="card note-card" data-nid="${nid}">
       <div class="note-hdr">
-        <div class="note-title">📝 ${esc(n.title||'（無標題）')}</div>
-        <div style="display:flex;gap:4px">
+        <div style="display:flex;align-items:center;min-width:0">
+          <div class="note-handle">⠿</div>
+          <div class="note-title">📝 ${esc(n.title||'（無標題）')}</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
           <button class="ib" onclick="openNoteEdit('${nid}')">✎</button>
           <button class="ib" onclick="delNote('${nid}')">✕</button>
         </div>
       </div>
-      ${preview?`<div class="note-preview">${preview}</div>`:''}
+      ${body?`<div class="note-preview${long&&!open?' clamped':''}">${body}</div>`:''}
+      ${long?`<button class="note-more" onclick="toggleNoteMore('${nid}')">${open?'收合 ⌃':'檢視更多 ⌄'}</button>`:''}
       ${thumbs?`<div class="note-thumbs">${thumbs}</div>`:''}
     </div>`;
   }
@@ -3012,10 +3169,13 @@ function renderNoteCard(nid,n){
         <span style="${item.done?'text-decoration:line-through;color:var(--muted)':''}">${esc(item.text||'')}</span>
       </label>
     </div>`).join('');
-  return`<div class="card note-card">
+  return`<div class="card note-card" data-nid="${nid}">
     <div class="note-hdr">
-      <div class="note-title">✅ ${esc(n.title||'待辦清單')}</div>
-      <div style="display:flex;align-items:center;gap:6px">
+      <div style="display:flex;align-items:center;min-width:0">
+        <div class="note-handle">⠿</div>
+        <div class="note-title">✅ ${esc(n.title||'待辦清單')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
         <span style="font-size:calc(18px*var(--fs));font-weight:700;color:var(--muted)">${doneCount}/${total}</span>
         <button class="ib" onclick="openTodoEdit('${nid}')">✎</button>
         <button class="ib" onclick="delNote('${nid}')">✕</button>
@@ -3080,6 +3240,7 @@ function saveTodo(){
   const now=new Date().toISOString();
   const existing=lastNotes[nid];
   const obj={type:'todo',title,items,
+    order:nextNoteOrder(existing),
     createdAt:existing?.createdAt||now,updatedAt:now};
   DB.ref('/notes/'+nid).set(obj);
   closeM('m-todo');toast('✅ 已儲存');
@@ -3090,13 +3251,13 @@ let curNoteImages=[];
 function onNoteImgPick(e){
   const file=e.target.files[0];if(!file)return;
   e.target.value='';
-  if(curNoteImages.length>=6){toast('最多 6 張圖片');return;}
+  if(curNoteImages.length>=10){toast('最多 10 張圖片');return;}
   compressImage(file).then(b64=>{curNoteImages.push(b64);renderNoteImgPreviews();});
 }
 function renderNoteImgPreviews(){
   const el=document.getElementById('note-img-previews');if(!el)return;
   el.innerHTML=curNoteImages.map((b,i)=>`<div class="img-preview-item"><img src="${b}"><button class="img-preview-rm" onclick="removeNoteImg(${i})">✕</button></div>`).join('');
-  const btn=document.getElementById('note-img-btn');if(btn)btn.style.display=curNoteImages.length>=6?'none':'';
+  const btn=document.getElementById('note-img-btn');if(btn)btn.style.display=curNoteImages.length>=10?'none':'';
 }
 function removeNoteImg(i){curNoteImages.splice(i,1);renderNoteImgPreviews();}
 function openNoteM(type){
@@ -3125,6 +3286,7 @@ function saveNote(){
   const existing=lastNotes[nid];
   const obj={type:'note',title,content,
     images:curNoteImages.length?[...curNoteImages]:null,
+    order:nextNoteOrder(existing),
     createdAt:existing?.createdAt||now,updatedAt:now};
   DB.ref('/notes/'+nid).set(obj);
   closeM('m-note');toast('✅ 已儲存');
@@ -3515,7 +3677,7 @@ window._selftest=_selftest;
     <div class="fg"><label class="lb">標題</label><input class="inp" id="n_title" placeholder="記事標題…"></div>
     <div class="fg"><label class="lb">內容</label><textarea class="ta" id="n_content" placeholder="記錄想法、資訊…" rows="5"></textarea></div>
     <div class="fg">
-      <label class="lb">圖片（最多 6 張）</label>
+      <label class="lb">圖片（最多 10 張）</label>
       <div id="note-img-previews" class="img-preview-row"></div>
       <button type="button" class="btn btn-g" style="margin-top:6px;font-size:15px;padding:8px 12px" onclick="document.getElementById('noteImgFile').click()" id="note-img-btn">📷 新增圖片</button>
       <input type="file" id="noteImgFile" accept="image/*" style="display:none" onchange="onNoteImgPick(event)">
