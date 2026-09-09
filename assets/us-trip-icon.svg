@@ -1,0 +1,63 @@
+<!--
+  us-trip.html 的 PWA icon 原始檔（大峽谷國家公園徽章，原創繪製）。
+  us-trip.html 裡存的是這張圖轉出的 base64 PNG，改這裡不會自動生效，要重新轉一次：
+
+    chrome --headless --disable-gpu --hide-scrollbars --force-device-scale-factor=1 \
+           --window-size=256,256 --screenshot=out.png file:///…/wrapper.html
+    # wrapper.html 只是 <img src="us-trip-icon.svg" width="256" height="256">
+    # ImageMagick 直接轉 SVG 會用內建的 MSVG 引擎，文字與路徑都跑掉，所以走瀏覽器
+
+  再用 PIL 量化成 64 色調色盤 PNG（約 5.7KB），base64 之後貼回 us-trip.html
+  的 apple-touch-icon 與 rel=icon 兩處（兩處是同一個字串）。
+
+  岩石一律加深藍描邊是刻意的：縮到桌面捷徑尺寸時，色塊之間沒有線條就糊成一團。
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <path id="badge" d="M78 30 C78 23 84 20 91 20 L165 20 C172 20 178 23 178 30 L178 38 L196 38 C203 38 208 43 208 50 L208 150 C208 199 172 227 128 241 C84 227 48 199 48 150 L48 50 C48 43 53 38 60 38 L78 38 Z"/>
+    <clipPath id="inner"><use href="#badge"/></clipPath>
+  </defs>
+  <rect width="256" height="256" fill="#F7F4EF"/>
+  <use href="#badge" fill="none" stroke="#FBF8F3" stroke-width="16" stroke-linejoin="round"/>
+
+  <g clip-path="url(#inner)">
+    <rect x="40" y="10" width="180" height="250" fill="#EFEADC"/>
+    <rect x="40" y="10" width="180" height="86" fill="#F2CE68"/>
+    <path d="M40 86 h180 v6 h-180 Z" fill="#1F3050"/>
+    <!-- 雲層 -->
+    <path d="M40 112 q14 -14 30 -6 q12 -14 30 -4 q16 -12 32 2 q18 -10 34 4 q14 -6 24 4 v10 h-150 Z" fill="#FCFAF4"/>
+
+    <!-- 遠景台地 -->
+    <path d="M40 124 l26 -10 l28 6 l24 -8 l30 8 l24 -10 l28 10 v20 h-160 Z"
+          fill="#E3BE94" stroke="#1F3050" stroke-width="3" stroke-linejoin="round"/>
+
+    <!-- 左岸：階梯狀懸崖 -->
+    <path d="M34 126 l60 -8 l14 14 v30 l-22 12 v26 l22 12 v54 h-74 Z"
+          fill="#D89F6C" stroke="#1F3050" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M34 152 l40 6 v34 l-40 10 Z" fill="#BC8250"/>
+    <path d="M34 210 l40 12 v44 h-40 Z" fill="#C68C58"/>
+
+    <!-- 右岸：階梯狀懸崖 -->
+    <path d="M222 122 l-46 6 l-16 16 l6 26 l-16 14 v34 l18 14 v34 h54 Z"
+          fill="#D89F6C" stroke="#1F3050" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M222 148 l-34 6 v40 l34 10 Z" fill="#BC8250"/>
+    <path d="M176 128 l16 -4 v28 l-18 6 l-6 -18 Z" fill="#E7C69C"/>
+
+    <!-- 中央伸出的岬角 -->
+    <path d="M94 118 l40 -4 l16 18 l-6 26 l-22 12 v28 l-24 14 v-42 l22 -12 v-30 Z"
+          fill="#E5C094" stroke="#1F3050" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M112 158 l22 -8 l-4 20 l-18 10 Z" fill="#C99464"/>
+
+    <!-- 河 -->
+    <path d="M136 140 c12 12 -8 22 2 36 c10 14 -12 22 -2 38 c10 16 -6 24 4 40 h34 c-10 -16 6 -24 -4 -40 c-10 -16 12 -24 2 -38 c-10 -14 10 -24 -2 -36 Z"
+          fill="#8FC9B8" stroke="#1F3050" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M144 148 c8 10 -6 18 0 30 c6 12 -8 18 -2 30 c6 12 -4 20 2 32 h10 c-6 -12 4 -20 -2 -32 c-6 -12 8 -18 2 -30 c-6 -12 6 -20 -2 -30 Z" fill="#AEDACA"/>
+  </g>
+
+  <use href="#badge" fill="none" stroke="#1F3050" stroke-width="8" stroke-linejoin="round"/>
+
+  <text x="128" y="58" text-anchor="middle" fill="#1F3050" textLength="122" lengthAdjust="spacingAndGlyphs"
+        font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="19" font-weight="800">GRAND CANYON</text>
+  <text x="128" y="78" text-anchor="middle" fill="#1F3050" textLength="86" lengthAdjust="spacingAndGlyphs"
+        font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="10" font-weight="700">NATIONAL PARK</text>
+</svg>
