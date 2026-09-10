@@ -3,6 +3,7 @@
 每個 parser 只做「HTML 字串 → list[Event]」，不碰網路、不碰狀態、不碰通知，
 因此可對離線 fixture 完整測試。
 """
+import html as htmllib
 import re
 from urllib.parse import urljoin
 
@@ -185,7 +186,17 @@ def airway_lines(html: str) -> list[str]:
     """
     text = re.sub(r"(?is)<script.*?</script>", "", html)
     text = re.sub(r"(?is)<style.*?</style>", "", text)
+    # 註解要在拔標籤之前先拔掉：內含 ">" 的註解會讓標籤 regex 提早收尾，
+    # 把 "-->" 之類的殘骸留成可見行，混進 diff 觸發多餘的 LLM 呼叫。
+    text = re.sub(r"(?s)<!--.*?-->", "", text)
     text = re.sub(r"(?s)<[^>]*>", "\n", text)
+    # 反轉義要在拔完標籤之後：否則 &lt; 會還原成 < 再被當成標籤吃掉。
+    # 不還原的話 &nbsp;／&zwj; 會原樣進 prompt，也可能被抄進 title 推到 LINE。
+    text = htmllib.unescape(text)
+    # &nbsp; 還原後是 \xa0，在標題裡是「看不見但不相等」的字元，
+    # 正規化成一般空格。注意不可動 \u200d（ZWJ）——它是 👨\u200d⚕️ 這類
+    # emoji 的一部分，拿掉會把一個字拆成兩個。
+    text = text.replace("\xa0", " ")
     return [line.strip() for line in text.split("\n") if line.strip()]
 
 

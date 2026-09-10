@@ -204,10 +204,25 @@ def test_airway_去除script與style():
     assert not any("var x" in l or "color:red" in l for l in lines)
 
 
-def test_airway_實抓快照為一二四行():
-    text = _fx("airway_text_20260910.txt")
-    lines = [l for l in text.split("\n") if l.strip()]
-    assert len(lines) == 124
+def test_airway_真實wix頁抽取結果與快照一致():
+    # 用真實 Wix 頁（僅去掉 script/style 以控制體積，註解與 entity 都保留）
+    # 端到端驗證 airway_lines，而非只斷言快照檔自己的行數
+    lines = extract.airway_lines(_fx("airway_page_20260910.html"))
+    expected = [l for l in _fx("airway_text_20260910.txt").split("\n") if l.strip()]
+    assert lines == expected
+    assert len(lines) == 117
+
+
+def test_airway_去除html註解殘骸():
+    # 內含 ">" 的註解會讓標籤 regex 提早收尾，把 "-->" 留成可見行。
+    # 真實頁面的第一行原本就是這個殘骸。
+    lines = extract.airway_lines("<!-- 內含 > 符號的註解 --><div>正文</div>")
+    assert lines == ["正文"]
+
+
+def test_airway_還原html_entity():
+    lines = extract.airway_lines("<div>課程名稱&nbsp;A&amp;B</div><div>&nbsp;</div>")
+    assert lines == ["課程名稱 A&B"]   # 純 &nbsp; 的填充行會被濾掉
 
 
 def test_airway_無新增時回空list():
