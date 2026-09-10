@@ -171,3 +171,18 @@ def test_pain_全部連到列表頁(pain_events):
 def test_pain_空表回傳空list():
     # 明年度尚無活動時，該 endpoint 回的是只有表頭的空表
     assert extract.parse_pain("<table class='table'><tbody></tbody></table>") == []
+
+
+def test_pain_缺text_info時退回整格文字不漏報():
+    # text-info 是 Bootstrap utility class，站方改版可能換掉，
+    # 缺它不可讓整筆無聲消失
+    html = """<table><tbody><tr>
+      <td><span>2026</span><span>九月</span><span>15</span></td>
+      <td>沒有包在 text-info 裡的活動名稱</td>
+      <td><a onclick="cal_listview_click_func('9001')">詳細</a></td>
+    </tr></tbody></table>"""
+    events = extract.parse_pain(html)
+    assert len(events) == 1
+    assert events[0].uid == "9001"
+    assert events[0].title == "沒有包在 text-info 裡的活動名稱"
+    assert events[0].date_text == "2026 九月 15"

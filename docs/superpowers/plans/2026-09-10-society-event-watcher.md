@@ -566,6 +566,21 @@ def test_pain_全部連到列表頁(pain_events):
 def test_pain_空表回傳空list():
     # 明年度尚無活動時，該 endpoint 回的是只有表頭的空表
     assert extract.parse_pain("<table class='table'><tbody></tbody></table>") == []
+
+
+def test_pain_缺text_info時退回整格文字不漏報():
+    # text-info 是 Bootstrap utility class，站方改版可能換掉，
+    # 缺它不可讓整筆無聲消失
+    html = """<table><tbody><tr>
+      <td><span>2026</span><span>九月</span><span>15</span></td>
+      <td>沒有包在 text-info 裡的活動名稱</td>
+      <td><a onclick="cal_listview_click_func('9001')">詳細</a></td>
+    </tr></tbody></table>"""
+    events = extract.parse_pain(html)
+    assert len(events) == 1
+    assert events[0].uid == "9001"
+    assert events[0].title == "沒有包在 text-info 裡的活動名稱"
+    assert events[0].date_text == "2026 九月 15"
 ```
 
 - [ ] **Step 2: 執行測試確認失敗**
@@ -578,7 +593,12 @@ Expected: FAIL，`AttributeError: ... has no attribute 'parse_pain'`
 在 `society_watch/extract.py` 追加常數與函式：
 
 ```python
-# 該站「詳細」是 onclick 不是 href，無逐則網址，一律連列表頁
+# 該站的「詳細」是 onclick 不是 href。逐則 endpoint 其實存在
+# （cal_listview_click_func → educlass_page1_content 同源的 cedunolog_page_content_view/{id}），
+# 但它回的是要塞進 BootstrapDialog 的裸片段，沒有版面、不適合直接給人點，
+# 因此一律連列表頁。
+# 網址尾段的 34 是導覽狀態、不影響內容：實測 /33/1/8/34 載入的正是我們抓的
+# fragment /33/1/8/0；而看似更乾淨的 /33/ 反而不含載入器，換過去會更糟。
 PAIN_LIST_URL = "https://pain.org.tw/index.php/educlass_page/index/33/1/8/34"
 ```
 
@@ -591,22 +611,36 @@ def parse_pain(html: str) -> list[Event]:
     soup = BeautifulSoup(html, "html.parser")
     events = []
     for row in soup.select("table tbody tr"):
+        # 沒有 uid 就無法去重，只有這種情形才丟棄整筆
         m = re.search(r"cal_listview_click_func\('(\d+)'\)", str(row))
-        title_el = row.select_one("span.text-info")
-        if not m or not title_el:
+        if not m:
             continue
 
         cells = row.select("td")
+
+        # 日期靠「第一個 td 內的 span 串接」取得（2026 / 八月 / 23）。
+        # 這是位置假設：該站若在最前面插一欄，date_text 會靜默變成錯的內容。
+        # 只影響顯示、不影響去重，故接受。
         date_text = ""
         if cells:
             date_text = _clean(" ".join(
                 s.get_text(strip=True) for s in cells[0].select("span")
             ))
 
+        # text-info 是 Bootstrap 4 的 utility class，站方改版可能換掉。
+        # 缺它時退回整格文字而非丟棄整筆——漏報才是本系統的失敗代價。
+        title_el = row.select_one("span.text-info")
+        if title_el:
+            title = _clean(title_el.get_text(" ", strip=True))
+        elif len(cells) > 1:
+            title = _clean(cells[1].get_text(" ", strip=True))
+        else:
+            title = ""
+
         events.append(Event(
             source="PAIN",
             uid=m.group(1),
-            title=_clean(title_el.get_text(" ", strip=True)),
+            title=title,
             date_text=date_text,
             url=PAIN_LIST_URL,
         ))
@@ -616,7 +650,7 @@ def parse_pain(html: str) -> list[Event]:
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_extract.py -v`
-Expected: 18 passed
+Expected: 21 passed
 
 - [ ] **Step 5: Commit**
 

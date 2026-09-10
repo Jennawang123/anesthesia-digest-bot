@@ -19,7 +19,12 @@ RAPM_BASE = "https://rapm.org.tw/"
 # 不為個案追加規則（over-fitting），判不出來一律不降級。
 TSCVA_MINOR_KEYWORDS = ("名單", "恭賀", "獲獎", "甄審條件")
 
-# 該站「詳細」是 onclick 不是 href，無逐則網址，一律連列表頁
+# 該站的「詳細」是 onclick 不是 href。逐則 endpoint 其實存在
+# （cal_listview_click_func → educlass_page1_content 同源的 cedunolog_page_content_view/{id}），
+# 但它回的是要塞進 BootstrapDialog 的裸片段，沒有版面、不適合直接給人點，
+# 因此一律連列表頁。
+# 網址尾段的 34 是導覽狀態、不影響內容：實測 /33/1/8/34 載入的正是我們抓的
+# fragment /33/1/8/0；而看似更乾淨的 /33/ 反而不含載入器，換過去會更糟。
 PAIN_LIST_URL = "https://pain.org.tw/index.php/educlass_page/index/33/1/8/34"
 
 
@@ -134,22 +139,36 @@ def parse_pain(html: str) -> list[Event]:
     soup = BeautifulSoup(html, "html.parser")
     events = []
     for row in soup.select("table tbody tr"):
+        # 沒有 uid 就無法去重，只有這種情形才丟棄整筆
         m = re.search(r"cal_listview_click_func\('(\d+)'\)", str(row))
-        title_el = row.select_one("span.text-info")
-        if not m or not title_el:
+        if not m:
             continue
 
         cells = row.select("td")
+
+        # 日期靠「第一個 td 內的 span 串接」取得（2026 / 八月 / 23）。
+        # 這是位置假設：該站若在最前面插一欄，date_text 會靜默變成錯的內容。
+        # 只影響顯示、不影響去重，故接受。
         date_text = ""
         if cells:
             date_text = _clean(" ".join(
                 s.get_text(strip=True) for s in cells[0].select("span")
             ))
 
+        # text-info 是 Bootstrap 4 的 utility class，站方改版可能換掉。
+        # 缺它時退回整格文字而非丟棄整筆——漏報才是本系統的失敗代價。
+        title_el = row.select_one("span.text-info")
+        if title_el:
+            title = _clean(title_el.get_text(" ", strip=True))
+        elif len(cells) > 1:
+            title = _clean(cells[1].get_text(" ", strip=True))
+        else:
+            title = ""
+
         events.append(Event(
             source="PAIN",
             uid=m.group(1),
-            title=_clean(title_el.get_text(" ", strip=True)),
+            title=title,
             date_text=date_text,
             url=PAIN_LIST_URL,
         ))
