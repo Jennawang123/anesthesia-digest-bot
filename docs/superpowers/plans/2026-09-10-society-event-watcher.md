@@ -6,9 +6,11 @@
 
 **Architecture:** GitHub Actions cron 每日 02:00 UTC 觸發 → `fetch.py` 逐站抓 HTML（失敗互不影響）→ `extract.py` 逐站 parser 轉成 `Event` → `state.py` 比對 `seen.json` 濾出新項目 → `notify.py` 格式化推 LINE → 狀態檔 commit 回 repo。四個結構化站用 BeautifulSoup 硬解析，只有 Wix 那站走「純文字 diff → 有新增才呼叫 Haiku」。
 
-**Tech Stack:** Python 3.11、requests、beautifulsoup4、anthropic（僅 Airway 用）、pytest、GitHub Actions
+**Tech Stack:** Python 3.11（GitHub Actions；本機實測為 3.12.5，`str | None` 語法兩者皆支援，無相容問題）、requests、beautifulsoup4、anthropic（僅 Airway 用）、pytest、GitHub Actions
 
 **設計依據：** `docs/superpowers/specs/2026-09-10-society-event-watcher-design.md`
+
+**「確認失敗」該長什麼樣：** 新建模組的 task（2、7、8、9、10、11、13），pytest 會在 **collection 階段報 error**（`1 error` / `Interrupted: 1 error during collection`）而非 `failed`，因為 import 的模組還不存在。只有「模組已存在但缺函式」的 task（3、4、5、6、12）才會是真正的 test failure（`AttributeError`）。兩者都算通過 TDD 的「先確認失敗」這一步。
 
 **測試原則：** 所有 parser 對著 `tests/fixtures/society_watch/` 的 2026-09-10 實抓樣本測，**不打真實網路**。斷言值皆為該日實測值。既有 repo 慣例：測試函式名用繁體中文（見 `tests/test_fx_rate.py`），需連外的測試標 `@pytest.mark.live`。
 
@@ -198,7 +200,7 @@ def test_tsa_全部不降級(tsa_events):
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_extract.py -v`
-Expected: FAIL，`ImportError` 或 `AttributeError: module 'society_watch.extract' has no attribute 'parse_tsa'`
+Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.extract'`，pytest 顯示 `1 error` 與 `Interrupted: 1 error during collection`
 
 - [ ] **Step 3: 實作**
 
@@ -759,7 +761,7 @@ def test_回應無法解析時回空list():
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_llm.py -v`
-Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.llm'`
+Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.llm'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
@@ -936,7 +938,7 @@ def test_快照讀寫(tmp_path):
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_state.py -v`
-Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.state'`
+Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.state'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
@@ -1108,7 +1110,7 @@ def test_實際抓TSA不亂碼():
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_fetch.py -v -m "not live"`
-Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.fetch'`
+Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.fetch'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
@@ -1229,7 +1231,7 @@ def test_每個來源都有網址與parser名稱():
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_sources.py -v`
-Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.sources'`
+Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.sources'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
@@ -1413,7 +1415,7 @@ def test_告警訊息列出失敗站別():
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_notify.py -v`
-Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.notify'`
+Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.notify'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
@@ -1783,7 +1785,7 @@ def test_有新項目就推播(tmp_path, monkeypatch):
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_main.py -v`
-Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.main'`
+Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.main'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
