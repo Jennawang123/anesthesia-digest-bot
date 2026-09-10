@@ -1103,6 +1103,8 @@ git commit -m "feat(society-watch): Wix 站新增段落的 Haiku 抽取"
 """狀態層測試。"""
 import json
 import sys
+
+import pytest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -1156,6 +1158,23 @@ def test_快照讀寫(tmp_path):
     assert state.load_snapshot(p) == []
     state.save_snapshot(p, ["A", "B"])
     assert state.load_snapshot(p) == ["A", "B"]
+
+
+def test_寫入失敗不會留下半截檔案(tmp_path, monkeypatch):
+    # 直接 write_text 是先截斷再寫，中途被砍會留下壞檔，
+    # 下一輪 json.loads 會炸掉且連告警都送不出去
+    p = tmp_path / "seen.json"
+    state.save_seen(p, {"TSA:1"})
+
+    def boom(*args, **kwargs):
+        raise KeyboardInterrupt("模擬 Actions 取消")
+
+    monkeypatch.setattr(state.os, "replace", boom)
+    with pytest.raises(KeyboardInterrupt):
+        state.save_seen(p, {"TSA:1", "TSA:2"})
+
+    assert state.load_seen(p) == {"TSA:1"}          # 舊內容完好
+    assert not list(tmp_path.glob("*.tmp"))         # 暫存檔已清掉
 ```
 
 - [ ] **Step 2: 執行測試確認失敗**
@@ -1175,10 +1194,33 @@ seen.json 只增不減：TSA 是 15 筆滾動視窗，舊活動會掉出列表�
 跑十年不過數百 KB，不值得為此冒重推風險。
 """
 import json
+import os
+import tempfile
 from pathlib import Path
 from typing import Iterable
 
 from .models import Event
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    """先寫暫存檔再 os.replace 換上去。
+
+    直接 write_text 是先截斷再寫：程序在寫入中途被砍（Actions 逾時或
+    取消）會留下半截檔案，下一輪 json.loads 直接拋例外，整個 run 在
+    collect() 之前就死掉——連告警都送不出去，唯一訊號是 Actions 紅燈。
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=path.name + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
 
 def load_seen(path: Path) -> set[str]:
@@ -1195,10 +1237,7 @@ def save_seen(path: Path, keys: Iterable[str]) -> None:
     只有真正新增的那幾行。
     """
     payload = {"seen": sorted(keys)}
-    Path(path).write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    _atomic_write(path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
 
 
 def filter_new(events: Iterable[Event], seen: set[str]) -> list[Event]:
@@ -1221,13 +1260,13 @@ def load_snapshot(path: Path) -> list[str]:
 
 
 def save_snapshot(path: Path, lines: list[str]) -> None:
-    Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _atomic_write(path, "\n".join(lines) + "\n")
 ```
 
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_state.py -v`
-Expected: 7 passed
+Expected: 8 passed
 
 - [ ] **Step 5: Commit**
 
@@ -1888,13 +1927,14 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from society_watch import main  # noqa: E402
 from society_watch.models import Event  # noqa: E402
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "society_watch"
-
 
 EMPTY_TABLE = "<table class='table'><tbody></tbody></table>"
 
@@ -1926,76 +1966,74 @@ ALL_OK = {
     "educlass_page1_content": "pain_fragment_20260910.html",
 }
 
-
-def test_收集五站事件(tmp_path, monkeypatch):
-    monkeypatch.setattr(main, "DATA_DIR", tmp_path)   # 別把快照寫進真實 repo
-    monkeypatch.setattr(main.fetch, "get", _fake_fetch(ALL_OK))
-    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
-    events, failures = main.collect(date(2026, 9, 10))
-    assert failures == []
-    # TSA 15 + TSCVA 6 + RAPM 16 + RAPM 11 + PAIN 10（今年）+ 0（明年空表）
-    assert len(events) == 58
+# TSA 15 + TSCVA 6 + RAPM 16 + RAPM 11 + PAIN 10（今年）+ 0（明年空表）
+TOTAL_EVENTS = 58
 
 
-def test_單站失敗不中斷其他站(tmp_path, monkeypatch):
-    import requests
+@pytest.fixture
+def env(tmp_path, monkeypatch):
+    """把狀態檔導到 tmp、攔截推播、AIRWAY 預設成功但無新增。"""
+    pushed = []
     monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main.fetch, "get", _fake_fetch(ALL_OK))
+    monkeypatch.setattr(main, "collect_airway", lambda: ([], ["A", "B"], None))
+    monkeypatch.setattr(main.notify, "push_line", lambda text: pushed.append(text))
+    return tmp_path, pushed, monkeypatch
+
+
+def test_收集五站事件(env):
+    events, failures, airway_lines = main.collect(date(2026, 9, 10))
+    assert failures == []
+    assert len(events) == TOTAL_EVENTS
+    assert airway_lines == ["A", "B"]
+
+
+def test_單站失敗不中斷其他站(env, monkeypatch):
+    import requests
     monkeypatch.setattr(
         main.fetch, "get",
         _fake_fetch(ALL_OK, failures={"congress.tscva.org.tw": requests.ConnectionError("斷線")}),
     )
-    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
-    events, failures = main.collect(date(2026, 9, 10))
+    events, failures, _ = main.collect(date(2026, 9, 10))
     assert [f[0] for f in failures] == ["TSCVA"]
     assert any(e.source == "TSA" for e in events)
     assert not any(e.source == "TSCVA" for e in events)
 
 
-def test_解析出零筆視為疑似改版(tmp_path, monkeypatch):
-    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+def test_解析出零筆視為疑似改版(env, monkeypatch):
     # 拿掉 TSA 的對應，讓它抓到一個 HTTP 200 但沒有活動的空頁
     without_tsa = {k: v for k, v in ALL_OK.items() if "anesth" not in k}
     monkeypatch.setattr(main.fetch, "get", _fake_fetch(without_tsa))
-    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
-    events, failures = main.collect(date(2026, 9, 10))
+    events, failures, _ = main.collect(date(2026, 9, 10))
     assert ("TSA", "解析出 0 筆，疑似改版") in failures
     assert any(e.source == "RAPM" for e in events)   # 其他站不受影響
 
 
-def test_bootstrap只寫狀態不推播(tmp_path, monkeypatch):
-    pushed = []
-    monkeypatch.setattr(main.fetch, "get", _fake_fetch(ALL_OK))
-    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
-    monkeypatch.setattr(main.notify, "push_line", lambda text: pushed.append(text))
-    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+def test_airway失敗時不回傳快照行(env, monkeypatch):
+    monkeypatch.setattr(main, "collect_airway", lambda: ([], ["半截"], "行數暴跌"))
+    _, failures, airway_lines = main.collect(date(2026, 9, 10))
+    assert ("AIRWAY", "行數暴跌") in failures
+    assert airway_lines is None
 
+
+def test_bootstrap只寫狀態不推播(env):
+    tmp_path, pushed, _ = env
     main.run(bootstrap=True, today=date(2026, 9, 10))
-
     assert pushed == []
-    assert len(main.state.load_seen(tmp_path / "seen.json")) == 58
+    assert len(main.state.load_seen(tmp_path / "seen.json")) == TOTAL_EVENTS
+    assert main.state.load_snapshot(tmp_path / "airway_snapshot.txt") == ["A", "B"]
 
 
-def test_第二次執行沒有新項目就不推播(tmp_path, monkeypatch):
-    pushed = []
-    monkeypatch.setattr(main.fetch, "get", _fake_fetch(ALL_OK))
-    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
-    monkeypatch.setattr(main.notify, "push_line", lambda text: pushed.append(text))
-    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
-
+def test_第二次執行沒有新項目就不推播(env):
+    tmp_path, pushed, _ = env
     main.run(bootstrap=True, today=date(2026, 9, 10))
     main.run(bootstrap=False, today=date(2026, 9, 11))
     assert pushed == []
 
 
-def test_有新項目就推播(tmp_path, monkeypatch):
-    pushed = []
-    monkeypatch.setattr(main.fetch, "get", _fake_fetch(ALL_OK))
-    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
-    monkeypatch.setattr(main.notify, "push_line", lambda text: pushed.append(text))
-    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
-
+def test_有新項目就推播(env):
+    tmp_path, pushed, _ = env
     main.run(bootstrap=True, today=date(2026, 9, 10))
-    # 移掉一筆已見過的紀錄，模擬出現新活動
     seen = main.state.load_seen(tmp_path / "seen.json")
     seen.discard("TSA:3105")
     main.state.save_seen(tmp_path / "seen.json", seen)
@@ -2003,6 +2041,63 @@ def test_有新項目就推播(tmp_path, monkeypatch):
     main.run(bootstrap=False, today=date(2026, 9, 11))
     assert len(pushed) == 1
     assert "3105" in pushed[0]
+
+
+def test_推播失敗時狀態不前進(env, monkeypatch):
+    # 寫檔成功但推播失敗會造成永久漏報，所以狀態必須排在推播之後
+    tmp_path, _, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    seen_before = main.state.load_seen(tmp_path / "seen.json")
+    seen_before.discard("TSA:3105")
+    main.state.save_seen(tmp_path / "seen.json", seen_before)
+    monkeypatch.setattr(main, "collect_airway", lambda: ([], ["A", "B", "C 新公告"], None))
+
+    def boom(text):
+        raise RuntimeError("LINE 掛了")
+
+    monkeypatch.setattr(main.notify, "push_line", boom)
+    with pytest.raises(RuntimeError):
+        main.run(bootstrap=False, today=date(2026, 9, 11))
+
+    # seen 沒補回 3105、快照也沒吃掉那行新公告 → 下一輪還會重推
+    assert "TSA:3105" not in main.state.load_seen(tmp_path / "seen.json")
+    assert main.state.load_snapshot(tmp_path / "airway_snapshot.txt") == ["A", "B"]
+
+
+def test_事件推播失敗時告警仍已送出(env, monkeypatch):
+    # 告警排在事件推播之前，否則推播一炸，當天的異常告警也一起消失
+    tmp_path, pushed, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+
+    import requests
+    monkeypatch.setattr(
+        main.fetch, "get",
+        _fake_fetch(ALL_OK, failures={"congress.tscva.org.tw": requests.ConnectionError("斷線")}),
+    )
+    sent = []
+
+    def push(text):
+        sent.append(text)
+        if not text.startswith("⚠️"):
+            raise RuntimeError("LINE 掛了")
+
+    monkeypatch.setattr(main.notify, "push_line", push)
+    monkeypatch.setattr(main, "collect_airway", lambda: ([], ["A", "B", "新的一行"], None))
+    with pytest.raises(RuntimeError):
+        main.run(bootstrap=False, today=date(2026, 9, 11))
+
+    assert any(t.startswith("⚠️") for t in sent)
+
+
+def test_bootstrap遇到失敗站會提醒重跑(env, monkeypatch, capsys):
+    import requests
+    monkeypatch.setattr(
+        main.fetch, "get",
+        _fake_fetch(ALL_OK, failures={"congress.tscva.org.tw": requests.ConnectionError("斷線")}),
+    )
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    out = capsys.readouterr().out
+    assert "TSCVA" in out and "再跑一次 bootstrap" in out
 ```
 
 - [ ] **Step 2: 執行測試確認失敗**
@@ -2065,8 +2160,14 @@ def collect_airway() -> tuple[list[Event], list[str], str | None]:
     return llm.classify(new_lines), lines, None
 
 
-def collect(today: date) -> tuple[list[Event], list[tuple[str, str]]]:
-    """逐站抓取與解析。單站失敗不影響其他站。"""
+def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] | None]:
+    """逐站抓取與解析。單站失敗不影響其他站。
+
+    回傳（事件, 失敗清單, AIRWAY 本次全文行）。第三個值為 None 代表
+    AIRWAY 這輪失敗，呼叫端就**不可以**推進快照——快照是 AIRWAY 對
+    「什麼是新的」的唯一記憶，另外四站每輪重抓完整列表可自我修復，
+    只有它沒有第二份備援。
+    """
     events: list[Event] = []
     failures: list[tuple[str, str]] = []
 
@@ -2094,49 +2195,54 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]]]:
         print(f"  ✅ {source}（{cfg.get('kind', '-')}）{len(found)} 筆")
         events.extend(found)
 
+    airway_lines_now: list[str] | None = None
     try:
-        airway_events, airway_lines_now, airway_error = collect_airway()
+        airway_events, lines, airway_error = collect_airway()
         if airway_error:
             failures.append(("AIRWAY", airway_error))
         else:
             events.extend(airway_events)
+            airway_lines_now = lines
             print(f"  ✅ AIRWAY {len(airway_events)} 筆")
-        # 只有正常抓到才更新快照。抓壞了還覆蓋的話，
-        # 下一輪會拿壞快照當基準，把整頁都當成新增全部推出來。
-        if not airway_error:
-            state.save_snapshot(DATA_DIR / "airway_snapshot.txt", airway_lines_now)
     except Exception as e:
         print(f"  ❌ AIRWAY 抓取失敗：{type(e).__name__}: {e}")
         traceback.print_exc()
         failures.append(("AIRWAY", f"{type(e).__name__}: {e}"))
 
-    return events, failures
+    return events, failures, airway_lines_now
 
 
 def run(bootstrap: bool = False, today: date | None = None) -> None:
     today = today or date.today()
     seen_path = DATA_DIR / "seen.json"
+    snapshot_path = DATA_DIR / "airway_snapshot.txt"
     alerts_path = DATA_DIR / "alert_state.json"
 
     print(f"執行日期：{today}｜模式：{'bootstrap' if bootstrap else '日常'}")
-    events, failures = collect(today)
+    events, failures, airway_lines_now = collect(today)
 
     seen = state.load_seen(seen_path)
     fresh = state.filter_new(events, seen)
     print(f"抓到 {len(events)} 筆，其中新項目 {len(fresh)} 筆")
 
-    if bootstrap:
+    def advance_state() -> None:
+        """把狀態推進到「已通知」。只在推播成功後呼叫。"""
         state.save_seen(seen_path, seen | {e.key for e in events})
+        if airway_lines_now is not None:
+            state.save_snapshot(snapshot_path, airway_lines_now)
+
+    if bootstrap:
+        advance_state()
         print("bootstrap 模式：只寫狀態檔，不推播。")
+        if failures:
+            names = "、".join(source for source, _ in failures)
+            print(
+                f"⚠️ {names} 本次失敗，未種進狀態檔。"
+                "修好後請再跑一次 bootstrap，否則下次成功時會把該站現存項目一次推出。"
+            )
         return
 
-    if fresh:
-        for part in notify.split_message(notify.format_message(fresh)):
-            notify.push_line(part)
-        print(f"已推播 {len(fresh)} 則。")
-    else:
-        print("沒有新項目，不推播。")
-
+    # 告警先送：事件推播若拋例外，當天的異常告警才不會跟著一起消失
     if failures:
         alerts = state.load_alerts(alerts_path)
         due = [f for f in failures if state.should_alert(alerts, f[0], today)]
@@ -2149,7 +2255,16 @@ def run(bootstrap: bool = False, today: date | None = None) -> None:
         else:
             print("有失敗但都在告警冷卻期內，不重複告警。")
 
-    state.save_seen(seen_path, seen | {e.key for e in events})
+    if fresh:
+        for part in notify.split_message(notify.format_message(fresh)):
+            notify.push_line(part)
+        print(f"已推播 {len(fresh)} 則。")
+    else:
+        print("沒有新項目，不推播。")
+
+    # 推播成功才推進狀態。push_line 內的 raise_for_status 會讓失敗穿出去，
+    # 於是這行到不了，下一輪重推——重複優於漏報。
+    advance_state()
 
 
 def main() -> None:
@@ -2169,7 +2284,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_main.py -v`
-Expected: 6 passed
+Expected: 11 passed
 
 - [ ] **Step 5: 全套測試回歸**
 

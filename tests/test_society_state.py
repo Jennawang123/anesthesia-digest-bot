@@ -1,6 +1,8 @@
 """狀態層測試。"""
 import json
 import sys
+
+import pytest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -54,3 +56,20 @@ def test_快照讀寫(tmp_path):
     assert state.load_snapshot(p) == []
     state.save_snapshot(p, ["A", "B"])
     assert state.load_snapshot(p) == ["A", "B"]
+
+
+def test_寫入失敗不會留下半截檔案(tmp_path, monkeypatch):
+    # 直接 write_text 是先截斷再寫，中途被砍會留下壞檔，
+    # 下一輪 json.loads 會炸掉且連告警都送不出去
+    p = tmp_path / "seen.json"
+    state.save_seen(p, {"TSA:1"})
+
+    def boom(*args, **kwargs):
+        raise KeyboardInterrupt("模擬 Actions 取消")
+
+    monkeypatch.setattr(state.os, "replace", boom)
+    with pytest.raises(KeyboardInterrupt):
+        state.save_seen(p, {"TSA:1", "TSA:2"})
+
+    assert state.load_seen(p) == {"TSA:1"}          # 舊內容完好
+    assert not list(tmp_path.glob("*.tmp"))         # 暫存檔已清掉

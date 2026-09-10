@@ -5,10 +5,33 @@ seen.json 只增不減：TSA 是 15 筆滾動視窗，舊活動會掉出列表�
 跑十年不過數百 KB，不值得為此冒重推風險。
 """
 import json
+import os
+import tempfile
 from pathlib import Path
 from typing import Iterable
 
 from .models import Event
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    """先寫暫存檔再 os.replace 換上去。
+
+    直接 write_text 是先截斷再寫：程序在寫入中途被砍（Actions 逾時或
+    取消）會留下半截檔案，下一輪 json.loads 直接拋例外，整個 run 在
+    collect() 之前就死掉——連告警都送不出去，唯一訊號是 Actions 紅燈。
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=path.name + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
 
 def load_seen(path: Path) -> set[str]:
@@ -25,10 +48,7 @@ def save_seen(path: Path, keys: Iterable[str]) -> None:
     只有真正新增的那幾行。
     """
     payload = {"seen": sorted(keys)}
-    Path(path).write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    _atomic_write(path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
 
 
 def filter_new(events: Iterable[Event], seen: set[str]) -> list[Event]:
@@ -51,4 +71,4 @@ def load_snapshot(path: Path) -> list[str]:
 
 
 def save_snapshot(path: Path, lines: list[str]) -> None:
-    Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _atomic_write(path, "\n".join(lines) + "\n")
