@@ -4,6 +4,7 @@
 因此可對離線 fixture 完整測試。
 """
 import re
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
@@ -12,6 +13,7 @@ from .models import Event
 TSA_BASE = "https://www.anesth.org.tw/events/"
 
 TSCVA_BASE = "https://congress.tscva.org.tw"
+RAPM_BASE = "https://rapm.org.tw/"
 
 # 非活動類公告的降級關鍵字。刻意保守：只攔明確的名單／獎項／資格公告，
 # 不為個案追加規則（over-fitting），判不出來一律不降級。
@@ -98,19 +100,24 @@ def parse_rapm(html: str, kind: str) -> list[Event]:
     events = []
     for item in soup.select(".service_item"):
         link = item.select_one(".service_title a")
-        date_el = item.select_one(".service_date")
-        if not link or not date_el:
+        if not link:
             continue
         href = link.get("href", "")
         if "news-detail/" not in href:
             continue
 
+        # 缺日期節點不丟棄整筆：本系統的失敗代價是漏報，
+        # 寧可推一則沒有日期的公告，也不要讓它靜默消失。
+        date_el = item.select_one(".service_date")
+
         events.append(Event(
             source="RAPM",
             uid=href.rsplit("/", 1)[1],
             title=_clean(link.get_text(" ", strip=True)),
-            date_text=_clean(date_el.get_text(strip=True)),
-            url=href,
+            date_text=_clean(date_el.get_text(strip=True)) if date_el else "",
+            # 該站目前給的是絕對網址，但改版改成相對路徑時，
+            # 直接沿用 href 會靜默產出無效連結，故一律經 urljoin 正規化。
+            url=urljoin(RAPM_BASE, href),
             kind=kind,
         ))
     return events

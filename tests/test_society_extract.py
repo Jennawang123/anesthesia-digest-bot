@@ -118,3 +118,24 @@ def test_rapm_兩分類編號不重疊():
     a = extract.parse_rapm(_fx("rapm_newslist2_20260910.html"), kind="學會活動")
     b = extract.parse_rapm(_fx("rapm_newslist5_20260910.html"), kind="友會活動")
     assert not ({x.uid for x in a} & {x.uid for x in b})
+
+
+def test_rapm_相對路徑連結會補成絕對網址():
+    # 該站目前給絕對網址，但改版成相對路徑時不可靜默產出無效連結
+    html = """<div class="service_item">
+      <div class="service_title"><a href="/news-detail/99">測試公告</a></div>
+      <div class="service_date">2026-09-01</div>
+    </div>"""
+    e = extract.parse_rapm(html, kind="學會活動")[0]
+    assert e.url == "https://rapm.org.tw/news-detail/99"
+
+
+def test_rapm_缺日期節點仍收錄不漏報():
+    # 漏報是本系統最該避免的失效，缺欄位給空字串而非整筆丟棄
+    html = """<div class="service_item">
+      <div class="service_title"><a href="https://rapm.org.tw/news-detail/98">沒有日期的公告</a></div>
+    </div>"""
+    events = extract.parse_rapm(html, kind="學會活動")
+    assert len(events) == 1
+    assert events[0].uid == "98"
+    assert events[0].date_text == ""

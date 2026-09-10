@@ -340,12 +340,16 @@ Expected: FAIL，`AttributeError: module 'society_watch.extract' has no attribut
 
 在 `society_watch/extract.py` 的 `TSA_BASE` 下方追加常數，並在 `parse_tsa` 之後追加函式：
 
+`extract.py` 頂端的 import 區加入 `from urllib.parse import urljoin`，並追加常數：
+
 ```python
 TSCVA_BASE = "https://congress.tscva.org.tw"
 
 # 非活動類公告的降級關鍵字。刻意保守：只攔明確的名單／獎項／資格公告，
 # 不為個案追加規則（over-fitting），判不出來一律不降級。
 TSCVA_MINOR_KEYWORDS = ("名單", "恭賀", "獲獎", "甄審條件")
+
+RAPM_BASE = "https://rapm.org.tw/"
 ```
 
 ```python
@@ -435,6 +439,27 @@ def test_rapm_兩分類編號不重疊():
     a = extract.parse_rapm(_fx("rapm_newslist2_20260910.html"), kind="學會活動")
     b = extract.parse_rapm(_fx("rapm_newslist5_20260910.html"), kind="友會活動")
     assert not ({x.uid for x in a} & {x.uid for x in b})
+
+
+def test_rapm_相對路徑連結會補成絕對網址():
+    # 該站目前給絕對網址，但改版成相對路徑時不可靜默產出無效連結
+    html = """<div class="service_item">
+      <div class="service_title"><a href="/news-detail/99">測試公告</a></div>
+      <div class="service_date">2026-09-01</div>
+    </div>"""
+    e = extract.parse_rapm(html, kind="學會活動")[0]
+    assert e.url == "https://rapm.org.tw/news-detail/99"
+
+
+def test_rapm_缺日期節點仍收錄不漏報():
+    # 漏報是本系統最該避免的失效，缺欄位給空字串而非整筆丟棄
+    html = """<div class="service_item">
+      <div class="service_title"><a href="https://rapm.org.tw/news-detail/98">沒有日期的公告</a></div>
+    </div>"""
+    events = extract.parse_rapm(html, kind="學會活動")
+    assert len(events) == 1
+    assert events[0].uid == "98"
+    assert events[0].date_text == ""
 ```
 
 - [ ] **Step 2: 執行測試確認失敗**
@@ -460,19 +485,24 @@ def parse_rapm(html: str, kind: str) -> list[Event]:
     events = []
     for item in soup.select(".service_item"):
         link = item.select_one(".service_title a")
-        date_el = item.select_one(".service_date")
-        if not link or not date_el:
+        if not link:
             continue
         href = link.get("href", "")
         if "news-detail/" not in href:
             continue
 
+        # 缺日期節點不丟棄整筆：本系統的失敗代價是漏報，
+        # 寧可推一則沒有日期的公告，也不要讓它靜默消失。
+        date_el = item.select_one(".service_date")
+
         events.append(Event(
             source="RAPM",
             uid=href.rsplit("/", 1)[1],
             title=_clean(link.get_text(" ", strip=True)),
-            date_text=_clean(date_el.get_text(strip=True)),
-            url=href,
+            date_text=_clean(date_el.get_text(strip=True)) if date_el else "",
+            # 該站目前給的是絕對網址，但改版改成相對路徑時，
+            # 直接沿用 href 會靜默產出無效連結，故一律經 urljoin 正規化。
+            url=urljoin(RAPM_BASE, href),
             kind=kind,
         ))
     return events
@@ -481,7 +511,7 @@ def parse_rapm(html: str, kind: str) -> list[Event]:
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_extract.py -v`
-Expected: 14 passed
+Expected: 16 passed
 
 - [ ] **Step 5: Commit**
 
