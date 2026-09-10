@@ -1726,6 +1726,8 @@ git commit -m "feat(society-watch): 來源設定表與 PAIN 跨年漏報防護"
 ```python
 """通知格式化測試。"""
 import sys
+
+import pytest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -1807,6 +1809,58 @@ def test_告警訊息列出失敗站別():
     msg = notify.format_alert([("TSA", "解析出 0 筆，疑似改版"), ("PAIN", "HTTP 500")])
     assert "TSA" in msg and "疑似改版" in msg
     assert "PAIN" in msg and "HTTP 500" in msg
+
+
+def test_同一學會的多筆設定只出現一個區塊():
+    # SOURCES 裡 RAPM 有兩筆（學會活動／友會活動），SOURCE_ORDER 靠
+    # dict.fromkeys 去重。去重被拿掉的話每則 RAPM 會推兩次，
+    # 而原本 10 個測試沒有一個用到 RAPM，抓不到
+    events = [
+        Event(source="RAPM", uid="32", title="疼痛擂台", date_text="2026-08-26",
+              url="https://rapm.org.tw/news-detail/32", kind="學會活動"),
+        Event(source="RAPM", uid="23", title="AOSRA 研討會", date_text="2026-04-16",
+              url="https://rapm.org.tw/news-detail/23", kind="友會活動"),
+    ]
+    msg = notify.format_message(events)
+    assert msg.count("【區域麻醉暨疼痛醫學會】") == 1
+    assert "疼痛擂台" in msg and "AOSRA 研討會" in msg
+
+
+def test_未知來源不會被靜默丟掉():
+    # 新增第六個來源時忘了寫進 sources.py 的話，事件會抓得到、算得進則數、
+    # 進得了 seen.json，就是不推播——而且狀態已前進，永遠不再推
+    e = Event(source="NEWSOC", uid="1", title="某個新學會的工作坊",
+              date_text="2026-10-01", url="https://example.org/1")
+    msg = notify.format_message([e])
+    assert "某個新學會的工作坊" in msg
+    assert msg.startswith("🔔 學會新活動 1 則")
+
+
+def test_字數以utf16計算():
+    # LINE 算 UTF-16 code unit，非 BMP 的 emoji 算 2；Python len() 算 1 會低估
+    assert notify._line_len("🔔" * 10) == 20
+    assert notify._line_len("鎮靜活動") == 4
+
+
+def test_滿版emoji訊息不會超過上限():
+    # 用 len() 判斷的話這種訊息會被誤判為安全而送出，LINE 回 400
+    body = "\n\n".join(f"【學會{i}】\n" + "🔔" * 300 for i in range(6))
+    parts = notify.split_message(body, max_chars=1000)
+    assert all(notify._line_len(p) <= 1000 for p in parts)
+
+
+def test_硬切不會把emoji切成一半():
+    parts = notify.split_message("【學會】\n" + "🔔" * 2000, max_chars=1000)
+    for p in parts:
+        p.encode("utf-8")          # 切壞的 surrogate 會在這裡炸掉
+        assert "\ufffd" not in p
+
+
+def test_max_chars過小時明確報錯():
+    # budget <= 0 會讓硬切迴圈的長度不再遞減 → 卡死而非拋錯，
+    # CI 要等到 timeout 才會發現
+    with pytest.raises(ValueError):
+        notify.split_message("【學會】\n" + "字" * 200, max_chars=40)
 ```
 
 - [ ] **Step 2: 執行測試確認失敗**
@@ -1827,11 +1881,31 @@ import requests
 from .models import Event
 from .sources import LABELS, SOURCES
 
-MAX_CHARS = 4800       # LINE 上限 5000，留 200 buffer（同 daily_push.py）
+MAX_CHARS = 4800       # LINE 上限 5000，留 200 安全邊界
 MARKER_RESERVE = 40    # 接頁標記「⬇️ 接下頁（1/3）」的空間，先扣掉才不會加完超標
 
 # 分組顯示順序，依 SOURCES 出現順序去重
 SOURCE_ORDER = list(dict.fromkeys(s["source"] for s in SOURCES))
+
+
+def _line_len(text: str) -> int:
+    """LINE 的字數是以 UTF-16 code unit 計，非 BMP 字元（多數 emoji）算 2。
+
+    Python 的 len() 算的是 code point，會低估。標題若帶多個 emoji，
+    用 len() 判斷就可能送出超過 5000 的訊息，LINE 回 400，推播從此卡住。
+    """
+    return len(text.encode("utf-16-le")) // 2
+
+
+def _cut(text: str, budget: int) -> str:
+    """取不超過 budget 個 UTF-16 unit 的最長前綴，不會把 emoji 切一半。"""
+    total = 0
+    for i, ch in enumerate(text):
+        width = 2 if ord(ch) > 0xFFFF else 1
+        if total + width > budget:
+            return text[:i]
+        total += width
+    return text
 
 
 def _format_one(event: Event) -> str:
@@ -1860,6 +1934,15 @@ def format_message(events: list[Event]) -> str:
         lines.extend(_format_one(e) for e in group)
         blocks.append("\n".join(lines))
 
+    # 不在 SOURCE_ORDER 上的來源（新增來源時忘了寫進 sources.py）不可以直接丟掉：
+    # 標題的則數用 len(events) 會對不上，而且該事件仍會進 seen.json，
+    # 於是「抓得到、算得進、就是不推播」，且因為狀態已前進而永遠不再推。
+    orphans = [e for e in main if e.source not in SOURCE_ORDER]
+    if orphans:
+        lines = ["【未分類來源】"]
+        lines.extend(_format_one(e) for e in orphans)
+        blocks.append("\n".join(lines))
+
     if minor:
         lines = ["── 其他公告 ──"]
         for e in minor:
@@ -1872,7 +1955,11 @@ def format_message(events: list[Event]) -> str:
 
 def split_message(text: str, max_chars: int = MAX_CHARS) -> list[str]:
     """在學會區塊邊界（空行）切割，確保每則 ≤ max_chars。"""
-    if len(text) <= max_chars:
+    if max_chars <= MARKER_RESERVE:
+        # budget 會 <= 0，硬切迴圈的切片長度不再遞減 → 無窮迴圈（不是拋錯，是卡死）
+        raise ValueError(f"max_chars 必須大於 {MARKER_RESERVE}")
+
+    if _line_len(text) <= max_chars:
         return [text]
 
     # 先扣掉接頁標記的空間，否則加上標記後每則反而會超過 LINE 上限
@@ -1881,16 +1968,17 @@ def split_message(text: str, max_chars: int = MAX_CHARS) -> list[str]:
     current = ""
     for block in text.split("\n\n"):
         candidate = f"{current}\n\n{block}" if current else block
-        if len(candidate) <= budget:
+        if _line_len(candidate) <= budget:
             current = candidate
             continue
         if current:
             chunks.append(current)
             current = ""
         # 單一區塊本身就超長，只能硬切
-        while len(block) > budget:
-            chunks.append(block[:budget])
-            block = block[budget:]
+        while _line_len(block) > budget:
+            head = _cut(block, budget)
+            chunks.append(head)
+            block = block[len(head):]
         current = block
     if current:
         chunks.append(current)
@@ -1914,6 +2002,17 @@ def format_alert(failures: list[tuple[str, str]]) -> str:
 
 
 def push_line(text: str) -> None:
+    """推播一則訊息。
+
+    ⚠️ 結尾的 raise_for_status() 是整個「不漏報」保證的支點：推播失敗必須
+    拋例外穿出去，main.run() 才不會呼叫 advance_state()。這行不可拿掉。
+
+    ⚠️ 但它擋不住「LINE 回 200 卻沒送達」。官方明文：請求一旦被平台接受
+    （HTTP 200）就無法重試，即使因為使用者封鎖了官方帳號而未能正確送達。
+    userId 打錯或使用者封鎖時，這裡看起來完全成功，狀態照樣前進，
+    每一則都被標記已推播而永遠不再出現——沒有任何訊號。
+    唯一的防線是部署後人工確認真的收到訊息（見 Task 14）。
+    """
     resp = requests.post(
         "https://api.line.me/v2/bot/message/push",
         headers={
@@ -1932,7 +2031,7 @@ def push_line(text: str) -> None:
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_notify.py -v`
-Expected: 10 passed
+Expected: 16 passed
 
 - [ ] **Step 5: Commit**
 
@@ -2571,7 +2670,9 @@ git push
 
 在 Actions 頁面手動觸發「學會活動監測」，**input 留空**（非 bootstrap）。因為 Step 4 已把 bootstrap 產生的 `seen.json` commit 進去，這次應該是 `沒有新項目，不推播。`
 
-接著為了驗證推播真的會動，暫時從 `society_watch/seen.json` 刪掉一則（例如 `"TSA:3105"`）後 push，再手動觸發一次，確認 LINE 收得到訊息。驗證完把該筆補回或讓它自然留在 seen 裡即可。
+接著為了驗證推播真的會動，暫時從 `society_watch/seen.json` 刪掉一則（例如 `"TSA:3105"`）後 push，再手動觸發一次，**確認手機真的收到那則 LINE 訊息**。驗證完把該筆補回或讓它自然留在 seen 裡即可。
+
+> ⚠️ **這一步不可跳過，Actions 綠燈不代表你收得到。** LINE 官方明文：請求一旦被平台接受（HTTP 200）就無法重試，即使因為使用者封鎖了官方帳號而未能正確送達。也就是說 `LINE_USER_ID` 填錯、或你把那支 bot 封鎖了，`push_line` 看起來完全成功、狀態照樣前進、每一則都被標記已推播而永遠不再出現——整條線靜默死亡，沒有任何訊號。人工確認收到訊息是唯一的防線。
 
 ---
 
