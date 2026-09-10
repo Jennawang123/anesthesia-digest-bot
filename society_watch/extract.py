@@ -173,3 +173,27 @@ def parse_pain(html: str) -> list[Event]:
             url=PAIN_LIST_URL,
         ))
     return events
+
+
+AIRWAY_URL = "https://www.tsamairway.org.tw/最新資訊"
+
+
+def airway_lines(html: str) -> list[str]:
+    """Wix 頁面 → 可見純文字逐行。
+
+    該站無「則」的結構可言，只能整頁取文字後與上次快照做 diff。
+    """
+    text = re.sub(r"(?is)<script.*?</script>", "", html)
+    text = re.sub(r"(?is)<style.*?</style>", "", text)
+    text = re.sub(r"(?s)<[^>]*>", "\n", text)
+    return [line.strip() for line in text.split("\n") if line.strip()]
+
+
+def airway_new_lines(current: list[str], previous: list[str]) -> list[str]:
+    """回傳 current 中不存在於 previous 的行，保持原順序。
+
+    用集合比對而非逐行位移比對：Wix 版面調整常使區塊順序變動，
+    位移比對會把整頁誤判為新增。
+    """
+    seen = set(previous)
+    return [line for line in current if line not in seen]

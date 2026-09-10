@@ -186,3 +186,45 @@ def test_pain_缺text_info時退回整格文字不漏報():
     assert events[0].uid == "9001"
     assert events[0].title == "沒有包在 text-info 裡的活動名稱"
     assert events[0].date_text == "2026 九月 15"
+
+
+# ── AIRWAY ────────────────────────────────────────────────────────────────────
+
+def test_airway_去除script與style():
+    html = """
+    <html><head><style>.a{color:red}</style></head>
+    <body><script>var x=1;</script>
+    <div>  📣 主辦單位： 台灣呼吸道處理醫學會  </div>
+    <div></div>
+    <div>🗓️ 上課時間： 2026年6月13日</div>
+    </body></html>
+    """
+    lines = extract.airway_lines(html)
+    assert lines == ["📣 主辦單位： 台灣呼吸道處理醫學會", "🗓️ 上課時間： 2026年6月13日"]
+    assert not any("var x" in l or "color:red" in l for l in lines)
+
+
+def test_airway_實抓快照為一二四行():
+    text = _fx("airway_text_20260910.txt")
+    lines = [l for l in text.split("\n") if l.strip()]
+    assert len(lines) == 124
+
+
+def test_airway_無新增時回空list():
+    old = ["A", "B", "C"]
+    assert extract.airway_new_lines(old, old) == []
+
+
+def test_airway_只回新增的行():
+    old = ["A", "B"]
+    new = ["A", "B", "C 新公告", "D"]
+    assert extract.airway_new_lines(new, old) == ["C 新公告", "D"]
+
+
+def test_airway_行順序改變不算新增():
+    # Wix 版面調整常導致區塊順序變動，不應誤判為新公告
+    assert extract.airway_new_lines(["B", "A"], ["A", "B"]) == []
+
+
+def test_airway_首次執行時舊快照為空則全部算新增():
+    assert extract.airway_new_lines(["A", "B"], []) == ["A", "B"]
