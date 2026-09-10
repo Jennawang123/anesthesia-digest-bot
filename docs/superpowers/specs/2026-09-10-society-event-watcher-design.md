@@ -24,7 +24,7 @@
 |---|---|---|---|---|
 | `TSA` | 台灣麻醉醫學會 | `https://www.anesth.org.tw/events/index.asp` | 靜態 SSR | 15 |
 | `TSCVA` | 台灣心臟胸腔暨血管麻醉醫學會 | `https://congress.tscva.org.tw/news` | 靜態 SSR | 6 |
-| `RAPM` | 台灣區域麻醉暨疼痛醫學會 | `https://rapm.org.tw/news-list/2`（學會活動）<br>`https://rapm.org.tw/news-list/5`（友會活動） | 靜態 SSR | 15+ |
+| `RAPM` | 台灣區域麻醉暨疼痛醫學會 | `https://rapm.org.tw/news-list/2`（學會活動）<br>`https://rapm.org.tw/news-list/5`（友會活動） | 靜態 SSR | 16 / 11 |
 | `PAIN` | 台灣疼痛醫學會 | `https://pain.org.tw/index.php/educlass_page/educlass_page1_content/33/1/8/0?yy=<年>` | AJAX fragment | 10（2026 年） |
 | `AIRWAY` | 台灣呼吸道處理醫學會 | `https://www.tsamairway.org.tw/最新資訊` | Wix SSR | 無「則」概念 |
 
@@ -84,10 +84,14 @@ tests/fixtures/society_watch/          2026-09-10 實抓樣本（見 §8）
 
 ### 4.2 TSCVA — 硬解析
 
-- 容器：`a.index_news--item`
+- 容器：`a.news_card`
 - `uid`：`href="/news/e9003f5d-1793-4fc4-babe-d031dd36b18b"` 的 UUID
-- `title`：`._title`
-- `date_text`：`._date` 的 `datetime` 屬性（已是 ISO，例 `2026-09-01`），**為公告日非活動日**
+- `title`：`p.news_card_title`
+- `date_text`：`time.news_card_time` 的 `datetime` 屬性（已是 ISO，例 `2026-09-01`），**為公告日非活動日**
+
+> ⚠️ `/news` 列表頁與首頁用的是**不同的 class**。首頁是 `a.index_news--item` / `._date` / `._title`，
+> `/news` 是 `a.news_card` / `time.news_card_time` / `p.news_card_title`。此處以 `/news` 為準，
+> 已對 fixture 實測抽出 6 筆。
 - 該站會自行在標題加 `[即將辦理活動]` 前綴，可當作活動判斷的免費訊號
 
 ### 4.3 RAPM — 硬解析
@@ -96,7 +100,8 @@ tests/fixtures/society_watch/          2026-09-10 實抓樣本（見 §8）
 - `uid`：`.service_title a` 的 `href="https://rapm.org.tw/news-detail/32"` → `32`
 - `title`：`.service_title a` 文字（含大量空白與 `<!--[if BLOCK]-->` 註解，需 normalize whitespace）
 - `date_text`：`.service_date`，**為公告日非活動日**；活動日只存在於標題（例 `疼痛擂台 8：真實病人工作坊-全脊守護，從頸到骶 ＠November 1`）或海報 jpg 上，不嘗試抽取
-- `kind`：依來源 URL 標為 `學會活動` 或 `友會活動`
+- `kind`：依來源 URL 標為 `學會活動`（`/news-list/2`）或 `友會活動`（`/news-list/5`）
+- 兩個分類共用同一組全域 `news-detail/{id}` 編號（實測 list 2 為 id 1–32、list 5 為 id 21–23，無重疊），因此 `uid` 不需再依分類加前綴
 
 ### 4.4 PAIN — 硬解析（含跨年處理）
 
@@ -178,7 +183,8 @@ Airway 用純文字而非 JSON，因為 git diff 本身就是我們要的東西�
 ```
 tsa_events_20260910.html        52 KB
 tscva_news_20260910.html        22 KB
-rapm_newslist2_20260910.html    74 KB
+rapm_newslist2_20260910.html    74 KB（學會活動）
+rapm_newslist5_20260910.html    44 KB（友會活動）
 pain_fragment_20260910.html     14 KB
 airway_text_20260910.txt        4 KB（已抽為純文字，避免 1.1 MB Wix HTML 進 public repo）
 ```
@@ -186,9 +192,9 @@ airway_text_20260910.txt        4 KB（已抽為純文字，避免 1.1 MB Wix HT
 斷言寫實際值：
 
 - TSA 抽出 15 筆；首筆 `uid == "3105"`、`date_text == "115/11/08"`、`kind == "鎮靜活動"`
-- TSCVA 抽出 6 筆；首筆 `uid == "e9003f5d-1793-4fc4-babe-d031dd36b18b"`、`date_text == "2026-09-01"`、`minor is True`
-- PAIN 抽出 10 筆；首筆 `uid == "3142"`
-- RAPM 抽出 ≥15 筆；首筆 `uid == "32"`
+- TSCVA 抽出 6 筆；首筆 `uid == "e9003f5d-1793-4fc4-babe-d031dd36b18b"`、`date_text == "2026-09-01"`、`minor is True`；6 筆中 `minor` 命中 3 筆
+- PAIN 抽出 10 筆；首筆 `uid == "3142"`、`date_text == "2026 八月 23"`
+- RAPM 學會活動抽出 16 筆、首筆 `uid == "32"`、`date_text == "2026-08-26"`；友會活動抽出 11 筆、首筆 `uid == "23"`
 - AIRWAY 純文字 124 行；空 diff 時不呼叫 LLM
 
 狀態層另測：bootstrap 不推播、同一 uid 不重推、僅新增才推、單站例外不影響其他站。

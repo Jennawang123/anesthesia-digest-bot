@@ -1,0 +1,2072 @@
+# 學會活動監測推播（society-watch）實作計畫
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 每日輪詢五個麻醉相關學會的活動公告頁，把沒通知過的新項目推播到使用者個人 LINE。
+
+**Architecture:** GitHub Actions cron 每日 02:00 UTC 觸發 → `fetch.py` 逐站抓 HTML（失敗互不影響）→ `extract.py` 逐站 parser 轉成 `Event` → `state.py` 比對 `seen.json` 濾出新項目 → `notify.py` 格式化推 LINE → 狀態檔 commit 回 repo。四個結構化站用 BeautifulSoup 硬解析，只有 Wix 那站走「純文字 diff → 有新增才呼叫 Haiku」。
+
+**Tech Stack:** Python 3.11、requests、beautifulsoup4、anthropic（僅 Airway 用）、pytest、GitHub Actions
+
+**設計依據：** `docs/superpowers/specs/2026-09-10-society-event-watcher-design.md`
+
+**測試原則：** 所有 parser 對著 `tests/fixtures/society_watch/` 的 2026-09-10 實抓樣本測，**不打真實網路**。斷言值皆為該日實測值。既有 repo 慣例：測試函式名用繁體中文（見 `tests/test_fx_rate.py`），需連外的測試標 `@pytest.mark.live`。
+
+---
+
+## 檔案結構
+
+| 檔案 | 職責 |
+|---|---|
+| `society_watch/__init__.py` | 空檔，標記為 package |
+| `society_watch/models.py` | `Event` dataclass 與 `key` 屬性。無相依。 |
+| `society_watch/extract.py` | 五個 parser：HTML → `list[Event]`。不碰網路、不碰狀態、不碰通知。 |
+| `society_watch/llm.py` | Airway 專用：新增段落 → Haiku → `list[Event]` |
+| `society_watch/state.py` | `seen.json` 與 `airway_snapshot.txt` 讀寫、bootstrap、去重 |
+| `society_watch/fetch.py` | HTTP 抓取：UA、timeout、retry×3 |
+| `society_watch/sources.py` | 來源設定表；PAIN 跨年 URL 產生 |
+| `society_watch/notify.py` | 訊息格式化、4800 字拆分、LINE 推播、告警節流 |
+| `society_watch/main.py` | 串接全流程、`--bootstrap` 旗標 |
+| `.github/workflows/society-watch.yml` | cron 排程 |
+| `tests/test_society_extract.py` | 五個 parser 的測試 |
+| `tests/test_society_state.py` | 狀態層測試 |
+| `tests/test_society_notify.py` | 格式化與拆分測試 |
+
+---
+
+## Task 1: 專案骨架與 Event 模型
+
+**Files:**
+- Create: `society_watch/__init__.py`
+- Create: `society_watch/models.py`
+- Create: `tests/test_society_models.py`
+- Modify: `requirements.txt`
+
+- [ ] **Step 1: 新增相依套件**
+
+在 `requirements.txt` 末尾**追加一行**（不要重排既有內容）：
+
+```
+beautifulsoup4>=4.12.0
+```
+
+- [ ] **Step 2: 寫失敗測試**
+
+建立 `tests/test_society_models.py`：
+
+```python
+"""Event 模型測試。"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from society_watch.models import Event  # noqa: E402
+
+
+def test_key_為來源加站方ID():
+    e = Event(source="TSA", uid="3105", title="鎮靜課程",
+              date_text="115/11/08", url="https://example.com")
+    assert e.key == "TSA:3105"
+
+
+def test_選填欄位預設值():
+    e = Event(source="TSA", uid="3105", title="鎮靜課程",
+              date_text="115/11/08", url="https://example.com")
+    assert e.kind is None
+    assert e.place is None
+    assert e.minor is False
+```
+
+- [ ] **Step 3: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_models.py -v`
+Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch'`
+
+- [ ] **Step 4: 實作**
+
+建立空的 `society_watch/__init__.py`，以及 `society_watch/models.py`：
+
+```python
+"""學會活動的最小資料結構。"""
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Event:
+    """一則學會活動或公告。
+
+    date_text 刻意保持各站原樣字串不做正規化：五站格式各異
+    （民國年 115/11/08、ISO 2026-08-26、中文 2026 八月 23），
+    系統既不排序也不比較日期，只原樣顯示，不轉換就不會轉錯。
+    """
+
+    source: str      # 來源代號：TSA / TSCVA / RAPM / PAIN / AIRWAY
+    uid: str         # 站方穩定 ID（AIRWAY 例外，為標題 hash）
+    title: str
+    date_text: str
+    url: str
+    kind: str | None = None    # 站方分類
+    place: str | None = None   # 活動地點，僅 TSA 有
+    minor: bool = False        # True = 降級到通知的「其他公告」區
+
+    @property
+    def key(self) -> str:
+        """去重用的唯一鍵。"""
+        return f"{self.source}:{self.uid}"
+```
+
+- [ ] **Step 5: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_models.py -v`
+Expected: 2 passed
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add society_watch/__init__.py society_watch/models.py tests/test_society_models.py requirements.txt
+git commit -m "feat(society-watch): Event 資料模型"
+```
+
+---
+
+## Task 2: TSA parser（台灣麻醉醫學會）
+
+**Files:**
+- Create: `society_watch/extract.py`
+- Create: `tests/test_society_extract.py`
+- Fixture: `tests/fixtures/society_watch/tsa_events_20260910.html`（已存在）
+
+- [ ] **Step 1: 寫失敗測試**
+
+建立 `tests/test_society_extract.py`：
+
+```python
+"""各學會 parser 測試。全部對 2026-09-10 實抓 fixture 離線測試。"""
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from society_watch import extract  # noqa: E402
+
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "society_watch"
+
+
+def _fx(name: str) -> str:
+    return (FIXTURES / name).read_text(encoding="utf-8")
+
+
+# ── TSA ───────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def tsa_events():
+    return extract.parse_tsa(_fx("tsa_events_20260910.html"))
+
+
+def test_tsa_抽出十五筆(tsa_events):
+    assert len(tsa_events) == 15
+
+
+def test_tsa_首筆欄位(tsa_events):
+    e = tsa_events[0]
+    assert e.source == "TSA"
+    assert e.uid == "3105"
+    assert e.date_text == "115/11/08"
+    assert e.kind == "鎮靜活動"
+    assert e.title == "台灣麻醉醫學會2026年健康台灣深耕計畫暨特管法輕中度鎮靜課程_1108高醫場"
+    assert e.place == "高雄醫學大學國際學術研究大樓三樓臨床技能中心"
+    assert e.url == "https://www.anesth.org.tw/events/content.asp?ID=3105&EduType=4"
+
+
+def test_tsa_跨日活動日期保留起訖(tsa_events):
+    e = next(x for x in tsa_events if x.uid == "3091")
+    assert e.date_text == "115/09/26 ~ 115/09/27"
+
+
+def test_tsa_民國年不做轉換(tsa_events):
+    # 115 年即 2026 年，但一律不轉換：不轉換就不會轉錯
+    assert all(not x.date_text.startswith("20") for x in tsa_events)
+
+
+def test_tsa_全部不降級(tsa_events):
+    assert all(x.minor is False for x in tsa_events)
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_extract.py -v`
+Expected: FAIL，`ImportError` 或 `AttributeError: module 'society_watch.extract' has no attribute 'parse_tsa'`
+
+- [ ] **Step 3: 實作**
+
+建立 `society_watch/extract.py`：
+
+```python
+"""五個學會的 HTML → Event 抽取。
+
+每個 parser 只做「HTML 字串 → list[Event]」，不碰網路、不碰狀態、不碰通知，
+因此可對離線 fixture 完整測試。
+"""
+import re
+
+from bs4 import BeautifulSoup
+
+from .models import Event
+
+TSA_BASE = "https://www.anesth.org.tw/events/"
+
+
+def _clean(text: str) -> str:
+    """壓平連續空白。RAPM 的標題含大量換行與樣板註解。"""
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def parse_tsa(html: str) -> list[Event]:
+    """台灣麻醉醫學會活動列表。無分頁，15 筆滾動視窗，含已過期活動。"""
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+    for item in soup.select(".event-item"):
+        link = item.select_one("a.e-link")
+        if not link:
+            continue
+        m = re.search(r"ID=(\d+)", link.get("href", ""))
+        if not m:
+            continue
+
+        place_el = item.select_one(".e-place")
+        place = None
+        if place_el:
+            label = place_el.select_one(".e-label")
+            if label:
+                label.extract()
+            place = _clean(place_el.get_text(" ", strip=True))
+
+        kind_el = item.select_one(".e-type")
+        date_el = item.select_one(".e-date")
+        title_el = item.select_one("h4.e-title")
+
+        events.append(Event(
+            source="TSA",
+            uid=m.group(1),
+            title=_clean(title_el.get_text(" ", strip=True)) if title_el else "",
+            # 跨日活動的 .e-date 內含 .e-date-end，取整段文字即 "115/09/26 ~ 115/09/27"
+            date_text=_clean(date_el.get_text(" ", strip=True)) if date_el else "",
+            url=TSA_BASE + link["href"],
+            kind=_clean(kind_el.get_text(strip=True)) if kind_el else None,
+            place=place,
+        ))
+    return events
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_extract.py -v`
+Expected: 5 passed
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add society_watch/extract.py tests/test_society_extract.py
+git commit -m "feat(society-watch): TSA 活動列表 parser"
+```
+
+---
+
+## Task 3: TSCVA parser（心臟胸腔暨血管麻醉，含 minor 降級）
+
+**Files:**
+- Modify: `society_watch/extract.py`
+- Modify: `tests/test_society_extract.py`
+- Fixture: `tests/fixtures/society_watch/tscva_news_20260910.html`（已存在）
+
+**注意：** `/news` 列表頁與首頁用**不同 class**。首頁是 `a.index_news--item`／`._date`／`._title`，`/news` 是 `a.news_card`／`time.news_card_time`／`p.news_card_title`。此處以 `/news` 為準。
+
+- [ ] **Step 1: 寫失敗測試**
+
+在 `tests/test_society_extract.py` 末尾追加：
+
+```python
+# ── TSCVA ─────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def tscva_events():
+    return extract.parse_tscva(_fx("tscva_news_20260910.html"))
+
+
+def test_tscva_抽出六筆(tscva_events):
+    assert len(tscva_events) == 6
+
+
+def test_tscva_首筆欄位(tscva_events):
+    e = tscva_events[0]
+    assert e.source == "TSCVA"
+    assert e.uid == "e9003f5d-1793-4fc4-babe-d031dd36b18b"
+    assert e.date_text == "2026-09-01"
+    assert e.title == "【恭賀通過名單】2026 年度 TSCVA 專科醫師甄審通過名單"
+    assert e.url == "https://congress.tscva.org.tw/news/e9003f5d-1793-4fc4-babe-d031dd36b18b"
+    assert e.minor is True
+
+
+def test_tscva_降級命中三筆(tscva_events):
+    # 「恭賀通過名單」「獲獎名單」「甄審條件及資格」命中；
+    # 「報告順序」「甄選辦法」不含關鍵字，刻意不追加規則去攔（over-fitting）
+    assert sum(1 for x in tscva_events if x.minor) == 3
+
+
+def test_tscva_即將辦理活動不降級(tscva_events):
+    e = next(x for x in tscva_events if x.title.startswith("[即將辦理活動]"))
+    assert e.minor is False
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_extract.py -k tscva -v`
+Expected: FAIL，`AttributeError: module 'society_watch.extract' has no attribute 'parse_tscva'`
+
+- [ ] **Step 3: 實作**
+
+在 `society_watch/extract.py` 的 `TSA_BASE` 下方追加常數，並在 `parse_tsa` 之後追加函式：
+
+```python
+TSCVA_BASE = "https://congress.tscva.org.tw"
+
+# 非活動類公告的降級關鍵字。刻意保守：只攔明確的名單／獎項／資格公告，
+# 不為個案追加規則（over-fitting），判不出來一律不降級。
+TSCVA_MINOR_KEYWORDS = ("名單", "恭賀", "獲獎", "甄審條件")
+```
+
+```python
+def parse_tscva(html: str) -> list[Event]:
+    """心臟胸腔暨血管麻醉醫學會最新消息（/news 完整列表，非首頁摘要）。"""
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+    for card in soup.select("a.news_card"):
+        href = card.get("href", "")
+        if "/news/" not in href:
+            continue
+        uid = href.rsplit("/", 1)[1]
+
+        title_el = card.select_one("p.news_card_title")
+        time_el = card.select_one("time.news_card_time")
+        title = _clean(title_el.get_text(" ", strip=True)) if title_el else ""
+
+        events.append(Event(
+            source="TSCVA",
+            uid=uid,
+            title=title,
+            date_text=time_el.get("datetime", "") if time_el else "",
+            url=TSCVA_BASE + href,
+            minor=any(k in title for k in TSCVA_MINOR_KEYWORDS),
+        ))
+    return events
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_extract.py -v`
+Expected: 9 passed
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add society_watch/extract.py tests/test_society_extract.py
+git commit -m "feat(society-watch): TSCVA parser 與非活動公告降級"
+```
+
+---
+
+## Task 4: RAPM parser（區域麻醉，學會活動＋友會活動）
+
+**Files:**
+- Modify: `society_watch/extract.py`
+- Modify: `tests/test_society_extract.py`
+- Fixtures: `rapm_newslist2_20260910.html`、`rapm_newslist5_20260910.html`（已存在）
+
+- [ ] **Step 1: 寫失敗測試**
+
+在 `tests/test_society_extract.py` 末尾追加：
+
+```python
+# ── RAPM ──────────────────────────────────────────────────────────────────────
+
+def test_rapm_學會活動抽出十六筆():
+    events = extract.parse_rapm(_fx("rapm_newslist2_20260910.html"), kind="學會活動")
+    assert len(events) == 16
+
+
+def test_rapm_首筆欄位():
+    events = extract.parse_rapm(_fx("rapm_newslist2_20260910.html"), kind="學會活動")
+    e = events[0]
+    assert e.source == "RAPM"
+    assert e.uid == "32"
+    assert e.date_text == "2026-08-26"
+    assert e.kind == "學會活動"
+    assert e.url == "https://rapm.org.tw/news-detail/32"
+    # 活動日只在標題裡（＠November 1），不嘗試抽出
+    assert e.title == "疼痛擂台 8：真實病人工作坊-全脊守護，從頸到骶 ＠November 1"
+
+
+def test_rapm_標題壓平樣板空白():
+    events = extract.parse_rapm(_fx("rapm_newslist2_20260910.html"), kind="學會活動")
+    assert all("\n" not in x.title and "  " not in x.title for x in events)
+
+
+def test_rapm_友會活動抽出十一筆():
+    events = extract.parse_rapm(_fx("rapm_newslist5_20260910.html"), kind="友會活動")
+    assert len(events) == 11
+    assert events[0].uid == "23"
+    assert events[0].kind == "友會活動"
+
+
+def test_rapm_兩分類編號不重疊():
+    a = extract.parse_rapm(_fx("rapm_newslist2_20260910.html"), kind="學會活動")
+    b = extract.parse_rapm(_fx("rapm_newslist5_20260910.html"), kind="友會活動")
+    assert not ({x.uid for x in a} & {x.uid for x in b})
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_extract.py -k rapm -v`
+Expected: FAIL，`AttributeError: ... has no attribute 'parse_rapm'`
+
+- [ ] **Step 3: 實作**
+
+在 `society_watch/extract.py` 追加：
+
+```python
+def parse_rapm(html: str, kind: str) -> list[Event]:
+    """區域麻醉暨疼痛醫學會消息列表。
+
+    kind 由呼叫端依來源 URL 指定：/news-list/2 為「學會活動」、/news-list/5 為「友會活動」。
+    兩個分類共用同一組全域 news-detail/{id} 編號，故 uid 不需再加分類前綴。
+
+    .service_date 是公告日不是活動日；活動日只存在於標題（例「＠November 1」）
+    或海報圖上，不嘗試抽取。
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+    for item in soup.select(".service_item"):
+        link = item.select_one(".service_title a")
+        date_el = item.select_one(".service_date")
+        if not link or not date_el:
+            continue
+        href = link.get("href", "")
+        if "news-detail/" not in href:
+            continue
+
+        events.append(Event(
+            source="RAPM",
+            uid=href.rsplit("/", 1)[1],
+            title=_clean(link.get_text(" ", strip=True)),
+            date_text=_clean(date_el.get_text(strip=True)),
+            url=href,
+            kind=kind,
+        ))
+    return events
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_extract.py -v`
+Expected: 14 passed
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add society_watch/extract.py tests/test_society_extract.py
+git commit -m "feat(society-watch): RAPM 學會活動與友會活動 parser"
+```
+
+---
+
+## Task 5: PAIN parser（疼痛醫學會）
+
+**Files:**
+- Modify: `society_watch/extract.py`
+- Modify: `tests/test_society_extract.py`
+- Fixture: `tests/fixtures/society_watch/pain_fragment_20260910.html`（已存在）
+
+**注意：** 該站「詳細」是 `onclick="cal_listview_click_func('3142')"` 而非 `href`，**沒有逐則網址**，所有項目一律連到列表頁。
+
+- [ ] **Step 1: 寫失敗測試**
+
+在 `tests/test_society_extract.py` 末尾追加：
+
+```python
+# ── PAIN ──────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def pain_events():
+    return extract.parse_pain(_fx("pain_fragment_20260910.html"))
+
+
+def test_pain_抽出十筆(pain_events):
+    assert len(pain_events) == 10
+
+
+def test_pain_首筆欄位(pain_events):
+    e = pain_events[0]
+    assert e.source == "PAIN"
+    assert e.uid == "3142"
+    assert e.date_text == "2026 八月 23"
+    assert e.title.startswith("2026 台灣疼痛醫學會 全人整合醫學教育 系列工作坊")
+
+
+def test_pain_全部連到列表頁(pain_events):
+    # 該站無逐則網址（詳細是 onclick 不是 href）
+    assert all(
+        x.url == "https://pain.org.tw/index.php/educlass_page/index/33/1/8/34"
+        for x in pain_events
+    )
+
+
+def test_pain_空表回傳空list():
+    # 明年度尚無活動時，該 endpoint 回的是只有表頭的空表
+    assert extract.parse_pain("<table class='table'><tbody></tbody></table>") == []
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_extract.py -k pain -v`
+Expected: FAIL，`AttributeError: ... has no attribute 'parse_pain'`
+
+- [ ] **Step 3: 實作**
+
+在 `society_watch/extract.py` 追加常數與函式：
+
+```python
+# 該站「詳細」是 onclick 不是 href，無逐則網址，一律連列表頁
+PAIN_LIST_URL = "https://pain.org.tw/index.php/educlass_page/index/33/1/8/34"
+```
+
+```python
+def parse_pain(html: str) -> list[Event]:
+    """疼痛醫學會學術教育活動列表（AJAX fragment）。
+
+    日期欄是三個 span 疊出來的（2026 / 八月 / 23），原樣以空白串接。
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+    for row in soup.select("table tbody tr"):
+        m = re.search(r"cal_listview_click_func\('(\d+)'\)", str(row))
+        title_el = row.select_one("span.text-info")
+        if not m or not title_el:
+            continue
+
+        cells = row.select("td")
+        date_text = ""
+        if cells:
+            date_text = _clean(" ".join(
+                s.get_text(strip=True) for s in cells[0].select("span")
+            ))
+
+        events.append(Event(
+            source="PAIN",
+            uid=m.group(1),
+            title=_clean(title_el.get_text(" ", strip=True)),
+            date_text=date_text,
+            url=PAIN_LIST_URL,
+        ))
+    return events
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_extract.py -v`
+Expected: 18 passed
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add society_watch/extract.py tests/test_society_extract.py
+git commit -m "feat(society-watch): PAIN 學術教育列表 parser"
+```
+
+---
+
+## Task 6: AIRWAY 純文字抽取與 diff（不含 LLM）
+
+**Files:**
+- Modify: `society_watch/extract.py`
+- Modify: `tests/test_society_extract.py`
+- Fixture: `tests/fixtures/society_watch/airway_text_20260910.txt`（已存在，124 行）
+
+**背景：** 該站是 Wix，SSR 有吐出可見文字但**完全無結構**——整頁是一片連續富文本，沒有逐則邊界、沒有逐則日期、沒有逐則連結。唯一可行做法是純文字 diff。
+
+**fixture 說明：** 原始 Wix HTML 為 1.1 MB，不放進 public repo，只保留抽取後的純文字。因此 `airway_lines()`（去 script/style 的通用邏輯）用小段手寫 HTML 測，`airway_new_lines()`（真正的業務邏輯）用真實 124 行文字測。
+
+- [ ] **Step 1: 寫失敗測試**
+
+在 `tests/test_society_extract.py` 末尾追加：
+
+```python
+# ── AIRWAY ────────────────────────────────────────────────────────────────────
+
+def test_airway_去除script與style():
+    html = """
+    <html><head><style>.a{color:red}</style></head>
+    <body><script>var x=1;</script>
+    <div>  📣 主辦單位： 台灣呼吸道處理醫學會  </div>
+    <div></div>
+    <div>🗓️ 上課時間： 2026年6月13日</div>
+    </body></html>
+    """
+    lines = extract.airway_lines(html)
+    assert lines == ["📣 主辦單位： 台灣呼吸道處理醫學會", "🗓️ 上課時間： 2026年6月13日"]
+    assert not any("var x" in l or "color:red" in l for l in lines)
+
+
+def test_airway_實抓快照為一二四行():
+    text = _fx("airway_text_20260910.txt")
+    lines = [l for l in text.split("\n") if l.strip()]
+    assert len(lines) == 124
+
+
+def test_airway_無新增時回空list():
+    old = ["A", "B", "C"]
+    assert extract.airway_new_lines(old, old) == []
+
+
+def test_airway_只回新增的行():
+    old = ["A", "B"]
+    new = ["A", "B", "C 新公告", "D"]
+    assert extract.airway_new_lines(new, old) == ["C 新公告", "D"]
+
+
+def test_airway_行順序改變不算新增():
+    # Wix 版面調整常導致區塊順序變動，不應誤判為新公告
+    assert extract.airway_new_lines(["B", "A"], ["A", "B"]) == []
+
+
+def test_airway_首次執行時舊快照為空則全部算新增():
+    assert extract.airway_new_lines(["A", "B"], []) == ["A", "B"]
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_extract.py -k airway -v`
+Expected: FAIL，`AttributeError: ... has no attribute 'airway_lines'`
+
+- [ ] **Step 3: 實作**
+
+在 `society_watch/extract.py` 追加：
+
+```python
+AIRWAY_URL = "https://www.tsamairway.org.tw/最新資訊"
+
+
+def airway_lines(html: str) -> list[str]:
+    """Wix 頁面 → 可見純文字逐行。
+
+    該站無「則」的結構可言，只能整頁取文字後與上次快照做 diff。
+    """
+    text = re.sub(r"(?is)<script.*?</script>", "", html)
+    text = re.sub(r"(?is)<style.*?</style>", "", text)
+    text = re.sub(r"(?s)<[^>]*>", "\n", text)
+    return [line.strip() for line in text.split("\n") if line.strip()]
+
+
+def airway_new_lines(current: list[str], previous: list[str]) -> list[str]:
+    """回傳 current 中不存在於 previous 的行，保持原順序。
+
+    用集合比對而非逐行位移比對：Wix 版面調整常使區塊順序變動，
+    位移比對會把整頁誤判為新增。
+    """
+    seen = set(previous)
+    return [line for line in current if line not in seen]
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_extract.py -v`
+Expected: 24 passed
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add society_watch/extract.py tests/test_society_extract.py
+git commit -m "feat(society-watch): Wix 站純文字抽取與 diff"
+```
+
+---
+
+## Task 7: AIRWAY 的 Haiku 抽取
+
+**Files:**
+- Create: `society_watch/llm.py`
+- Create: `tests/test_society_llm.py`
+
+**成本控制：** 只有 diff 有新增行時才呼叫，沒新增就完全不呼叫。判不出來時一律當成活動（不降級），符合 spec §5「不確定偏向通知」。
+
+- [ ] **Step 1: 寫失敗測試**
+
+建立 `tests/test_society_llm.py`：
+
+```python
+"""Airway LLM 抽取測試。只測 prompt 組裝與回應解析，不打 API。"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from society_watch import llm  # noqa: E402
+
+
+def test_prompt_含全部新增行():
+    prompt = llm.build_prompt(["📣 北區麻醉月會", "📅 時間：115年2月7日"])
+    assert "📣 北區麻醉月會" in prompt
+    assert "📅 時間：115年2月7日" in prompt
+
+
+def test_解析回應為Event():
+    raw = '[{"title": "115年2月份北區麻醉月會", "date_text": "115年2月7日", "is_event": true}]'
+    events = llm.parse_response(raw)
+    assert len(events) == 1
+    e = events[0]
+    assert e.source == "AIRWAY"
+    assert e.title == "115年2月份北區麻醉月會"
+    assert e.date_text == "115年2月7日"
+    assert e.url == "https://www.tsamairway.org.tw/最新資訊"
+    assert e.minor is False
+
+
+def test_uid為標題hash且穩定():
+    raw = '[{"title": "北區麻醉月會", "date_text": "", "is_event": true}]'
+    a = llm.parse_response(raw)[0]
+    b = llm.parse_response(raw)[0]
+    assert a.uid == b.uid
+    assert len(a.uid) == 12
+
+
+def test_非活動者標為minor():
+    raw = '[{"title": "賀呂忠和主任榮任理事長", "date_text": "", "is_event": false}]'
+    assert llm.parse_response(raw)[0].minor is True
+
+
+def test_回應含程式碼圍籬也能解析():
+    raw = '```json\n[{"title": "工作坊", "date_text": "", "is_event": true}]\n```'
+    assert len(llm.parse_response(raw)) == 1
+
+
+def test_回應無法解析時回空list():
+    # 寧可漏這一輪也不要讓整支程式炸掉；Task 13 會另外送告警
+    assert llm.parse_response("模型今天話很多但沒給 JSON") == []
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_llm.py -v`
+Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.llm'`
+
+- [ ] **Step 3: 實作**
+
+建立 `society_watch/llm.py`：
+
+```python
+"""Airway（Wix 無結構站）專用的 Haiku 抽取。
+
+只有 diff 出現新增行時才呼叫，沒新增就完全不呼叫，成本趨近於零。
+"""
+import hashlib
+import json
+import os
+import re
+
+from anthropic import Anthropic
+
+from .extract import AIRWAY_URL
+from .models import Event
+
+MODEL = "claude-haiku-4-5-20251001"
+
+PROMPT_TEMPLATE = """以下是台灣呼吸道處理醫學會網站「最新資訊」頁新增的內容片段。
+請判斷其中包含哪些「活動、課程或工作坊」公告。
+
+請只輸出 JSON 陣列，每個元素包含：
+- title：活動名稱（字串）
+- date_text：活動日期，原樣照抄不要換算民國年或西元年（找不到就給空字串）
+- is_event：是否為活動／課程／工作坊公告（布林值）。人事賀詞、得獎名單、宣傳影片請給 false。
+
+不確定是不是活動時，一律給 is_event: true。
+
+新增內容：
+---
+{content}
+---
+"""
+
+
+def build_prompt(new_lines: list[str]) -> str:
+    return PROMPT_TEMPLATE.format(content="\n".join(new_lines))
+
+
+def parse_response(raw: str) -> list[Event]:
+    """把模型回應解析成 Event。解析不出來回空 list，不拋例外。"""
+    text = raw.strip()
+    fence = re.search(r"```(?:json)?\s*(.+?)```", text, re.S)
+    if fence:
+        text = fence.group(1).strip()
+
+    match = re.search(r"\[.*\]", text, re.S)
+    if not match:
+        return []
+    try:
+        items = json.loads(match.group(0))
+    except json.JSONDecodeError:
+        return []
+
+    events = []
+    for item in items:
+        title = str(item.get("title", "")).strip()
+        if not title:
+            continue
+        events.append(Event(
+            source="AIRWAY",
+            # 該站無站方 ID，只能用標題 hash。已知限制：主辦方改標題會重推。
+            uid=hashlib.sha1(title.encode("utf-8")).hexdigest()[:12],
+            title=title,
+            date_text=str(item.get("date_text", "")).strip(),
+            url=AIRWAY_URL,
+            minor=not item.get("is_event", True),
+        ))
+    return events
+
+
+def classify(new_lines: list[str]) -> list[Event]:
+    """呼叫 Haiku 判斷新增段落。沒有新增行就不呼叫 API。"""
+    if not new_lines:
+        return []
+    client = Anthropic(api_key=os.environ["CLAUDE_API_KEY"])
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=2000,
+        messages=[{"role": "user", "content": build_prompt(new_lines)}],
+    )
+    return parse_response(resp.content[0].text)
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_llm.py -v`
+Expected: 6 passed
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add society_watch/llm.py tests/test_society_llm.py
+git commit -m "feat(society-watch): Wix 站新增段落的 Haiku 抽取"
+```
+
+---
+
+## Task 8: 狀態層（seen.json 與 snapshot）
+
+**Files:**
+- Create: `society_watch/state.py`
+- Create: `tests/test_society_state.py`
+
+**格式要求：** `seen.json` 排序後 pretty-print、**一則一行**、保留結尾換行，沿用 `daily_data/sent_articles.json` 慣例。每日 commit 的 diff 才會只有真正新增的那幾行。
+
+- [ ] **Step 1: 寫失敗測試**
+
+建立 `tests/test_society_state.py`：
+
+```python
+"""狀態層測試。"""
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from society_watch import state  # noqa: E402
+from society_watch.models import Event  # noqa: E402
+
+
+def _ev(source, uid):
+    return Event(source=source, uid=uid, title="t", date_text="d", url="u")
+
+
+def test_檔案不存在時回空set(tmp_path):
+    assert state.load_seen(tmp_path / "nope.json") == set()
+
+
+def test_寫入後讀得回來(tmp_path):
+    p = tmp_path / "seen.json"
+    state.save_seen(p, {"TSA:3105", "PAIN:3142"})
+    assert state.load_seen(p) == {"TSA:3105", "PAIN:3142"}
+
+
+def test_寫出格式為排序且一則一行(tmp_path):
+    p = tmp_path / "seen.json"
+    state.save_seen(p, {"TSA:3105", "PAIN:3142", "RAPM:32"})
+    text = p.read_text(encoding="utf-8")
+    assert text.endswith("\n")           # 保留結尾換行，避免整檔 diff
+    assert json.loads(text)["seen"] == ["PAIN:3142", "RAPM:32", "TSA:3105"]
+    assert text.count('"PAIN:3142"') == 1
+    # 每則各佔一行
+    assert '"PAIN:3142",\n' in text
+
+
+def test_只回未見過的項目():
+    events = [_ev("TSA", "3105"), _ev("TSA", "3106")]
+    assert [e.uid for e in state.filter_new(events, {"TSA:3105"})] == ["3106"]
+
+
+def test_同一輪內重複的項目只留一筆():
+    events = [_ev("TSA", "3105"), _ev("TSA", "3105")]
+    assert len(state.filter_new(events, set())) == 1
+
+
+def test_不同來源相同uid不互相影響():
+    events = [_ev("TSA", "32"), _ev("RAPM", "32")]
+    assert len(state.filter_new(events, {"TSA:32"})) == 1
+
+
+def test_快照讀寫(tmp_path):
+    p = tmp_path / "snap.txt"
+    assert state.load_snapshot(p) == []
+    state.save_snapshot(p, ["A", "B"])
+    assert state.load_snapshot(p) == ["A", "B"]
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_state.py -v`
+Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.state'`
+
+- [ ] **Step 3: 實作**
+
+建立 `society_watch/state.py`：
+
+```python
+"""去重狀態與 Wix 快照的讀寫。
+
+seen.json 只增不減：TSA 是 15 筆滾動視窗，舊活動會掉出列表，
+若為省空間裁剪，該筆日後重新出現就會重推。一則 uid 數十 bytes，
+跑十年不過數百 KB，不值得為此冒重推風險。
+"""
+import json
+from pathlib import Path
+from typing import Iterable
+
+from .models import Event
+
+
+def load_seen(path: Path) -> set[str]:
+    if not Path(path).exists():
+        return set()
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return set(data.get("seen", []))
+
+
+def save_seen(path: Path, keys: Iterable[str]) -> None:
+    """排序後 pretty-print、一則一行、保留結尾換行。
+
+    格式沿用 daily_data/sent_articles.json，讓每日 commit 的 diff
+    只有真正新增的那幾行。
+    """
+    payload = {"seen": sorted(keys)}
+    Path(path).write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def filter_new(events: Iterable[Event], seen: set[str]) -> list[Event]:
+    """濾出未通知過的項目，並去掉同一輪內的重複（保持原順序）。"""
+    result = []
+    batch_seen = set()
+    for event in events:
+        if event.key in seen or event.key in batch_seen:
+            continue
+        batch_seen.add(event.key)
+        result.append(event)
+    return result
+
+
+def load_snapshot(path: Path) -> list[str]:
+    if not Path(path).exists():
+        return []
+    text = Path(path).read_text(encoding="utf-8")
+    return [line for line in text.split("\n") if line.strip()]
+
+
+def save_snapshot(path: Path, lines: list[str]) -> None:
+    Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_state.py -v`
+Expected: 7 passed
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add society_watch/state.py tests/test_society_state.py
+git commit -m "feat(society-watch): 去重狀態層與 Wix 快照讀寫"
+```
+
+---
+
+## Task 9: 抓取層（含編碼修正）
+
+**Files:**
+- Create: `society_watch/fetch.py`
+- Create: `tests/test_society_fetch.py`
+
+**已實測的坑：** `https://www.anesth.org.tw/events/index.asp` 回應的 `Content-Type` 是 `text/html`，**不帶 charset**。`requests` 此時會退回猜 `ISO-8859-1`，`resp.text` 直接是亂碼（實測 `"鎮靜活動" in resp.text` 為 `False`）。必須在標頭沒有 charset 時改用 `apparent_encoding`。
+
+- [ ] **Step 1: 寫失敗測試**
+
+建立 `tests/test_society_fetch.py`：
+
+```python
+"""抓取層測試。離線測編碼與重試，另有 --live 測試打真實網站。"""
+import sys
+from pathlib import Path
+
+import pytest
+import requests
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from society_watch import fetch  # noqa: E402
+
+
+class FakeResponse:
+    def __init__(self, body: bytes, content_type: str):
+        self.content = body
+        self.headers = {"Content-Type": content_type}
+        self.encoding = "ISO-8859-1"   # requests 無 charset 時的預設猜測
+        self.apparent_encoding = "utf-8"
+        self.status_code = 200
+
+    @property
+    def text(self):
+        return self.content.decode(self.encoding)
+
+    def raise_for_status(self):
+        pass
+
+
+def test_標頭無charset時改用apparent_encoding(monkeypatch):
+    body = "鎮靜活動".encode("utf-8")
+    monkeypatch.setattr(
+        fetch.requests, "get",
+        lambda *a, **k: FakeResponse(body, "text/html"),
+    )
+    assert fetch.get("https://example.com") == "鎮靜活動"
+
+
+def test_標頭有charset時尊重標頭(monkeypatch):
+    resp = FakeResponse("鎮靜活動".encode("utf-8"), "text/html; charset=utf-8")
+    resp.encoding = "utf-8"
+    monkeypatch.setattr(fetch.requests, "get", lambda *a, **k: resp)
+    assert fetch.get("https://example.com") == "鎮靜活動"
+
+
+def test_失敗會重試三次後放棄(monkeypatch):
+    calls = []
+
+    def boom(*a, **k):
+        calls.append(1)
+        raise requests.ConnectionError("斷線")
+
+    monkeypatch.setattr(fetch.requests, "get", boom)
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    with pytest.raises(requests.ConnectionError):
+        fetch.get("https://example.com")
+    assert len(calls) == 3
+
+
+def test_第二次就成功則不再重試(monkeypatch):
+    calls = []
+
+    def flaky(*a, **k):
+        calls.append(1)
+        if len(calls) == 1:
+            raise requests.ConnectionError("斷線")
+        return FakeResponse("OK".encode("utf-8"), "text/html; charset=utf-8")
+
+    monkeypatch.setattr(fetch.requests, "get", flaky)
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    fetch.get("https://example.com")
+    assert len(calls) == 2
+
+
+@pytest.mark.live
+def test_實際抓TSA不亂碼():
+    html = fetch.get("https://www.anesth.org.tw/events/index.asp")
+    assert "鎮靜" in html or "工作坊" in html
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_fetch.py -v -m "not live"`
+Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.fetch'`
+
+- [ ] **Step 3: 實作**
+
+建立 `society_watch/fetch.py`：
+
+```python
+"""HTTP 抓取層：UA、timeout、重試、編碼修正。"""
+import time
+
+import requests
+
+UA = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+    )
+}
+
+
+def get(url: str, timeout: int = 30, attempts: int = 3) -> str:
+    """抓一個頁面回傳解碼後的 HTML 字串。
+
+    anesth.org.tw 的 Content-Type 不帶 charset，requests 此時會退回猜
+    ISO-8859-1 導致整頁中文變亂碼，因此標頭沒有 charset 就改用
+    apparent_encoding（實測為 utf-8）。
+    """
+    last_error = None
+    for i in range(attempts):
+        try:
+            resp = requests.get(url, headers=UA, timeout=timeout)
+            resp.raise_for_status()
+            if "charset=" not in resp.headers.get("Content-Type", "").lower():
+                resp.encoding = resp.apparent_encoding or "utf-8"
+            return resp.text
+        except requests.RequestException as e:
+            last_error = e
+            if i == attempts - 1:
+                break
+            wait = 2 ** i
+            print(f"    ⚠️ 抓取失敗（{type(e).__name__}），{wait}s 後重試（{i + 2}/{attempts}）")
+            time.sleep(wait)
+    raise last_error
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_fetch.py -v -m "not live"`
+Expected: 4 passed, 1 deselected
+
+- [ ] **Step 5: 跑一次 live 測試確認真實站點沒問題**
+
+Run: `python3 -m pytest tests/test_society_fetch.py -v -m live`
+Expected: 1 passed
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add society_watch/fetch.py tests/test_society_fetch.py
+git commit -m "feat(society-watch): 抓取層與無 charset 站的編碼修正"
+```
+
+---
+
+## Task 10: 來源設定表（含 PAIN 跨年）
+
+**Files:**
+- Create: `society_watch/sources.py`
+- Create: `tests/test_society_sources.py`
+
+**已實測的漏報陷阱：** pain.org.tw 的列表是「年份 × 分類」scoped，預設只回當年。實抓 2026 年 10 筆全部已過期（最新 8/23，抓取日 9/10），代表明年度活動一旦公告**不會出現在預設頁面**。必須抓今年＋明年兩次。
+
+- [ ] **Step 1: 寫失敗測試**
+
+建立 `tests/test_society_sources.py`：
+
+```python
+"""來源設定表測試。"""
+import sys
+from datetime import date
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from society_watch import sources  # noqa: E402
+
+
+def test_五個來源代號齊全():
+    assert {s["source"] for s in sources.SOURCES} == {
+        "TSA", "TSCVA", "RAPM", "PAIN", "AIRWAY"
+    }
+
+
+def test_pain同時抓今年與明年():
+    urls = sources.pain_urls(date(2026, 9, 10))
+    assert len(urls) == 2
+    assert "yy=2026" in urls[0]
+    assert "yy=2027" in urls[1]
+
+
+def test_pain跨年時自動往後推():
+    urls = sources.pain_urls(date(2027, 1, 5))
+    assert "yy=2027" in urls[0]
+    assert "yy=2028" in urls[1]
+
+
+def test_rapm有兩個分類():
+    rapm = [s for s in sources.SOURCES if s["source"] == "RAPM"]
+    assert len(rapm) == 2
+    assert {s["kind"] for s in rapm} == {"學會活動", "友會活動"}
+
+
+def test_每個來源都有網址與parser名稱():
+    for s in sources.SOURCES:
+        assert s["url"].startswith("https://")
+        assert s["parser"]
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_sources.py -v`
+Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.sources'`
+
+- [ ] **Step 3: 實作**
+
+建立 `society_watch/sources.py`：
+
+```python
+"""監測來源設定表。全部經 2026-09-10 實抓驗證。"""
+from datetime import date
+
+# 疼痛醫學會的 AJAX fragment endpoint（從頁面 JS 的 $("#main_content").load(...) 挖出，
+# 實測免 cookie、免 session 可直接抓）。非公開 API，改版風險高於其他四站。
+PAIN_ENDPOINT = (
+    "https://pain.org.tw/index.php/educlass_page/educlass_page1_content/33/1/8/0"
+)
+
+SOURCES = [
+    {
+        "source": "TSA",
+        "label": "台灣麻醉醫學會",
+        "url": "https://www.anesth.org.tw/events/index.asp",
+        "parser": "tsa",
+    },
+    {
+        "source": "TSCVA",
+        "label": "心臟胸腔暨血管麻醉醫學會",
+        # 用 /news 完整列表，不用首頁摘要（兩者 class 不同，詳見 extract.parse_tscva）
+        "url": "https://congress.tscva.org.tw/news",
+        "parser": "tscva",
+    },
+    {
+        "source": "RAPM",
+        "label": "區域麻醉暨疼痛醫學會",
+        "url": "https://rapm.org.tw/news-list/2",
+        "parser": "rapm",
+        "kind": "學會活動",
+    },
+    {
+        "source": "RAPM",
+        "label": "區域麻醉暨疼痛醫學會",
+        "url": "https://rapm.org.tw/news-list/5",
+        "parser": "rapm",
+        "kind": "友會活動",
+    },
+    {
+        "source": "PAIN",
+        "label": "台灣疼痛醫學會",
+        "url": PAIN_ENDPOINT,     # 實際抓取時由 pain_urls() 補上 ?yy=
+        "parser": "pain",
+    },
+    {
+        "source": "AIRWAY",
+        "label": "台灣呼吸道處理醫學會",
+        "url": "https://www.tsamairway.org.tw/最新資訊",
+        "parser": "airway",
+    },
+]
+
+# 通知訊息裡的分組順序與顯示名稱
+LABELS = {s["source"]: s["label"] for s in SOURCES}
+
+
+def pain_urls(today: date) -> list[str]:
+    """疼痛醫學會要抓今年＋明年兩份。
+
+    該列表是「年份 scoped」且預設只回當年，明年度活動一旦公告
+    不會出現在預設頁面，只抓當年會造成漏報。
+    """
+    return [f"{PAIN_ENDPOINT}?yy={today.year + n}" for n in (0, 1)]
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_sources.py -v`
+Expected: 5 passed
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add society_watch/sources.py tests/test_society_sources.py
+git commit -m "feat(society-watch): 來源設定表與 PAIN 跨年漏報防護"
+```
+
+---
+
+## Task 11: 訊息格式化與拆分
+
+**Files:**
+- Create: `society_watch/notify.py`
+- Create: `tests/test_society_notify.py`
+
+- [ ] **Step 1: 寫失敗測試**
+
+建立 `tests/test_society_notify.py`：
+
+```python
+"""通知格式化測試。"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from society_watch import notify  # noqa: E402
+from society_watch.models import Event  # noqa: E402
+
+TSA_EVENT = Event(
+    source="TSA", uid="3105",
+    title="2026年特管法輕中度鎮靜課程_1108高醫場",
+    date_text="115/11/08",
+    url="https://www.anesth.org.tw/events/content.asp?ID=3105&EduType=4",
+    kind="鎮靜活動",
+    place="高雄醫學大學臨床技能中心",
+)
+MINOR_EVENT = Event(
+    source="TSCVA", uid="abc",
+    title="2026 年度專科醫師甄審通過名單",
+    date_text="2026-09-01",
+    url="https://congress.tscva.org.tw/news/abc",
+    minor=True,
+)
+
+
+def test_標題顯示則數():
+    msg = notify.format_message([TSA_EVENT, MINOR_EVENT])
+    assert msg.startswith("🔔 學會新活動 2 則")
+
+
+def test_依學會分組並顯示日期與地點():
+    msg = notify.format_message([TSA_EVENT])
+    assert "【台灣麻醉醫學會】" in msg
+    assert "115/11/08｜高雄醫學大學臨床技能中心" in msg
+    assert "https://www.anesth.org.tw/events/content.asp?ID=3105&EduType=4" in msg
+
+
+def test_minor項目排在其他公告區():
+    msg = notify.format_message([MINOR_EVENT, TSA_EVENT])
+    assert "── 其他公告 ──" in msg
+    assert msg.index("鎮靜課程") < msg.index("── 其他公告 ──")
+    assert msg.index("── 其他公告 ──") < msg.index("甄審通過名單")
+
+
+def test_全部都是minor時仍有其他公告區():
+    msg = notify.format_message([MINOR_EVENT])
+    assert "── 其他公告 ──" in msg
+
+
+def test_沒有minor時不出現其他公告區():
+    assert "── 其他公告 ──" not in notify.format_message([TSA_EVENT])
+
+
+def test_無地點時只顯示日期():
+    e = Event(source="PAIN", uid="1", title="工作坊", date_text="2026 八月 23",
+              url="https://pain.org.tw/x")
+    assert "2026 八月 23\n" in notify.format_message([e])
+
+
+def test_短訊息不拆分():
+    assert notify.split_message("短訊息") == ["短訊息"]
+
+
+def test_長訊息在學會邊界拆分():
+    body = "\n\n".join(f"【學會{i}】\n" + "・活動\n" * 100 for i in range(6))
+    parts = notify.split_message(body, max_chars=1000)
+    assert len(parts) > 1
+    assert all(len(p) <= 1000 for p in parts)
+    # 六個學會區塊都完整保留，沒有被切掉
+    # （不能斷言每段開頭都是「【」：最後一段開頭是「⬆️ 接上頁」標記）
+    assert sum(p.count("【學會") for p in parts) == 6
+
+
+def test_單一區塊超長時硬切():
+    parts = notify.split_message("【學會】\n" + "字" * 3000, max_chars=1000)
+    assert all(len(p) <= 1000 for p in parts)
+
+
+def test_告警訊息列出失敗站別():
+    msg = notify.format_alert([("TSA", "解析出 0 筆，疑似改版"), ("PAIN", "HTTP 500")])
+    assert "TSA" in msg and "疑似改版" in msg
+    assert "PAIN" in msg and "HTTP 500" in msg
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_notify.py -v`
+Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.notify'`
+
+- [ ] **Step 3: 實作**
+
+建立 `society_watch/notify.py`：
+
+```python
+"""訊息格式化、拆分與 LINE 推播。"""
+import os
+
+import requests
+
+from .models import Event
+from .sources import LABELS, SOURCES
+
+MAX_CHARS = 4800       # LINE 上限 5000，留 200 buffer（同 daily_push.py）
+MARKER_RESERVE = 40    # 接頁標記「⬇️ 接下頁（1/3）」的空間，先扣掉才不會加完超標
+
+# 分組顯示順序，依 SOURCES 出現順序去重
+SOURCE_ORDER = list(dict.fromkeys(s["source"] for s in SOURCES))
+
+
+def _format_one(event: Event) -> str:
+    parts = [f"・{event.title}"]
+    detail = event.date_text
+    if event.place:
+        detail = f"{detail}｜{event.place}" if detail else event.place
+    if detail:
+        parts.append(f"  {detail}")
+    parts.append(f"  {event.url}")
+    return "\n".join(parts)
+
+
+def format_message(events: list[Event]) -> str:
+    """依學會分組；非活動類公告降到底部「其他公告」區。"""
+    main = [e for e in events if not e.minor]
+    minor = [e for e in events if e.minor]
+
+    blocks = [f"🔔 學會新活動 {len(events)} 則"]
+
+    for source in SOURCE_ORDER:
+        group = [e for e in main if e.source == source]
+        if not group:
+            continue
+        lines = [f"【{LABELS.get(source, source)}】"]
+        lines.extend(_format_one(e) for e in group)
+        blocks.append("\n".join(lines))
+
+    if minor:
+        lines = ["── 其他公告 ──"]
+        for e in minor:
+            lines.append(f"・【{LABELS.get(e.source, e.source)}】{e.title}")
+            lines.append(f"  {e.url}")
+        blocks.append("\n".join(lines))
+
+    return "\n\n".join(blocks)
+
+
+def split_message(text: str, max_chars: int = MAX_CHARS) -> list[str]:
+    """在學會區塊邊界（空行）切割，確保每則 ≤ max_chars。"""
+    if len(text) <= max_chars:
+        return [text]
+
+    # 先扣掉接頁標記的空間，否則加上標記後每則反而會超過 LINE 上限
+    budget = max_chars - MARKER_RESERVE
+    chunks = []
+    current = ""
+    for block in text.split("\n\n"):
+        candidate = f"{current}\n\n{block}" if current else block
+        if len(candidate) <= budget:
+            current = candidate
+            continue
+        if current:
+            chunks.append(current)
+            current = ""
+        # 單一區塊本身就超長，只能硬切
+        while len(block) > budget:
+            chunks.append(block[:budget])
+            block = block[budget:]
+        current = block
+    if current:
+        chunks.append(current)
+
+    total = len(chunks)
+    if total == 1:
+        return chunks
+    return [
+        c + f"\n\n⬇️ 接下頁（{i + 1}/{total}）" if i < total - 1
+        else f"⬆️ 接上頁（{i + 1}/{total}）\n\n" + c
+        for i, c in enumerate(chunks)
+    ]
+
+
+def format_alert(failures: list[tuple[str, str]]) -> str:
+    lines = ["⚠️ 學會監測異常", ""]
+    lines.extend(f"・{source}：{reason}" for source, reason in failures)
+    lines.append("")
+    lines.append("請確認該站是否改版或搬家。")
+    return "\n".join(lines)
+
+
+def push_line(text: str) -> None:
+    resp = requests.post(
+        "https://api.line.me/v2/bot/message/push",
+        headers={
+            "Authorization": f"Bearer {os.environ['LINE_CHANNEL_ACCESS_TOKEN']}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "to": os.environ["LINE_USER_ID"],
+            "messages": [{"type": "text", "text": text}],
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_notify.py -v`
+Expected: 10 passed
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add society_watch/notify.py tests/test_society_notify.py
+git commit -m "feat(society-watch): 通知格式化、區塊邊界拆分與 LINE 推播"
+```
+
+---
+
+## Task 12: 告警節流
+
+**Files:**
+- Modify: `society_watch/state.py`
+- Modify: `tests/test_society_state.py`
+
+**規則：** 同一站 7 天內最多告警一次，避免站掛掉時天天吵。
+
+- [ ] **Step 1: 寫失敗測試**
+
+在 `tests/test_society_state.py` 末尾追加：
+
+先把測試檔頂端的 import 區改成（新增 `from datetime import date` 一行）：
+
+```python
+import json
+import sys
+from datetime import date
+from pathlib import Path
+```
+
+再於檔案末尾追加：
+
+```python
+def test_首次失敗就告警():
+    assert state.should_alert({}, "TSA", date(2026, 9, 10)) is True
+
+
+def test_七天內重複失敗不再告警():
+    alerts = {"TSA": "2026-09-10"}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 14)) is False
+
+
+def test_滿七天後再次告警():
+    alerts = {"TSA": "2026-09-10"}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 17)) is True
+
+
+def test_不同站各自計算節流():
+    alerts = {"TSA": "2026-09-10"}
+    assert state.should_alert(alerts, "PAIN", date(2026, 9, 11)) is True
+
+
+def test_告警紀錄讀寫(tmp_path):
+    p = tmp_path / "alerts.json"
+    assert state.load_alerts(p) == {}
+    state.save_alerts(p, {"TSA": "2026-09-10"})
+    assert state.load_alerts(p) == {"TSA": "2026-09-10"}
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_state.py -k alert -v`
+Expected: FAIL，`AttributeError: module 'society_watch.state' has no attribute 'should_alert'`
+
+- [ ] **Step 3: 實作**
+
+在 `society_watch/state.py` 頂端 import 區追加 `from datetime import date, timedelta`，並在檔案末尾追加：
+
+```python
+ALERT_COOLDOWN_DAYS = 7
+
+
+def load_alerts(path: Path) -> dict[str, str]:
+    if not Path(path).exists():
+        return {}
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def save_alerts(path: Path, alerts: dict[str, str]) -> None:
+    Path(path).write_text(
+        json.dumps(alerts, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def should_alert(alerts: dict[str, str], source: str, today: date) -> bool:
+    """同一站 7 天內最多告警一次，避免站掛掉時天天吵。"""
+    last = alerts.get(source)
+    if not last:
+        return True
+    return today - date.fromisoformat(last) >= timedelta(days=ALERT_COOLDOWN_DAYS)
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_state.py -v`
+Expected: 12 passed
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add society_watch/state.py tests/test_society_state.py
+git commit -m "feat(society-watch): 告警節流，同站七天最多一次"
+```
+
+---
+
+## Task 13: 主流程串接
+
+**Files:**
+- Create: `society_watch/main.py`
+- Create: `tests/test_society_main.py`
+
+**三個必要行為：**
+1. 單站失敗**不中斷其他站**
+2. HTTP 200 但解析出 0 筆 → 視為疑似改版並告警
+3. `--bootstrap` 只寫狀態檔不推播（否則首次執行會把約 50 則一次推出洗版）
+
+- [ ] **Step 1: 寫失敗測試**
+
+建立 `tests/test_society_main.py`：
+
+```python
+"""主流程測試。以假的抓取函式取代網路。"""
+import sys
+from datetime import date
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from society_watch import main  # noqa: E402
+from society_watch.models import Event  # noqa: E402
+
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "society_watch"
+
+
+EMPTY_TABLE = "<table class='table'><tbody></tbody></table>"
+
+
+def _fake_fetch(mapping, failures=None):
+    failures = failures or {}
+
+    def _get(url, **kwargs):
+        for key, exc in failures.items():
+            if key in url:
+                raise exc
+        # PAIN 會被抓兩次（今年＋明年）；明年度實際上是空表，
+        # 若不分開處理會把同一份 fixture 回兩次，筆數多算 10 筆
+        if "educlass_page1_content" in url and "yy=2027" in url:
+            return EMPTY_TABLE
+        for key, name in mapping.items():
+            if key in url:
+                return (FIXTURES / name).read_text(encoding="utf-8")
+        return "<html></html>"
+
+    return _get
+
+
+ALL_OK = {
+    "anesth.org.tw": "tsa_events_20260910.html",
+    "congress.tscva.org.tw": "tscva_news_20260910.html",
+    "news-list/2": "rapm_newslist2_20260910.html",
+    "news-list/5": "rapm_newslist5_20260910.html",
+    "educlass_page1_content": "pain_fragment_20260910.html",
+}
+
+
+def test_收集五站事件(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)   # 別把快照寫進真實 repo
+    monkeypatch.setattr(main.fetch, "get", _fake_fetch(ALL_OK))
+    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
+    events, failures = main.collect(date(2026, 9, 10))
+    assert failures == []
+    # TSA 15 + TSCVA 6 + RAPM 16 + RAPM 11 + PAIN 10（今年）+ 0（明年空表）
+    assert len(events) == 58
+
+
+def test_單站失敗不中斷其他站(tmp_path, monkeypatch):
+    import requests
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(
+        main.fetch, "get",
+        _fake_fetch(ALL_OK, failures={"congress.tscva.org.tw": requests.ConnectionError("斷線")}),
+    )
+    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
+    events, failures = main.collect(date(2026, 9, 10))
+    assert [f[0] for f in failures] == ["TSCVA"]
+    assert any(e.source == "TSA" for e in events)
+    assert not any(e.source == "TSCVA" for e in events)
+
+
+def test_解析出零筆視為疑似改版(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    # 拿掉 TSA 的對應，讓它抓到一個 HTTP 200 但沒有活動的空頁
+    without_tsa = {k: v for k, v in ALL_OK.items() if "anesth" not in k}
+    monkeypatch.setattr(main.fetch, "get", _fake_fetch(without_tsa))
+    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
+    events, failures = main.collect(date(2026, 9, 10))
+    assert ("TSA", "解析出 0 筆，疑似改版") in failures
+    assert any(e.source == "RAPM" for e in events)   # 其他站不受影響
+
+
+def test_bootstrap只寫狀態不推播(tmp_path, monkeypatch):
+    pushed = []
+    monkeypatch.setattr(main.fetch, "get", _fake_fetch(ALL_OK))
+    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
+    monkeypatch.setattr(main.notify, "push_line", lambda text: pushed.append(text))
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+
+    assert pushed == []
+    assert len(main.state.load_seen(tmp_path / "seen.json")) == 58
+
+
+def test_第二次執行沒有新項目就不推播(tmp_path, monkeypatch):
+    pushed = []
+    monkeypatch.setattr(main.fetch, "get", _fake_fetch(ALL_OK))
+    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
+    monkeypatch.setattr(main.notify, "push_line", lambda text: pushed.append(text))
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    main.run(bootstrap=False, today=date(2026, 9, 11))
+    assert pushed == []
+
+
+def test_有新項目就推播(tmp_path, monkeypatch):
+    pushed = []
+    monkeypatch.setattr(main.fetch, "get", _fake_fetch(ALL_OK))
+    monkeypatch.setattr(main, "collect_airway", lambda: ([], [], None))
+    monkeypatch.setattr(main.notify, "push_line", lambda text: pushed.append(text))
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    # 移掉一筆已見過的紀錄，模擬出現新活動
+    seen = main.state.load_seen(tmp_path / "seen.json")
+    seen.discard("TSA:3105")
+    main.state.save_seen(tmp_path / "seen.json", seen)
+
+    main.run(bootstrap=False, today=date(2026, 9, 11))
+    assert len(pushed) == 1
+    assert "3105" in pushed[0]
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_main.py -v`
+Expected: FAIL，`ModuleNotFoundError: No module named 'society_watch.main'`
+
+- [ ] **Step 3: 實作**
+
+建立 `society_watch/main.py`：
+
+```python
+"""學會活動監測主流程。
+
+用法：
+    python3 -m society_watch.main --bootstrap   # 首次執行：只寫狀態檔，不推播
+    python3 -m society_watch.main               # 日常執行
+"""
+import argparse
+import traceback
+from datetime import date
+from pathlib import Path
+
+from . import extract, fetch, llm, notify, state
+from .models import Event
+from .sources import SOURCES, pain_urls
+
+DATA_DIR = Path(__file__).resolve().parent
+
+PARSERS = {
+    "tsa": lambda html, cfg: extract.parse_tsa(html),
+    "tscva": lambda html, cfg: extract.parse_tscva(html),
+    "rapm": lambda html, cfg: extract.parse_rapm(html, kind=cfg["kind"]),
+    "pain": lambda html, cfg: extract.parse_pain(html),
+}
+
+
+def collect_airway() -> tuple[list[Event], list[str], str | None]:
+    """回傳（事件, 本次全文行, 失敗原因）。
+
+    只有 diff 出現新增行時才呼叫 Haiku，沒新增就完全不呼叫。
+    """
+    cfg = next(s for s in SOURCES if s["source"] == "AIRWAY")
+    html = fetch.get(cfg["url"])
+    lines = extract.airway_lines(html)
+
+    previous = state.load_snapshot(DATA_DIR / "airway_snapshot.txt")
+    if previous and len(lines) < len(previous) * 0.5:
+        return [], lines, f"純文字行數自 {len(previous)} 暴跌至 {len(lines)}，疑似改版"
+
+    new_lines = extract.airway_new_lines(lines, previous)
+    if not previous:
+        # 首次執行：只建立快照，不送 LLM
+        return [], lines, None
+    return llm.classify(new_lines), lines, None
+
+
+def collect(today: date) -> tuple[list[Event], list[tuple[str, str]]]:
+    """逐站抓取與解析。單站失敗不影響其他站。"""
+    events: list[Event] = []
+    failures: list[tuple[str, str]] = []
+
+    for cfg in SOURCES:
+        source = cfg["source"]
+        if cfg["parser"] == "airway":
+            continue
+        urls = pain_urls(today) if cfg["parser"] == "pain" else [cfg["url"]]
+        try:
+            found: list[Event] = []
+            for url in urls:
+                found.extend(PARSERS[cfg["parser"]](fetch.get(url), cfg))
+        except Exception as e:
+            print(f"  ❌ {source} 抓取失敗：{type(e).__name__}: {e}")
+            failures.append((source, f"{type(e).__name__}: {e}"))
+            continue
+
+        # found 是該站所有 URL 的累加結果。PAIN 的明年度清單正常為空，
+        # 但今年＋明年全空就確實異常，故此處統一判斷即可。
+        if not found:
+            failures.append((source, "解析出 0 筆，疑似改版"))
+            print(f"  ⚠️ {source} 解析出 0 筆，疑似改版")
+            continue
+
+        print(f"  ✅ {source}（{cfg.get('kind', '-')}）{len(found)} 筆")
+        events.extend(found)
+
+    try:
+        airway_events, airway_lines_now, airway_error = collect_airway()
+        if airway_error:
+            failures.append(("AIRWAY", airway_error))
+        else:
+            events.extend(airway_events)
+            print(f"  ✅ AIRWAY {len(airway_events)} 筆")
+        # 只有正常抓到才更新快照。抓壞了還覆蓋的話，
+        # 下一輪會拿壞快照當基準，把整頁都當成新增全部推出來。
+        if not airway_error:
+            state.save_snapshot(DATA_DIR / "airway_snapshot.txt", airway_lines_now)
+    except Exception as e:
+        print(f"  ❌ AIRWAY 抓取失敗：{type(e).__name__}: {e}")
+        traceback.print_exc()
+        failures.append(("AIRWAY", f"{type(e).__name__}: {e}"))
+
+    return events, failures
+
+
+def run(bootstrap: bool = False, today: date | None = None) -> None:
+    today = today or date.today()
+    seen_path = DATA_DIR / "seen.json"
+    alerts_path = DATA_DIR / "alert_state.json"
+
+    print(f"執行日期：{today}｜模式：{'bootstrap' if bootstrap else '日常'}")
+    events, failures = collect(today)
+
+    seen = state.load_seen(seen_path)
+    fresh = state.filter_new(events, seen)
+    print(f"抓到 {len(events)} 筆，其中新項目 {len(fresh)} 筆")
+
+    if bootstrap:
+        state.save_seen(seen_path, seen | {e.key for e in events})
+        print("bootstrap 模式：只寫狀態檔，不推播。")
+        return
+
+    if fresh:
+        for part in notify.split_message(notify.format_message(fresh)):
+            notify.push_line(part)
+        print(f"已推播 {len(fresh)} 則。")
+    else:
+        print("沒有新項目，不推播。")
+
+    if failures:
+        alerts = state.load_alerts(alerts_path)
+        due = [f for f in failures if state.should_alert(alerts, f[0], today)]
+        if due:
+            notify.push_line(notify.format_alert(due))
+            for source, _ in due:
+                alerts[source] = today.isoformat()
+            state.save_alerts(alerts_path, alerts)
+            print(f"已送出 {len(due)} 則告警。")
+        else:
+            print("有失敗但都在告警冷卻期內，不重複告警。")
+
+    state.save_seen(seen_path, seen | {e.key for e in events})
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="學會活動監測與推播")
+    parser.add_argument(
+        "--bootstrap", action="store_true",
+        help="首次執行：只建立狀態檔，不推播（避免把現存約 50 則一次推出）",
+    )
+    args = parser.parse_args()
+    run(bootstrap=args.bootstrap)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_main.py -v`
+Expected: 6 passed
+
+- [ ] **Step 5: 全套測試回歸**
+
+Run: `python3 -m pytest tests/ -v -m "not live"`
+Expected: 全數 passed，且既有的 `test_fx_rate` 等測試不受影響
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add society_watch/main.py tests/test_society_main.py
+git commit -m "feat(society-watch): 主流程串接、逐站錯誤隔離與 bootstrap 模式"
+```
+
+---
+
+## Task 14: GitHub Actions 排程與首次上線
+
+**Files:**
+- Create: `.github/workflows/society-watch.yml`
+
+- [ ] **Step 1: 建立 workflow**
+
+建立 `.github/workflows/society-watch.yml`：
+
+```yaml
+name: 學會活動監測
+
+on:
+  schedule:
+    # 每日 02:00 UTC = 10:00 台灣時間，與日報的 08:45／09:05 錯開
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: '首次執行：只建立狀態檔不推播（填 true）'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic requests beautifulsoup4
+
+      - name: Run society watch
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+        run: |
+          if [ "${{ github.event.inputs.bootstrap }}" = "true" ]; then
+            python3 -m society_watch.main --bootstrap
+          else
+            python3 -m society_watch.main
+          fi
+
+      - name: Commit state
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add society_watch/seen.json society_watch/airway_snapshot.txt society_watch/alert_state.json
+          if git diff --cached --quiet; then
+            echo "狀態無變化，不 commit。"
+          else
+            git commit -m "chore: update society watch state [skip ci]"
+            git push
+          fi
+```
+
+- [ ] **Step 2: 本機乾跑一次確認能抓到真實資料**
+
+Run:
+```bash
+LINE_CHANNEL_ACCESS_TOKEN=dummy LINE_USER_ID=dummy python3 -m society_watch.main --bootstrap
+```
+Expected: 印出六列 `✅`（TSA/TSCVA/RAPM×2/PAIN/AIRWAY），總筆數約 55–60，末行為 `bootstrap 模式：只寫狀態檔，不推播。`，且產生 `society_watch/seen.json` 與 `society_watch/airway_snapshot.txt`。
+
+- [ ] **Step 3: 檢查狀態檔格式**
+
+Run: `head -5 society_watch/seen.json && tail -c 20 society_watch/seen.json | xxd | tail -1`
+Expected: 一則一行、排序、結尾有換行（`0a`）
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add .github/workflows/society-watch.yml society_watch/seen.json society_watch/airway_snapshot.txt
+git commit -m "feat(society-watch): GitHub Actions 每日排程"
+git push
+```
+
+- [ ] **Step 5: 設定 GitHub Secrets（需使用者操作）**
+
+在 repo 的 Settings → Secrets and variables → Actions 新增：
+
+- `LINE_USER_ID`：使用者個人 LINE userId
+
+> ⚠️ **userId 綁定 bot channel**：麻醉日報那支 bot 取得的 userId，與 MCP plugin 那支 bot 的 userId **不同、不可互用**。必須用實際推播的那支 bot（即 `LINE_CHANNEL_ACCESS_TOKEN` 所屬的 channel）取得：把該 bot 加為好友後傳一則訊息，從 webhook log 撈 `events[0].source.userId`。
+>
+> `CLAUDE_API_KEY` 與 `LINE_CHANNEL_ACCESS_TOKEN` 已存在，沿用即可。
+
+- [ ] **Step 6: 手動觸發驗證**
+
+在 Actions 頁面手動觸發「學會活動監測」，**input 留空**（非 bootstrap）。因為 Step 4 已把 bootstrap 產生的 `seen.json` commit 進去，這次應該是 `沒有新項目，不推播。`
+
+接著為了驗證推播真的會動，暫時從 `society_watch/seen.json` 刪掉一則（例如 `"TSA:3105"`）後 push，再手動觸發一次，確認 LINE 收得到訊息。驗證完把該筆補回或讓它自然留在 seen 裡即可。
+
+---
+
+## 完成後的驗收標準
+
+- [ ] `python3 -m pytest tests/ -m "not live"` 全數通過
+- [ ] `python3 -m pytest tests/ -m live` 通過（實際連 TSA 不亂碼）
+- [ ] 本機 bootstrap 跑得出六列 `✅`，總筆數 55–60
+- [ ] `society_watch/seen.json` 為排序、一則一行、結尾有換行
+- [ ] GitHub Actions 手動觸發成功，LINE 收得到測試推播
+- [ ] 既有的日報 workflow 未受影響（`daily-fetch-classify` / `daily-push` 照常）
