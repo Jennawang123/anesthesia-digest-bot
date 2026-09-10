@@ -11,6 +11,12 @@ from .models import Event
 
 TSA_BASE = "https://www.anesth.org.tw/events/"
 
+TSCVA_BASE = "https://congress.tscva.org.tw"
+
+# 非活動類公告的降級關鍵字。刻意保守：只攔明確的名單／獎項／資格公告，
+# 不為個案追加規則（over-fitting），判不出來一律不降級。
+TSCVA_MINOR_KEYWORDS = ("名單", "恭賀", "獲獎", "甄審條件")
+
 
 def _clean(text: str) -> str:
     """壓平連續空白。RAPM 的標題含大量換行與樣板註解。"""
@@ -50,5 +56,30 @@ def parse_tsa(html: str) -> list[Event]:
             url=TSA_BASE + link["href"],
             kind=_clean(kind_el.get_text(strip=True)) if kind_el else None,
             place=place,
+        ))
+    return events
+
+
+def parse_tscva(html: str) -> list[Event]:
+    """心臟胸腔暨血管麻醉醫學會最新消息（/news 完整列表，非首頁摘要）。"""
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+    for card in soup.select("a.news_card"):
+        href = card.get("href", "")
+        if "/news/" not in href:
+            continue
+        uid = href.rsplit("/", 1)[1]
+
+        title_el = card.select_one("p.news_card_title")
+        time_el = card.select_one("time.news_card_time")
+        title = _clean(title_el.get_text(" ", strip=True)) if title_el else ""
+
+        events.append(Event(
+            source="TSCVA",
+            uid=uid,
+            title=title,
+            date_text=time_el.get("datetime", "") if time_el else "",
+            url=TSCVA_BASE + href,
+            minor=any(k in title for k in TSCVA_MINOR_KEYWORDS),
         ))
     return events
