@@ -1309,6 +1309,7 @@ class FakeResponse:
         self.encoding = "ISO-8859-1"   # requests 無 charset 時的預設猜測
         self.apparent_encoding = "utf-8"
         self.status_code = 200
+        self.url = "https://example.com"
 
     @property
     def text(self):
@@ -1327,9 +1328,21 @@ def test_標頭無charset時改用apparent_encoding(monkeypatch):
     assert fetch.get("https://example.com") == "鎮靜活動"
 
 
+def test_標頭無charset時優先看頁面自己的meta(monkeypatch):
+    # anesth.org.tw 就是這種：Content-Type 裸 text/html，但頁面寫了
+    # <meta charset="utf-8">。能問頁面就別用統計猜。
+    body = '<meta charset="utf-8"><h4>鎮靜活動</h4>'.encode("utf-8")
+    resp = FakeResponse(body, "text/html")
+    resp.apparent_encoding = "big5"      # 猜錯的話會解成亂碼
+    monkeypatch.setattr(fetch.requests, "get", lambda *a, **k: resp)
+    assert "鎮靜活動" in fetch.get("https://example.com")
+
+
 def test_標頭有charset時尊重標頭(monkeypatch):
+    # apparent_encoding 刻意設成不同值：兩者相同的話，就算實作誤把標頭
+    # 無條件覆寫掉，這個測試也照樣會過（mutation 實測確認過）
     resp = FakeResponse("鎮靜活動".encode("utf-8"), "text/html; charset=utf-8")
-    resp.encoding = "utf-8"
+    resp.apparent_encoding = "big5"
     monkeypatch.setattr(fetch.requests, "get", lambda *a, **k: resp)
     assert fetch.get("https://example.com") == "鎮靜活動"
 
@@ -1367,6 +1380,47 @@ def test_第二次就成功則不再重試(monkeypatch):
 def test_實際抓TSA不亂碼():
     html = fetch.get("https://www.anesth.org.tw/events/index.asp")
     assert "鎮靜" in html or "工作坊" in html
+
+
+def _http_error(status: int) -> requests.HTTPError:
+    resp = FakeResponse(b"", "text/html; charset=utf-8")
+    resp.status_code = status
+    return requests.HTTPError(f"{status}", response=resp)
+
+
+def test_永久性失敗不重試(monkeypatch):
+    # raise_for_status 拋的 HTTPError 也是 RequestException，一律重試的話
+    # 站方改網址(404)或擋爬蟲(403)會白白多打兩次
+    calls = []
+
+    def gone(*a, **k):
+        calls.append(1)
+        raise _http_error(404)
+
+    monkeypatch.setattr(fetch.requests, "get", gone)
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    with pytest.raises(requests.HTTPError):
+        fetch.get("https://example.com")
+    assert len(calls) == 1
+
+
+def test_伺服器錯誤仍會重試(monkeypatch):
+    calls = []
+
+    def flaky(*a, **k):
+        calls.append(1)
+        raise _http_error(503)
+
+    monkeypatch.setattr(fetch.requests, "get", flaky)
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    with pytest.raises(requests.HTTPError):
+        fetch.get("https://example.com")
+    assert len(calls) == 3
+
+
+def test_attempts為零時明確報錯():
+    with pytest.raises(ValueError):
+        fetch.get("https://example.com", attempts=0)
 ```
 
 - [ ] **Step 2: 執行測試確認失敗**
@@ -1379,7 +1433,8 @@ Expected: **collection error**（不是 test failed）——`ImportError: cannot
 建立 `society_watch/fetch.py`：
 
 ```python
-"""HTTP 抓取層：UA、timeout、重試、編碼修正。"""
+"""HTTP 抓取層：UA、timeout、重試、編碼決定。"""
+import re
 import time
 
 import requests
@@ -1391,24 +1446,76 @@ UA = {
     )
 }
 
+# 只在前段找，避免整頁掃描；meta charset 依規範就該在 head 前面
+_META_CHARSET = re.compile(
+    rb"""<meta[^>]+charset\s*=\s*["']?\s*([A-Za-z0-9_.:-]+)""", re.I
+)
+
+
+def _header_charset(resp: requests.Response) -> str | None:
+    ctype = resp.headers.get("Content-Type", "")
+    m = re.search(r"charset\s*=\s*([^\s;]+)", ctype, re.I)
+    return m.group(1).strip('"\'') if m else None
+
+
+def _meta_charset(content: bytes) -> str | None:
+    m = _META_CHARSET.search(content[:4096])
+    return m.group(1).decode("ascii", "ignore") if m else None
+
+
+def _decode(resp: requests.Response) -> str:
+    """決定編碼並解碼。
+
+    順序：HTTP 標頭 → 頁面自己的 <meta charset> → apparent_encoding。
+
+    為什麼要有中間那一層：anesth.org.tw 的 Content-Type 是裸 text/html，
+    requests 會退回猜 ISO-8859-1，整頁中文變亂碼；但那一頁其實有寫
+    <meta charset="utf-8">，requests 完全不看。落到 apparent_encoding 是
+    純統計推斷，而 CJK 編碼互相誤判時解出來的是「合法但錯誤的漢字」，
+    不會拋例外、不會有 U+FFFD，任何下游檢查都攔不到——parser 照樣吐出
+    N 筆亂碼標題推到 LINE。能問頁面就別用猜的。
+    """
+    encoding = _header_charset(resp)
+    if not encoding:
+        encoding = _meta_charset(resp.content)
+    if not encoding:
+        encoding = resp.apparent_encoding or "utf-8"
+        # 推斷是最後手段，留一行紀錄讓 Actions log 看得到用了什麼
+        print(f"    ℹ️ {getattr(resp, 'url', '?')} 未宣告編碼，推斷為 {encoding}")
+
+    resp.encoding = encoding
+    return resp.text
+
+
+def _should_retry(error: requests.RequestException) -> bool:
+    """只重試「等一下可能會好」的失敗。
+
+    raise_for_status 拋的 HTTPError 也是 RequestException，若一律重試，
+    站方改網址（404）或擋爬蟲（403）這種永久性失敗會白白多打兩次。
+    """
+    if isinstance(error, requests.HTTPError):
+        resp = error.response
+        if resp is None:
+            return False
+        return resp.status_code == 429 or resp.status_code >= 500
+    return True   # 連線、逾時、DNS 等傳輸類一律重試
+
 
 def get(url: str, timeout: int = 30, attempts: int = 3) -> str:
-    """抓一個頁面回傳解碼後的 HTML 字串。
+    """抓一個頁面回傳解碼後的 HTML 字串。"""
+    if attempts < 1:
+        raise ValueError("attempts 至少要 1")
 
-    anesth.org.tw 的 Content-Type 不帶 charset，requests 此時會退回猜
-    ISO-8859-1 導致整頁中文變亂碼，因此標頭沒有 charset 就改用
-    apparent_encoding（實測為 utf-8）。
-    """
     last_error = None
     for i in range(attempts):
         try:
             resp = requests.get(url, headers=UA, timeout=timeout)
             resp.raise_for_status()
-            if "charset=" not in resp.headers.get("Content-Type", "").lower():
-                resp.encoding = resp.apparent_encoding or "utf-8"
-            return resp.text
+            return _decode(resp)
         except requests.RequestException as e:
             last_error = e
+            if not _should_retry(e):
+                break
             if i == attempts - 1:
                 break
             wait = 2 ** i
@@ -1420,7 +1527,7 @@ def get(url: str, timeout: int = 30, attempts: int = 3) -> str:
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_fetch.py -v -m "not live"`
-Expected: 4 passed, 1 deselected
+Expected: 8 passed, 1 deselected
 
 - [ ] **Step 5: 跑一次 live 測試確認真實站點沒問題**
 
@@ -2329,6 +2436,10 @@ permissions:
 jobs:
   watch:
     runs-on: ubuntu-latest
+    # 最壞情況實測約 11 分鐘（7 個 URL × 重試 3 次 × timeout 30s ＋ 退避）。
+    # Actions 預設是 360 分鐘，遇到慢速滴水的伺服器會空轉數小時佔住額度，
+    # 不如快死快重試——狀態檔只在推播成功後才寫，被砍不會漏報，只會重推。
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
