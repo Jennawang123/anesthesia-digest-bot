@@ -10,7 +10,15 @@
 
 **設計依據：** `docs/superpowers/specs/2026-09-10-society-event-watcher-design.md`
 
-**「確認失敗」該長什麼樣：** 新建模組的 task（2、7、8、9、10、11、13），pytest 會在 **collection 階段報 error**（`1 error` / `Interrupted: 1 error during collection`）而非 `failed`，因為 import 的模組還不存在。這些測試檔用的是 `from society_watch import <模組>` 的寫法，package 本身已存在、只缺子模組，因此丟的是 **`ImportError: cannot import name ...`**，不是 `ModuleNotFoundError`（只有 `import society_watch.<模組>` 那種寫法才會是後者）。只有「模組已存在但缺函式」的 task（3、4、5、6、12）才會是真正的 test failure（`AttributeError`）。兩者都算通過 TDD 的「先確認失敗」這一步。
+**「確認失敗」該長什麼樣：** 各 Step 的 `Expected` 只保證**例外型別**，不保證 pytest 把它歸類成 `failed` 還是 `error`。三種情形都算通過 TDD 的「先確認失敗」：
+
+| 情形 | pytest 標籤 | 例外 |
+|---|---|---|
+| 模組還不存在（Task 2、7、8、9、10、11、13） | collection `error` | `ImportError: cannot import name '<模組>' from 'society_watch'` |
+| 模組存在但缺函式，且函式在 **pytest fixture 內**被呼叫（Task 3、5） | `error at setup` | `AttributeError: module ... has no attribute ...` |
+| 模組存在但缺函式，函式在**測試函式本體內**被呼叫（Task 4、6、12） | `failed` | `AttributeError: module ... has no attribute ...` |
+
+只要例外型別對得上就繼續往下走，不需要為了讓標籤變成 `failed` 而改測試寫法。
 
 **測試原則：** 所有 parser 對著 `tests/fixtures/society_watch/` 的 2026-09-10 實抓樣本測，**不打真實網路**。斷言值皆為該日實測值。既有 repo 慣例：測試函式名用繁體中文（見 `tests/test_fx_rate.py`），需連外的測試標 `@pytest.mark.live`。
 
