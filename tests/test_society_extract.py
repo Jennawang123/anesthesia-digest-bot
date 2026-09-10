@@ -139,3 +139,35 @@ def test_rapm_缺日期節點仍收錄不漏報():
     assert len(events) == 1
     assert events[0].uid == "98"
     assert events[0].date_text == ""
+
+
+# ── PAIN ──────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def pain_events():
+    return extract.parse_pain(_fx("pain_fragment_20260910.html"))
+
+
+def test_pain_抽出十筆(pain_events):
+    assert len(pain_events) == 10
+
+
+def test_pain_首筆欄位(pain_events):
+    e = pain_events[0]
+    assert e.source == "PAIN"
+    assert e.uid == "3142"
+    assert e.date_text == "2026 八月 23"
+    assert e.title.startswith("2026 台灣疼痛醫學會 全人整合醫學教育 系列工作坊")
+
+
+def test_pain_全部連到列表頁(pain_events):
+    # 該站無逐則網址（詳細是 onclick 不是 href）
+    assert all(
+        x.url == "https://pain.org.tw/index.php/educlass_page/index/33/1/8/34"
+        for x in pain_events
+    )
+
+
+def test_pain_空表回傳空list():
+    # 明年度尚無活動時，該 endpoint 回的是只有表頭的空表
+    assert extract.parse_pain("<table class='table'><tbody></tbody></table>") == []

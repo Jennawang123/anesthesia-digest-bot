@@ -19,6 +19,9 @@ RAPM_BASE = "https://rapm.org.tw/"
 # 不為個案追加規則（over-fitting），判不出來一律不降級。
 TSCVA_MINOR_KEYWORDS = ("名單", "恭賀", "獲獎", "甄審條件")
 
+# 該站「詳細」是 onclick 不是 href，無逐則網址，一律連列表頁
+PAIN_LIST_URL = "https://pain.org.tw/index.php/educlass_page/index/33/1/8/34"
+
 
 def _clean(text: str) -> str:
     """壓平連續空白。RAPM 的標題含大量換行與樣板註解。"""
@@ -119,5 +122,35 @@ def parse_rapm(html: str, kind: str) -> list[Event]:
             # 直接沿用 href 會靜默產出無效連結，故一律經 urljoin 正規化。
             url=urljoin(RAPM_BASE, href),
             kind=kind,
+        ))
+    return events
+
+
+def parse_pain(html: str) -> list[Event]:
+    """疼痛醫學會學術教育活動列表（AJAX fragment）。
+
+    日期欄是三個 span 疊出來的（2026 / 八月 / 23），原樣以空白串接。
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+    for row in soup.select("table tbody tr"):
+        m = re.search(r"cal_listview_click_func\('(\d+)'\)", str(row))
+        title_el = row.select_one("span.text-info")
+        if not m or not title_el:
+            continue
+
+        cells = row.select("td")
+        date_text = ""
+        if cells:
+            date_text = _clean(" ".join(
+                s.get_text(strip=True) for s in cells[0].select("span")
+            ))
+
+        events.append(Event(
+            source="PAIN",
+            uid=m.group(1),
+            title=_clean(title_el.get_text(" ", strip=True)),
+            date_text=date_text,
+            url=PAIN_LIST_URL,
         ))
     return events
