@@ -81,3 +81,40 @@ def test_tscva_降級命中三筆(tscva_events):
 def test_tscva_即將辦理活動不降級(tscva_events):
     e = next(x for x in tscva_events if x.title.startswith("[即將辦理活動]"))
     assert e.minor is False
+
+
+# ── RAPM ──────────────────────────────────────────────────────────────────────
+
+def test_rapm_學會活動抽出十六筆():
+    events = extract.parse_rapm(_fx("rapm_newslist2_20260910.html"), kind="學會活動")
+    assert len(events) == 16
+
+
+def test_rapm_首筆欄位():
+    events = extract.parse_rapm(_fx("rapm_newslist2_20260910.html"), kind="學會活動")
+    e = events[0]
+    assert e.source == "RAPM"
+    assert e.uid == "32"
+    assert e.date_text == "2026-08-26"
+    assert e.kind == "學會活動"
+    assert e.url == "https://rapm.org.tw/news-detail/32"
+    # 活動日只在標題裡（＠November 1），不嘗試抽出
+    assert e.title == "疼痛擂台 8：真實病人工作坊-全脊守護，從頸到骶 ＠November 1"
+
+
+def test_rapm_標題壓平樣板空白():
+    events = extract.parse_rapm(_fx("rapm_newslist2_20260910.html"), kind="學會活動")
+    assert all("\n" not in x.title and "  " not in x.title for x in events)
+
+
+def test_rapm_友會活動抽出十一筆():
+    events = extract.parse_rapm(_fx("rapm_newslist5_20260910.html"), kind="友會活動")
+    assert len(events) == 11
+    assert events[0].uid == "23"
+    assert events[0].kind == "友會活動"
+
+
+def test_rapm_兩分類編號不重疊():
+    a = extract.parse_rapm(_fx("rapm_newslist2_20260910.html"), kind="學會活動")
+    b = extract.parse_rapm(_fx("rapm_newslist5_20260910.html"), kind="友會活動")
+    assert not ({x.uid for x in a} & {x.uid for x in b})

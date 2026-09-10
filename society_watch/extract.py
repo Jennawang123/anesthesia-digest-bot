@@ -83,3 +83,34 @@ def parse_tscva(html: str) -> list[Event]:
             minor=any(k in title for k in TSCVA_MINOR_KEYWORDS),
         ))
     return events
+
+
+def parse_rapm(html: str, kind: str) -> list[Event]:
+    """區域麻醉暨疼痛醫學會消息列表。
+
+    kind 由呼叫端依來源 URL 指定：/news-list/2 為「學會活動」、/news-list/5 為「友會活動」。
+    兩個分類共用同一組全域 news-detail/{id} 編號，故 uid 不需再加分類前綴。
+
+    .service_date 是公告日不是活動日；活動日只存在於標題（例「＠November 1」）
+    或海報圖上，不嘗試抽取。
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+    for item in soup.select(".service_item"):
+        link = item.select_one(".service_title a")
+        date_el = item.select_one(".service_date")
+        if not link or not date_el:
+            continue
+        href = link.get("href", "")
+        if "news-detail/" not in href:
+            continue
+
+        events.append(Event(
+            source="RAPM",
+            uid=href.rsplit("/", 1)[1],
+            title=_clean(link.get_text(" ", strip=True)),
+            date_text=_clean(date_el.get_text(strip=True)),
+            url=href,
+            kind=kind,
+        ))
+    return events
