@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    
+    <title>News | TSCVA</title>
+
+    <link rel="icon" type="image/png" href="/common/img/logo/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/common/img/logo/favicon.svg" />
+    <link rel="shortcut icon" href="/common/img/logo/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/common/img/logo/apple-touch-icon.png" />
+
+    <!-- Google tag (gtag.js) -->
+    
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-DX0LXVJ5R6"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', "G-DX0LXVJ5R6");
+        </script>
+    
+
+    <!-- core -->
+    <script src="/core/jQuery-3.5.1/jquery-3.5.1.min.js"></script>
+    <link href="/core/bootstrap-5.3.8/css/bootstrap.min.css" rel="stylesheet">
+    <script src="/core/bootstrap-5.3.8/js/bootstrap.bundle.min.js"></script>
+
+    <!-- plugins -->
+    <link href="/plugins/fontawesome-free-6.7.2-web/css/all.min.css" rel="stylesheet">
+    <link href="/plugins/jquery-ui-1.12.1/jquery-ui.min.css" rel="stylesheet">
+    <script src="/plugins/jquery-ui-1.12.1/jquery-ui.min.js"></script>
+    <script src="/plugins/jquery-ui-touch-punch-master/jquery.ui.touch-punch.min.js"></script>
+    <script src="/common/js/form-validation.js"></script>
+
+    <link href="/plugins/swiper-11.1.15/swiper-bundle.min.css" rel="stylesheet">
+    <script src="/plugins/swiper-11.1.15/swiper-bundle.min.js"></script>
+
+    <link href="/plugins/fancyapps/ui-5.0.36/dist/fancybox/fancybox.css" rel="stylesheet">
+    <script src="/plugins/fancyapps/ui-5.0.36/dist/fancybox/fancybox.umd.js"></script>
+
+    <!-- custom -->
+    <link href="/common/css/simplify.css" rel="stylesheet">
+    <link href="/common/css/custom.css" rel="stylesheet">
+    <link href="/common/css/form-validation.css" rel="stylesheet">
+    <script src="/common/js/custom.js"></script>
+    <script src="/common/js/menu-hint.js" defer></script>
+
+    
+    
+</head>
+<body>
+    <div id="wrap">
+        <header class="header">
+    <nav class="navbar navbar-light navbar-expand-xl">
+        <div class="container">
+            <a class="navbar-brand me-3" href="/">
+                <img src="/common/img/logo/logo-header.png" height="50" alt="SCNM 2027">
+            </a>
+            <button class="btn navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#headerCollapse" aria-controls="headerCollapse" aria-expanded="false" aria-label="Toggle navigation">
+                <img class="aria-expanded-false" src="/common/img/icon/icon-menu.png" alt="">
+                <img class="aria-expanded-true" src="/common/img/icon/icon-close.png" alt="">
+            </button>
+            <div class="collapse navbar-collapse" id="headerCollapse">
+                <ul class="navbar-nav justify-content-between">
+                    <!-- PAGE 類型 menu 注入 data-menu-page-code / data-menu-label，供 menu-hint.js 寫 cookie -->
+                    
+
+                        
+                            <li NOTE="無子項：一般連結" class="nav-item">
+                                <a class="nav-link" href="/news">
+                                    <span class="_lg">最新消息</span>
+                                    
+                                </a>
+                            </li>
+
+                            
+
+                            
+                        
+
+                        
+
+                        
+                    
+
+                        
+                            <li NOTE="無子項：一般連結" class="nav-item">
+                                <a class="nav-link" href="/scientific_program"
+                                   data-menu-page-code="scientific_program"
+                                   data-menu-label="學術議程">
+                                    <span class="_lg">學術議程</span>
+                                    
+                                </a>
+                            </li>
+
+                            
+
+                            
+                        
+
+                        
+
+                        
+                    
+
+                        
+                            <li NOTE="無子項：一般連結" class="nav-item">
+                                <a class="nav-link" href="/speakers">
+                                    <span class="_lg">邀請貴賓</span>
+                                    
+                                </a>
+                            </li>
+
+                            
+
+                            
+                        
+
+                        
+
+                        
+                    
+
+                        
+                            
+
+                            <li NOTE="有子項：頂層 + 1層清單" class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                    <span class="_lg">線上報名</span>
+                                    
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="/registration_guideline"
+                                           data-menu-page-code="registration_guideline"
+                                           data-menu-label="報名須知">
+                                            <span class="_lg">報名須知</span>
+                                            
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            
+                        
+
+                        
+
+                        
+                    
+
+                        
+                            <li NOTE="無子項：一般連結" class="nav-item">
+                                <a class="nav-link" href="/venue"
+                                   data-menu-page-code="venue"
+                                   data-menu-label="場地資訊">
+                                    <span class="_lg">場地資訊</span>
+                                    
+                                </a>
+                            </li>
+
+                            
+
+                            
+                        
+
+                        
+
+                        
+                    
+
+                        
+                            <li NOTE="無子項：一般連結" class="nav-item">
+                                <a class="nav-link" href="/sponsorship"
+                                   data-menu-page-code="sponsorship"
+                                   data-menu-label="贊助廠商">
+                                    <span class="_lg">贊助廠商</span>
+                                    
+                                </a>
+                            </li>
+
+                            
+
+                            
+                        
+
+                        
+
+                        
+                    
+
+                        
+
+                        
+
+                        
+                            <li NOTE="無子項：未登入" class="nav-item">
+                                <a class="nav-link" href="/login">
+                                    <span class="_lg">登入</span>
+                                    
+                                </a>
+                            </li>
+                        
+                    
+
+                        
+
+                        
+                            <li NOTE="無子項：未登入" class="nav-item">
+                                <a class="nav-link" href="/sign_up">
+                                    <span class="_lg">註冊</span>
+                                    
+                                </a>
+                            </li>
+                        
+
+                        
+                    
+
+                    <!-- 已登入會員區 -->
+                    
+                </ul>
+            </div>
+        </div>
+    </nav>
+</header>
+<script>
+    // Mega Menu
+    if ( $('.header-megaMenu').length > 0 ){
+        $('.header-megaMenu ul.navbar-nav > li.nav-item > a.nav-link.dropdown-toggle').on('click', function (e) {
+            if (window.matchMedia("(min-width: 1200px)").matches) {
+                e.preventDefault();
+                e.stopPropagation();
+                $('.header-megaMenu > .navbar').toggleClass('_expand');
+            }
+        });
+        $(document).on('click', function (e) {
+            // 電腦版：點擊 header 以外區域時收合展開的 mega menu
+            if (window.matchMedia("(min-width: 1200px)").matches && !$(e.target).closest('.header-megaMenu, .header-megaMenu > .navbar').length) {
+                $('.header-megaMenu > .navbar').removeClass('_expand');
+            }
+            // 手機板：點擊 header 以外區域時收合 headerCollapse
+            if (window.matchMedia("(max-width: 1199.98px)").matches && $('#headerCollapse').hasClass('show') && !$(e.target).closest('.header-megaMenu').length) {
+                $('#headerCollapse').collapse('hide');
+            }
+        });
+    }
+</script>
+        <main>
+    
+    <div class="bg_grayF">
+        <nav class="container" aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">HOME</a></li>
+                
+                <li class="breadcrumb-item active" aria-current="page">
+                    <span>News</span>
+                </li>
+            </ol>
+        </nav>
+    </div>
+
+    
+    <div class="main_title_banner">
+        <img class="main_title_banner_img"
+             src="/upload/event/20260701/5a2f4706864e480db8761b30b989c839/bannerBG.png" alt=""/>
+        <div class="container">
+            <h1 class="main_title">最新消息</h1>
+        </div>
+    </div>
+
+
+    <article class="article_py">
+        <div class="container">
+            <div class="container_1200">
+                <ul class="row row-cols-1 g-3 list-unstyled">
+                    <li class="cols">
+                        <a class="news_card" href="/news/e9003f5d-1793-4fc4-babe-d031dd36b18b">
+                            <div class="news_card_body">
+                                <div class="flex_center_a gap-2">
+                                    <time class="news_card_time"
+                                          datetime="2026-09-01">2026-09-01</time>
+                                    
+                                </div>
+                                <p class="news_card_title">【恭賀通過名單】2026 年度 TSCVA 專科醫師甄審通過名單</p>
+                            </div>
+                            <div class="news_card_arrow">
+                                <svg width="44" height="56" viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M15.1428 45.4998C14.9179 45.5026 14.695 45.4574 14.4883 45.367C14.2817 45.2765 14.0958 45.143 13.9428 44.9748C13.257 44.2748 13.257 43.1898 13.9428 42.4898L28.1713 27.9648L13.9428 13.4748C13.257 12.7748 13.257 11.6898 13.9428 10.9898C14.6285 10.2898 15.6913 10.2898 16.377 10.9898L31.7713 26.7748C32.457 27.4748 32.457 28.5598 31.7713 29.2598L16.3428 44.9748C15.9999 45.3248 15.5542 45.4998 15.1428 45.4998Z" fill="currentColor"/>
+                                </svg>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="cols">
+                        <a class="news_card" href="/news/4890462f-3b96-48b1-98bc-35cde5f50c60">
+                            <div class="news_card_body">
+                                <div class="flex_center_a gap-2">
+                                    <time class="news_card_time"
+                                          datetime="2026-09-01">2026-09-01</time>
+                                    
+                                </div>
+                                <p class="news_card_title">【獲獎名單】2026第二屆心安優護獎 - 臺灣優良心胸麻醉照護護理人員 / 護理團隊</p>
+                            </div>
+                            <div class="news_card_arrow">
+                                <svg width="44" height="56" viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M15.1428 45.4998C14.9179 45.5026 14.695 45.4574 14.4883 45.367C14.2817 45.2765 14.0958 45.143 13.9428 44.9748C13.257 44.2748 13.257 43.1898 13.9428 42.4898L28.1713 27.9648L13.9428 13.4748C13.257 12.7748 13.257 11.6898 13.9428 10.9898C14.6285 10.2898 15.6913 10.2898 16.377 10.9898L31.7713 26.7748C32.457 27.4748 32.457 28.5598 31.7713 29.2598L16.3428 44.9748C15.9999 45.3248 15.5542 45.4998 15.1428 45.4998Z" fill="currentColor"/>
+                                </svg>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="cols">
+                        <a class="news_card" href="/news/f473b213-e6f6-45ba-846f-883b30fe535d">
+                            <div class="news_card_body">
+                                <div class="flex_center_a gap-2">
+                                    <time class="news_card_time"
+                                          datetime="2026-08-21">2026-08-21</time>
+                                    
+                                </div>
+                                <p class="news_card_title">【2026第二屆心安優護獎-台灣優良心胸麻醉護理團隊】報告順序</p>
+                            </div>
+                            <div class="news_card_arrow">
+                                <svg width="44" height="56" viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M15.1428 45.4998C14.9179 45.5026 14.695 45.4574 14.4883 45.367C14.2817 45.2765 14.0958 45.143 13.9428 44.9748C13.257 44.2748 13.257 43.1898 13.9428 42.4898L28.1713 27.9648L13.9428 13.4748C13.257 12.7748 13.257 11.6898 13.9428 10.9898C14.6285 10.2898 15.6913 10.2898 16.377 10.9898L31.7713 26.7748C32.457 27.4748 32.457 28.5598 31.7713 29.2598L16.3428 44.9748C15.9999 45.3248 15.5542 45.4998 15.1428 45.4998Z" fill="currentColor"/>
+                                </svg>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="cols">
+                        <a class="news_card" href="/news/c946f9c7-8a79-4968-8825-d46c616997e0">
+                            <div class="news_card_body">
+                                <div class="flex_center_a gap-2">
+                                    <time class="news_card_time"
+                                          datetime="2026-07-02">2026-07-02</time>
+                                    
+                                </div>
+                                <p class="news_card_title">【2026第二屆心安優護獎-台灣優良心胸麻醉護理團隊】甄選辦法</p>
+                            </div>
+                            <div class="news_card_arrow">
+                                <svg width="44" height="56" viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M15.1428 45.4998C14.9179 45.5026 14.695 45.4574 14.4883 45.367C14.2817 45.2765 14.0958 45.143 13.9428 44.9748C13.257 44.2748 13.257 43.1898 13.9428 42.4898L28.1713 27.9648L13.9428 13.4748C13.257 12.7748 13.257 11.6898 13.9428 10.9898C14.6285 10.2898 15.6913 10.2898 16.377 10.9898L31.7713 26.7748C32.457 27.4748 32.457 28.5598 31.7713 29.2598L16.3428 44.9748C15.9999 45.3248 15.5542 45.4998 15.1428 45.4998Z" fill="currentColor"/>
+                                </svg>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="cols">
+                        <a class="news_card" href="/news/d6a347f1-d2eb-4096-860e-690ba9d3de08">
+                            <div class="news_card_body">
+                                <div class="flex_center_a gap-2">
+                                    <time class="news_card_time"
+                                          datetime="2026-07-01">2026-07-01</time>
+                                    
+                                </div>
+                                <p class="news_card_title">報考2026年心胸麻專科甄審條件及資格</p>
+                            </div>
+                            <div class="news_card_arrow">
+                                <svg width="44" height="56" viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M15.1428 45.4998C14.9179 45.5026 14.695 45.4574 14.4883 45.367C14.2817 45.2765 14.0958 45.143 13.9428 44.9748C13.257 44.2748 13.257 43.1898 13.9428 42.4898L28.1713 27.9648L13.9428 13.4748C13.257 12.7748 13.257 11.6898 13.9428 10.9898C14.6285 10.2898 15.6913 10.2898 16.377 10.9898L31.7713 26.7748C32.457 27.4748 32.457 28.5598 31.7713 29.2598L16.3428 44.9748C15.9999 45.3248 15.5542 45.4998 15.1428 45.4998Z" fill="currentColor"/>
+                                </svg>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="cols">
+                        <a class="news_card" href="/news/3b966409-a217-4d21-b82a-2ee609978fb4">
+                            <div class="news_card_body">
+                                <div class="flex_center_a gap-2">
+                                    <time class="news_card_time"
+                                          datetime="2026-07-01">2026-07-01</time>
+                                    
+                                </div>
+                                <p class="news_card_title">[即將辦理活動] 115年 08 月 30 日（日）2026年臺灣心臟胸腔暨血管麻醉醫學會年會暨國際學術研討會暨專科甄審暨系列活動-微創介入，全人照護 Minimal Access, Maximum Care</p>
+                            </div>
+                            <div class="news_card_arrow">
+                                <svg width="44" height="56" viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M15.1428 45.4998C14.9179 45.5026 14.695 45.4574 14.4883 45.367C14.2817 45.2765 14.0958 45.143 13.9428 44.9748C13.257 44.2748 13.257 43.1898 13.9428 42.4898L28.1713 27.9648L13.9428 13.4748C13.257 12.7748 13.257 11.6898 13.9428 10.9898C14.6285 10.2898 15.6913 10.2898 16.377 10.9898L31.7713 26.7748C32.457 27.4748 32.457 28.5598 31.7713 29.2598L16.3428 44.9748C15.9999 45.3248 15.5542 45.4998 15.1428 45.4998Z" fill="currentColor"/>
+                                </svg>
+                            </div>
+                        </a>
+                    </li>
+                </ul>
+                
+
+                <div class="py-1">
+                    
+    
+
+                </div>
+            </div>
+        </div>
+    </article>
+
+</main>
+        <footer class="footer">
+    <div class="container">
+        <div class="footer--logos">
+            <img src="/common/img/logo/logo-footer.png" alt="TSCVA" class="footer--logo">
+            <div class="text-center text-xl-start">
+                <div class="_lg">臺灣心臟胸腔暨血管麻醉醫學會</div>
+                <div class="_sm">Taiwan Society of Cardiothoracic and Vascular Anesthesia</div>
+            </div>
+        </div>
+        <div class="text-xl-end">
+            <div class="footer--contact">
+                <a href="tel:062525047">06-2525047</a>
+                <div class="footer--divider"></div>
+                <a href="mailto:tscvaanes@gmail.com">tscvaanes@gmail.com</a>
+            </div>
+            <div class="fz_h6 mt-2 mt-xl-1">&copy; All copyright reserved 2023 by TSVCA</div>
+        </div>
+    </div>
+</footer>
+    </div>
+
+    <!-- 全站共用結果 modal:
+         server 端 controller 用 ra.addFlashAttribute("flashMessage", ...) 觸發;
+         client 端 AJAX 可呼叫 window.showFlashModal(message) 重用同一支。 -->
+    <div class="modal fade" id="flashModal" tabindex="-1" aria-hidden="true" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="btn close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center js-alert-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 暴露給其他 JS 重用:更新訊息 + show
+        window.showFlashModal = function (message, options) {
+            var el = document.getElementById('flashModal');
+            if (!el || !window.bootstrap || !bootstrap.Modal) {
+                window.alert(message);
+                if (options && typeof options.onClose === 'function') options.onClose();
+                return;
+            }
+            var content = el.querySelector('.js-alert-content');
+            if (content) content.textContent = message;
+            if (options && typeof options.onClose === 'function') {
+                el.addEventListener('hidden.bs.modal', options.onClose, { once: true });
+            }
+            bootstrap.Modal.getOrCreateInstance(el).show();
+        };
+    </script>
+    
+
+    <!-- 全域事件委派:點擊 .js-banner-msg(MESSAGE 模式的 hero banner 按鈕)時,
+         讀 data-message 觸發 flashModal。寫在 layout 確保前台每頁皆可用。 -->
+    <script>
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('.js-banner-msg');
+            if (!btn) return;
+            e.preventDefault();
+            window.showFlashModal(btn.getAttribute('data-message') || '');
+        });
+    </script>
+
+<!-- 可追加 script -->
+
+</body>
+</html>
