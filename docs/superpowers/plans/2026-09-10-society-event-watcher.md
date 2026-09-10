@@ -10,7 +10,7 @@
 
 **設計依據：** `docs/superpowers/specs/2026-09-10-society-event-watcher-design.md`
 
-**「確認失敗」該長什麼樣：** 新建模組的 task（2、7、8、9、10、11、13），pytest 會在 **collection 階段報 error**（`1 error` / `Interrupted: 1 error during collection`）而非 `failed`，因為 import 的模組還不存在。只有「模組已存在但缺函式」的 task（3、4、5、6、12）才會是真正的 test failure（`AttributeError`）。兩者都算通過 TDD 的「先確認失敗」這一步。
+**「確認失敗」該長什麼樣：** 新建模組的 task（2、7、8、9、10、11、13），pytest 會在 **collection 階段報 error**（`1 error` / `Interrupted: 1 error during collection`）而非 `failed`，因為 import 的模組還不存在。這些測試檔用的是 `from society_watch import <模組>` 的寫法，package 本身已存在、只缺子模組，因此丟的是 **`ImportError: cannot import name ...`**，不是 `ModuleNotFoundError`（只有 `import society_watch.<模組>` 那種寫法才會是後者）。只有「模組已存在但缺函式」的 task（3、4、5、6、12）才會是真正的 test failure（`AttributeError`）。兩者都算通過 TDD 的「先確認失敗」這一步。
 
 **測試原則：** 所有 parser 對著 `tests/fixtures/society_watch/` 的 2026-09-10 實抓樣本測，**不打真實網路**。斷言值皆為該日實測值。既有 repo 慣例：測試函式名用繁體中文（見 `tests/test_fx_rate.py`），需連外的測試標 `@pytest.mark.live`。
 
@@ -200,7 +200,7 @@ def test_tsa_全部不降級(tsa_events):
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_extract.py -v`
-Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.extract'`，pytest 顯示 `1 error` 與 `Interrupted: 1 error during collection`
+Expected: **collection error**（不是 test failed）——`ImportError: cannot import name 'extract' from 'society_watch'`，pytest 顯示 `1 error` 與 `Interrupted: 1 error during collection`
 
 - [ ] **Step 3: 實作**
 
@@ -761,7 +761,7 @@ def test_回應無法解析時回空list():
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_llm.py -v`
-Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.llm'`，pytest 顯示 `1 error`
+Expected: **collection error**（不是 test failed）——`ImportError: cannot import name 'llm' from 'society_watch'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
@@ -938,7 +938,7 @@ def test_快照讀寫(tmp_path):
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_state.py -v`
-Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.state'`，pytest 顯示 `1 error`
+Expected: **collection error**（不是 test failed）——`ImportError: cannot import name 'state' from 'society_watch'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
@@ -1110,7 +1110,7 @@ def test_實際抓TSA不亂碼():
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_fetch.py -v -m "not live"`
-Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.fetch'`，pytest 顯示 `1 error`
+Expected: **collection error**（不是 test failed）——`ImportError: cannot import name 'fetch' from 'society_watch'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
@@ -1231,7 +1231,7 @@ def test_每個來源都有網址與parser名稱():
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_sources.py -v`
-Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.sources'`，pytest 顯示 `1 error`
+Expected: **collection error**（不是 test failed）——`ImportError: cannot import name 'sources' from 'society_watch'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
@@ -1415,7 +1415,7 @@ def test_告警訊息列出失敗站別():
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_notify.py -v`
-Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.notify'`，pytest 顯示 `1 error`
+Expected: **collection error**（不是 test failed）——`ImportError: cannot import name 'notify' from 'society_watch'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
@@ -1785,7 +1785,7 @@ def test_有新項目就推播(tmp_path, monkeypatch):
 - [ ] **Step 2: 執行測試確認失敗**
 
 Run: `python3 -m pytest tests/test_society_main.py -v`
-Expected: **collection error**（不是 test failed）——`ModuleNotFoundError: No module named 'society_watch.main'`，pytest 顯示 `1 error`
+Expected: **collection error**（不是 test failed）——`ImportError: cannot import name 'main' from 'society_watch'`，pytest 顯示 `1 error`
 
 - [ ] **Step 3: 實作**
 
