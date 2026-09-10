@@ -12,14 +12,33 @@ from anthropic import Anthropic
 from .extract import AIRWAY_URL
 from .models import Event
 
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = "claude-haiku-4-5"   # 完整 model id，不加日期後綴
+
+# 單次送給模型的新增行上限。整頁被判為新增（改版、頁面搬家）時，
+# 與其花錢送一大包進去、還可能被 max_tokens 截斷成半截 JSON，
+# 不如當成異常拋出去告警——快照不會前進，人看過再說。
+MAX_NEW_LINES = 60
+
+class LLMResponseError(RuntimeError):
+    """Haiku 回應無法解析，或新增量異常。
+
+    刻意拋出而非回空 list：呼叫端（main.collect）的 except 會把它記成
+    AIRWAY 失敗 → 送告警 → **不更新快照** → 下一輪重試。
+    若改回空 list，「模型回垃圾」與「模型判定沒有活動」在呼叫端完全同形，
+    快照照樣前進，那批公告就永久漏掉且無人知曉。
+    """
+
 
 PROMPT_TEMPLATE = """以下是台灣呼吸道處理醫學會網站「最新資訊」頁新增的內容片段。
 請判斷其中包含哪些「活動、課程或工作坊」公告。
 
 請只輸出 JSON 陣列，每個元素包含：
 - title：活動名稱（字串）
-- date_text：活動日期，原樣照抄不要換算民國年或西元年（找不到就給空字串）
+- date_text：活動日期。**只取日期本身**，不要含時間、星期、時區，也不要含
+  「時間：」這類標籤與 emoji。年份原樣照抄，不要在民國年與西元年之間換算。
+  找不到就給空字串。
+  例：「📅 時間：115年2月7日（星期六）08:30-12:30」→「115年2月7日」
+  例：「🗓️ 上課時間： 2026年6月13日（六）10:00 - 11:00 (GMT+8)」→「2026年6月13日」
 - is_event：是否為活動／課程／工作坊公告（布林值）。人事賀詞、得獎名單、宣傳影片請給 false。
 
 不確定是不是活動時，一律給 is_event: true。
@@ -35,23 +54,33 @@ def build_prompt(new_lines: list[str]) -> str:
     return PROMPT_TEMPLATE.format(content="\n".join(new_lines))
 
 
-def parse_response(raw: str) -> list[Event]:
-    """把模型回應解析成 Event。解析不出來回空 list，不拋例外。"""
+def parse_response_checked(raw: str) -> tuple[list[Event], bool]:
+    """回傳（事件清單, 是否成功解析出 JSON 陣列）。
+
+    第二個值是關鍵：合法的空陣列與垃圾回應都會產出空清單，
+    只有這裡分得出來，不能把這個資訊丟掉。
+    """
     text = raw.strip()
     fence = re.search(r"```(?:json)?\s*(.+?)```", text, re.S)
     if fence:
         text = fence.group(1).strip()
 
-    match = re.search(r"\[.*\]", text, re.S)
-    if not match:
-        return []
+    start = text.find("[")
+    if start == -1:
+        return [], False
     try:
-        items = json.loads(match.group(0))
+        # 用 raw_decode 而非貪婪 regex：模型若在陣列後又寫了含 [ ] 的散文，
+        # 貪婪比對會抓到過寬的區間而整包解析失敗。
+        items, _ = json.JSONDecoder().raw_decode(text[start:])
     except json.JSONDecodeError:
-        return []
+        return [], False
+    if not isinstance(items, list):
+        return [], False
 
     events = []
     for item in items:
+        if not isinstance(item, dict):
+            continue
         title = str(item.get("title", "")).strip()
         if not title:
             continue
@@ -64,17 +93,34 @@ def parse_response(raw: str) -> list[Event]:
             url=AIRWAY_URL,
             minor=not item.get("is_event", True),
         ))
-    return events
+    return events, True
+
+
+def parse_response(raw: str) -> list[Event]:
+    """薄包裝，維持「解析不出來回空 list」的既有契約。"""
+    return parse_response_checked(raw)[0]
 
 
 def classify(new_lines: list[str]) -> list[Event]:
     """呼叫 Haiku 判斷新增段落。沒有新增行就不呼叫 API。"""
     if not new_lines:
         return []
+    if len(new_lines) > MAX_NEW_LINES:
+        raise LLMResponseError(
+            f"新增 {len(new_lines)} 行超過上限 {MAX_NEW_LINES}，疑似整頁改版"
+        )
+
     client = Anthropic(api_key=os.environ["CLAUDE_API_KEY"])
     resp = client.messages.create(
         model=MODEL,
         max_tokens=2000,
         messages=[{"role": "user", "content": build_prompt(new_lines)}],
     )
-    return parse_response(resp.content[0].text)
+    # 取第一個 text block，不假設 content[0] 就是文字
+    # （日後若換成預設開 thinking 的模型，content[0] 會是 thinking block）
+    text = next((b.text for b in resp.content if getattr(b, "type", None) == "text"), "")
+
+    events, ok = parse_response_checked(text)
+    if not ok:
+        raise LLMResponseError("Haiku 回應無法解析為 JSON 陣列")
+    return events
