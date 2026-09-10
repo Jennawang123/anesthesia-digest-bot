@@ -38,7 +38,10 @@ SOURCES = [
     {
         "source": "PAIN",
         "label": "台灣疼痛醫學會",
-        "url": PAIN_ENDPOINT,     # 實際抓取時由 pain_urls() 補上 ?yy=
+        # ⚠️ 這個 url 只是佔位：collect() 對 PAIN 走的是 pain_urls(today)，
+        # 不讀這個欄位。若日後有人把 collect() 統一改成讀 cfg["url"]（很自然的
+        # 簡化），PAIN 會靜默退回只抓當年，跨年防護消失。改之前先看 pain_urls。
+        "url": PAIN_ENDPOINT,
         "parser": "pain",
     },
     {
@@ -53,10 +56,14 @@ SOURCES = [
 LABELS = {s["source"]: s["label"] for s in SOURCES}
 
 
-def pain_urls(today: date) -> list[str]:
-    """疼痛醫學會要抓今年＋明年兩份。
+# 相對於當前年份要抓的年份位移。
+# +1 是主要目的：該列表「年份 scoped」且預設只回當年，明年度活動一旦公告
+#    不會出現在預設頁面，只抓當年會漏報。
+# -1 補的是跨年單向死角：視窗只往前滑，12/31 當天執行之後才上架、掛在去年
+#    年份下的項目，1/1 起就再也抓不到，那是永久漏報而非延遲。多一次 HTTP 而已。
+PAIN_YEAR_OFFSETS = (-1, 0, 1)
 
-    該列表是「年份 scoped」且預設只回當年，明年度活動一旦公告
-    不會出現在預設頁面，只抓當年會造成漏報。
-    """
-    return [f"{PAIN_ENDPOINT}?yy={today.year + n}" for n in (0, 1)]
+
+def pain_urls(today: date) -> list[str]:
+    """疼痛醫學會要抓去年／今年／明年三份，合併後由呼叫端去重。"""
+    return [f"{PAIN_ENDPOINT}?yy={today.year + n}" for n in PAIN_YEAR_OFFSETS]

@@ -1572,17 +1572,25 @@ def test_五個來源代號齊全():
     }
 
 
-def test_pain同時抓今年與明年():
+def test_pain抓去年今年明年三份():
+    # 用完整字串比對而非子字串：只驗 "yy=2026" 的話，? 掉成路徑黏連
+    # （…/0yy=2026）也會過，實際上等於沒帶 query param、靜默退回當年
     urls = sources.pain_urls(date(2026, 9, 10))
-    assert len(urls) == 2
-    assert "yy=2026" in urls[0]
-    assert "yy=2027" in urls[1]
+    assert urls == [
+        f"{sources.PAIN_ENDPOINT}?yy={y}" for y in (2025, 2026, 2027)
+    ]
 
 
-def test_pain跨年時自動往後推():
+def test_pain跨年時整個視窗往後推():
     urls = sources.pain_urls(date(2027, 1, 5))
-    assert "yy=2027" in urls[0]
-    assert "yy=2028" in urls[1]
+    assert urls == [
+        f"{sources.PAIN_ENDPOINT}?yy={y}" for y in (2026, 2027, 2028)
+    ]
+
+
+def test_pain視窗含去年以補跨年死角():
+    # 視窗只往前滑的話，12/31 執行後才上架的當年項目 1/1 起永遠抓不到
+    assert -1 in sources.PAIN_YEAR_OFFSETS
 
 
 def test_rapm有兩個分類():
@@ -1592,9 +1600,22 @@ def test_rapm有兩個分類():
 
 
 def test_每個來源都有網址與parser名稱():
+    assert len(sources.SOURCES) == 6      # 沒有這行，SOURCES 被清空時迴圈跑零圈也會過
     for s in sources.SOURCES:
         assert s["url"].startswith("https://")
         assert s["parser"]
+
+
+def test_每筆設定的網址都不重複():
+    # 兩筆 RAPM 是複製貼上來的，漏改 url 會讓友會活動永久不再監測，
+    # 而且畫面上與其他測試都看不出來（kind 沒有被顯示在通知裡）
+    urls = [s["url"] for s in sources.SOURCES]
+    assert len(set(urls)) == len(urls)
+
+
+def test_每個來源代號都有顯示名稱():
+    assert set(sources.LABELS) == {s["source"] for s in sources.SOURCES}
+    assert all(sources.LABELS.values())
 ```
 
 - [ ] **Step 2: 執行測試確認失敗**
@@ -1647,7 +1668,10 @@ SOURCES = [
     {
         "source": "PAIN",
         "label": "台灣疼痛醫學會",
-        "url": PAIN_ENDPOINT,     # 實際抓取時由 pain_urls() 補上 ?yy=
+        # ⚠️ 這個 url 只是佔位：collect() 對 PAIN 走的是 pain_urls(today)，
+        # 不讀這個欄位。若日後有人把 collect() 統一改成讀 cfg["url"]（很自然的
+        # 簡化），PAIN 會靜默退回只抓當年，跨年防護消失。改之前先看 pain_urls。
+        "url": PAIN_ENDPOINT,
         "parser": "pain",
     },
     {
@@ -1662,19 +1686,23 @@ SOURCES = [
 LABELS = {s["source"]: s["label"] for s in SOURCES}
 
 
-def pain_urls(today: date) -> list[str]:
-    """疼痛醫學會要抓今年＋明年兩份。
+# 相對於當前年份要抓的年份位移。
+# +1 是主要目的：該列表「年份 scoped」且預設只回當年，明年度活動一旦公告
+#    不會出現在預設頁面，只抓當年會漏報。
+# -1 補的是跨年單向死角：視窗只往前滑，12/31 當天執行之後才上架、掛在去年
+#    年份下的項目，1/1 起就再也抓不到，那是永久漏報而非延遲。多一次 HTTP 而已。
+PAIN_YEAR_OFFSETS = (-1, 0, 1)
 
-    該列表是「年份 scoped」且預設只回當年，明年度活動一旦公告
-    不會出現在預設頁面，只抓當年會造成漏報。
-    """
-    return [f"{PAIN_ENDPOINT}?yy={today.year + n}" for n in (0, 1)]
+
+def pain_urls(today: date) -> list[str]:
+    """疼痛醫學會要抓去年／今年／明年三份，合併後由呼叫端去重。"""
+    return [f"{PAIN_ENDPOINT}?yy={today.year + n}" for n in PAIN_YEAR_OFFSETS]
 ```
 
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_sources.py -v`
-Expected: 5 passed
+Expected: 8 passed
 
 - [ ] **Step 5: Commit**
 
@@ -2046,17 +2074,26 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures" / "society_watch"
 EMPTY_TABLE = "<table class='table'><tbody></tbody></table>"
 
 
+pain_urls_seen: list[str] = []
+
+
 def _fake_fetch(mapping, failures=None):
     failures = failures or {}
+    pain_urls_seen.clear()
 
     def _get(url, **kwargs):
         for key, exc in failures.items():
             if key in url:
                 raise exc
-        # PAIN 會被抓兩次（今年＋明年）；明年度實際上是空表，
-        # 若不分開處理會把同一份 fixture 回兩次，筆數多算 10 筆
-        if "educlass_page1_content" in url and "yy=2027" in url:
-            return EMPTY_TABLE
+        # PAIN 會被抓三次（去年／今年／明年）。這裡刻意嚴格：沒帶 yy 就炸，
+        # 否則日後若有人把 collect() 改成統一讀 cfg["url"]，PAIN 會靜默
+        # 退回只抓當年、跨年防護消失，而測試筆數仍然分毫不差地通過。
+        if "educlass_page1_content" in url:
+            if "yy=" not in url:
+                raise AssertionError(f"PAIN 的抓取 URL 必須帶 yy=：{url}")
+            pain_urls_seen.append(url)
+            if "yy=2026" not in url:
+                return EMPTY_TABLE
         for key, name in mapping.items():
             if key in url:
                 return (FIXTURES / name).read_text(encoding="utf-8")
@@ -2093,6 +2130,22 @@ def test_收集五站事件(env):
     assert failures == []
     assert len(events) == TOTAL_EVENTS
     assert airway_lines == ["A", "B"]
+
+
+def test_pain三個年份都有被抓(env):
+    main.collect(date(2026, 9, 10))
+    assert sorted(u.rsplit("=", 1)[1] for u in pain_urls_seen) == ["2025", "2026", "2027"]
+
+
+def test_rapm兩個分類的告警key互不相干(env, monkeypatch):
+    import requests
+    monkeypatch.setattr(
+        main.fetch, "get",
+        _fake_fetch(ALL_OK, failures={"news-list/5": requests.ConnectionError("斷線")}),
+    )
+    _, failures, _ = main.collect(date(2026, 9, 10))
+    # key 要帶 kind，否則友會活動的失敗會吃掉學會活動的 7 天告警冷卻期
+    assert [f[0] for f in failures] == ["RAPM／友會活動"]
 
 
 def test_單站失敗不中斷其他站(env, monkeypatch):
@@ -2282,6 +2335,10 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] 
         source = cfg["source"]
         if cfg["parser"] == "airway":
             continue
+        # 同一個 source 可能有多筆設定（RAPM 的學會活動／友會活動）。
+        # 告警 key 若只用 source，其中一筆失敗會吃掉另一筆的 7 天冷卻期，
+        # 真故障會被另一個故障的節流紀錄遮住。
+        alert_key = f"{source}／{cfg['kind']}" if cfg.get("kind") else source
         urls = pain_urls(today) if cfg["parser"] == "pain" else [cfg["url"]]
         try:
             found: list[Event] = []
@@ -2289,13 +2346,13 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] 
                 found.extend(PARSERS[cfg["parser"]](fetch.get(url), cfg))
         except Exception as e:
             print(f"  ❌ {source} 抓取失敗：{type(e).__name__}: {e}")
-            failures.append((source, f"{type(e).__name__}: {e}"))
+            failures.append((alert_key, f"{type(e).__name__}: {e}"))
             continue
 
         # found 是該站所有 URL 的累加結果。PAIN 的明年度清單正常為空，
         # 但今年＋明年全空就確實異常，故此處統一判斷即可。
         if not found:
-            failures.append((source, "解析出 0 筆，疑似改版"))
+            failures.append((alert_key, "解析出 0 筆，疑似改版"))
             print(f"  ⚠️ {source} 解析出 0 筆，疑似改版")
             continue
 
@@ -2391,7 +2448,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_main.py -v`
-Expected: 11 passed
+Expected: 13 passed
 
 - [ ] **Step 5: 全套測試回歸**
 
