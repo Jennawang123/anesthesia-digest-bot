@@ -7,6 +7,7 @@ seen.json 只增不減：TSA 是 15 筆滾動視窗，舊活動會掉出列表�
 import json
 import os
 import tempfile
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Iterable
 
@@ -72,3 +73,27 @@ def load_snapshot(path: Path) -> list[str]:
 
 def save_snapshot(path: Path, lines: list[str]) -> None:
     _atomic_write(path, "\n".join(lines) + "\n")
+
+
+ALERT_COOLDOWN_DAYS = 7
+
+
+def load_alerts(path: Path) -> dict[str, str]:
+    if not Path(path).exists():
+        return {}
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def save_alerts(path: Path, alerts: dict[str, str]) -> None:
+    Path(path).write_text(
+        json.dumps(alerts, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def should_alert(alerts: dict[str, str], source: str, today: date) -> bool:
+    """同一站 7 天內最多告警一次，避免站掛掉時天天吵。"""
+    last = alerts.get(source)
+    if not last:
+        return True
+    return today - date.fromisoformat(last) >= timedelta(days=ALERT_COOLDOWN_DAYS)

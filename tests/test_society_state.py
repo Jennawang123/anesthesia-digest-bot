@@ -1,6 +1,7 @@
 """狀態層測試。"""
 import json
 import sys
+from datetime import date
 
 import pytest
 from pathlib import Path
@@ -73,3 +74,29 @@ def test_寫入失敗不會留下半截檔案(tmp_path, monkeypatch):
 
     assert state.load_seen(p) == {"TSA:1"}          # 舊內容完好
     assert not list(tmp_path.glob("*.tmp"))         # 暫存檔已清掉
+
+
+def test_首次失敗就告警():
+    assert state.should_alert({}, "TSA", date(2026, 9, 10)) is True
+
+
+def test_七天內重複失敗不再告警():
+    alerts = {"TSA": "2026-09-10"}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 14)) is False
+
+
+def test_滿七天後再次告警():
+    alerts = {"TSA": "2026-09-10"}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 17)) is True
+
+
+def test_不同站各自計算節流():
+    alerts = {"TSA": "2026-09-10"}
+    assert state.should_alert(alerts, "PAIN", date(2026, 9, 11)) is True
+
+
+def test_告警紀錄讀寫(tmp_path):
+    p = tmp_path / "alerts.json"
+    assert state.load_alerts(p) == {}
+    state.save_alerts(p, {"TSA": "2026-09-10"})
+    assert state.load_alerts(p) == {"TSA": "2026-09-10"}
