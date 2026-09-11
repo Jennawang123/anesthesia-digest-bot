@@ -3619,6 +3619,202 @@ git commit -m "feat(society-watch): 新增急重症聯合年會，並把文字 d
 
 ---
 
+## Task 17: 改用重症醫學會本體，並修掉 Task 16 review 揭露的三個問題
+
+**Files:**
+- Modify: `society_watch/extract.py`、`sources.py`、`llm.py`、`main.py` 與四個對應測試檔
+- Fixture（已存在，untracked，本 task 要納入版控）：`tests/fixtures/society_watch/tsccm_news_20260912.html`
+
+**背景：** 使用者指出 `tweccm.org.tw` 只是年會官網，`tsccm.org.tw`（中華民國重症醫學會）才是學會本體。實抓確認後兩個決定：
+
+1. **新增 tsccm 最新資訊**（`news/news_list.asp`）。實測 9 筆/頁、共 52 筆 6 頁，結構是 `ul.list_td`，帶日期與穩定 ID。
+2. **移除 tweccm 首頁那筆文字 diff 設定**（`/download/index.asp` 公告列表保留）。
+
+移除首頁的理由有三，第三個是 Task 16 執行者發現的：
+
+- tsccm 最新資訊已經在報 SECC 的消息（實測第一則就是「早鳥報名延至9/20！SECC Congress 2026 Taipei…」、第七則是「論文投稿延至7/31！」），結構化且零 LLM 成本，比 diff 首頁好。
+- 該首頁有輪播與過期殘留（實測 `2025/9/30` 與 `2026/09/20` 兩組早鳥截止並存且都不在註解內），是所有來源裡最吵的。
+- **首頁本身就含「其他公告」那四則的標題**。新公告上架時，公告列表推一則（`TWECCM:130`＋infoFiles 連結），首頁 diff 又會把同一標題送進 Haiku 產出另一則（`TWECCM:<hash>`＋首頁連結），uid 不同、去重擋不住，**同一則公告推兩次**。
+
+**順帶記一筆：** 使用者另外提過 `rapm.org.tw/society-annual-meeting-detail/3`，實查後不加——那是 2025 年已結束的年會詳情頁，且年會公告本來就出現在已監測的 `news-list/2`。
+
+- [ ] **Step 1: 寫失敗測試（tsccm parser）**
+
+在 `tests/test_society_extract.py` 末尾追加：
+
+```python
+# ── TSCCM ─────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def tsccm_events():
+    return extract.parse_tsccm(_fx("tsccm_news_20260912.html"))
+
+
+def test_tsccm_抽出九筆(tsccm_events):
+    # 該站 9 筆/頁、共 52 筆 6 頁。只抓第一頁：新項目一定在第一頁，
+    # 每天輪詢一次不可能單日新增超過 9 則（同 TSA 的滾動視窗邏輯）
+    assert len(tsccm_events) == 9
+
+
+def test_tsccm_首筆欄位(tsccm_events):
+    e = tsccm_events[0]
+    assert e.source == "TSCCM"
+    assert e.uid == "983"
+    assert e.date_text == "2026/09/07"
+    assert e.title == "早鳥報名延至9/20！ 「SECC Congress 2026 Taipei」暨 「急重症聯合學術年會」＋「第十屆亞太早期復健會議」"
+    assert e.url == "https://www.tsccm.org.tw/news/news_info.asp?/983.html"
+
+
+def test_tsccm_日期不含標籤文字(tsccm_events):
+    # 該欄原文是「日期： 2026/09/07」，標籤要拿掉
+    assert all("日期" not in e.date_text for e in tsccm_events)
+    assert all(e.date_text for e in tsccm_events)
+
+
+def test_tsccm_涵蓋secc報名消息(tsccm_events):
+    # 這是移除 tweccm 首頁 diff 的前提：年會消息在這裡就看得到
+    assert any("SECC" in e.title for e in tsccm_events)
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_extract.py -k tsccm -v`
+Expected: `AttributeError: module 'society_watch.extract' has no attribute 'parse_tsccm'`
+
+- [ ] **Step 3: 實作 parse_tsccm**
+
+`extract.py` 追加常數與函式：
+
+```python
+TSCCM_NEWS_BASE = "https://www.tsccm.org.tw/news/"
+```
+
+```python
+def parse_tsccm(html: str) -> list[Event]:
+    """中華民國重症醫學會最新資訊。
+
+    每則是一個 ul.list_td：第一個 li.w15p_lg 是日期（原文含「日期：」標籤），
+    li.w70p_lg 內的 <a href="news_info.asp?/983.html"> 帶穩定 ID。
+
+    注意該站是混編碼的：這頁 meta 宣告 utf-8，而課程頁宣告 big5，
+    兩頁的 HTTP 標頭都不帶 charset。解碼由 fetch._decode 的
+    「標頭 → 頁面 meta → 統計推斷」順序處理，parser 這層不必管。
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+    for block in soup.select("ul.list_td"):
+        link = block.select_one('a[href*="news_info.asp"]')
+        if not link:
+            continue
+        m = re.search(r"/(\d+)\.html", link.get("href", ""))
+        if not m:
+            continue
+
+        date_text = ""
+        date_el = block.select_one("li.w15p_lg")
+        if date_el:
+            label = date_el.select_one("span")
+            if label:
+                label.extract()
+            date_text = _clean(date_el.get_text(" ", strip=True))
+
+        events.append(Event(
+            source="TSCCM",
+            uid=m.group(1),
+            title=_clean(link.get_text(" ", strip=True)),
+            date_text=date_text,
+            url=urljoin(TSCCM_NEWS_BASE, link["href"]),
+        ))
+    return events
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_extract.py -v`
+Expected: 37 passed
+
+- [ ] **Step 5: 換掉來源設定**
+
+`sources.py`：**刪除** TWECCM 首頁那筆（`"parser": "text"` 的那一筆，保留 `/download/index.asp`），並追加：
+
+```python
+    {
+        "source": "TSCCM",
+        "label": "中華民國重症醫學會",
+        # 9 筆/頁、共 52 筆 6 頁。只抓第一頁就夠：新項目一定出現在第一頁。
+        "url": "https://www.tsccm.org.tw/news/news_list.asp",
+        "parser": "tsccm",
+    },
+```
+
+`main.py` 的 `PARSERS` 加入 `"tsccm"`。
+
+- [ ] **Step 6: 讓改版門檻隨頁面大小縮放**
+
+`llm.py` 目前用固定的 `MAX_NEW_LINES = 60`。Task 16 review 實測指出這對兩個文字來源的「實質容量」差一個數量級：AIRWAY 一則公告約 10–13 行，**一次貼 5 則新公告就撞上限**；而門檻的用意是攔「整頁改版」，不是攔「今天公告比較多」。
+
+改成依上一份快照的行數按比例計算：
+
+```python
+# 攔的是「整頁改版」而不是「今天公告比較多」，所以門檻要隨頁面大小縮放。
+# AIRWAY 一則公告約 10–13 行（主辦／課程名／主講人／時間／地點／連結各一行），
+# 固定 60 行等於只容得下 5 則新公告，太緊。
+NEW_LINES_RATIO = 0.6
+MIN_NEW_LINES_CAP = 40
+
+
+def new_lines_cap(previous_count: int) -> int:
+    return max(MIN_NEW_LINES_CAP, int(previous_count * NEW_LINES_RATIO))
+```
+
+`classify()` 多吃一個 `previous_count` 參數，並改用 `new_lines_cap(previous_count)` 判斷。呼叫端 `collect_text_source` 傳 `len(previous)`。
+
+- [ ] **Step 7: 告警原因要穩定，否則 7 天冷卻會失效**
+
+`should_alert` 以 reason 字串做節流 key。目前兩處異常訊息都內嵌會浮動的數字：
+
+- `f"新增 {len(new_lines)} 行超過上限 {MAX_NEW_LINES}"`
+- `f"純文字行數自 {len(previous)} 暴跌至 {len(lines)}，疑似改版"`
+
+數字每天不同 → 每天都是「新的壞法」→ 冷卻失效、天天吵。把數字移到 `print()`，reason 只留穩定描述：
+
+```python
+        raise LLMResponseError("新增行數異常，疑似整頁改版")
+```
+
+```python
+        print(f"    ⚠️ {source} 純文字行數自 {len(previous)} 暴跌至 {len(lines)}")
+        return [], lines, "純文字行數暴跌，疑似改版"
+```
+
+- [ ] **Step 8: `LLMResponseError` 不該被標成「程式錯誤」**
+
+`main._reason()` 目前把所有非 `RequestException`、非 anthropic 的例外標成「程式錯誤（需改 code）」。但整頁改版與模型回應無法解析，**該去看的是網站不是程式碼**。追加一個分類：
+
+```python
+    if isinstance(error, llm.LLMResponseError):
+        return f"內容異常（先看網站是否改版）{detail}"
+```
+
+放在 anthropic 判斷之後、程式錯誤之前。
+
+- [ ] **Step 9: 更新既有測試**
+
+- `tests/test_society_sources.py`：來源數由 8 改為 **8**（刪一筆首頁、加一筆 tsccm，總數不變），並確認 `TWECCM` 只剩一筆設定。
+- `tests/test_society_main.py`：`TOTAL_EVENTS` 由 62 改為 **71**（多 tsccm 9 筆），`ALL_OK` 移除首頁對應、加入 `"tsccm.org.tw/news"`。
+- `tests/test_society_llm.py`：`classify` 與門檻測試改用 `new_lines_cap`。
+- 補測試：`test_同一則公告不會因為兩個來源而推兩次`（TWECCM 現在只有一筆設定，這條是回歸守門）。
+
+- [ ] **Step 10: 全套回歸**
+
+Run: `python3 -m pytest tests/ -m "not live"` → 全數 passed
+
+- [ ] **Step 11: Commit**
+
+`git add` 要含新 fixture `tests/fixtures/society_watch/tsccm_news_20260912.html`。
+
+---
+
 ## 完成後的驗收標準
 
 - [ ] `python3 -m pytest tests/ -m "not live"` 全數通過
