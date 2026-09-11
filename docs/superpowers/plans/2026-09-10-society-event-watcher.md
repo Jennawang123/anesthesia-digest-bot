@@ -3400,6 +3400,225 @@ git commit -m "feat(society-watch): 月度心跳，把靜默死亡變成可察�
 
 ---
 
+## Task 16: 新增急重症聯合年會（SECC），並把文字 diff 一般化
+
+**Files:**
+- Modify: `society_watch/extract.py`（改名兩個函式＋新增 `parse_tweccm`）
+- Modify: `society_watch/llm.py`（prompt 吃學會名參數）
+- Modify: `society_watch/sources.py`（新增兩筆設定，AIRWAY 改用通用 parser）
+- Modify: `society_watch/main.py`（`collect_airway` 一般化為 `collect_text_source`）
+- Modify: 對應四個測試檔
+- Rename: `society_watch/airway_snapshot.txt` → `society_watch/snapshot_airway.txt`
+- Fixtures（已存在）：`tweccm_download_20260912.html`、`tweccm_home_20260912.html`
+
+**背景：** 使用者要求新增 `https://www.tweccm.org.tw/`。實抓後確認它不是學會消息流，是**單一年會的官網**，兩個頁面性質不同，兩個都要：
+
+| 頁面 | 性質 | 作法 |
+|---|---|---|
+| `/download/index.asp`（其他公告） | 結構化列表，`infoFiles.asp?/130.html` 帶穩定 ID | 硬解析 |
+| 首頁 | `重要訊息` 卡片（報名／投稿／截止日），才是真正會變的部分 | 文字 diff ＋ Haiku |
+
+**另一個被否決的來源：** 使用者同時提到 `https://rapm.org.tw/society-annual-meeting-detail/3`。實查後不加——那是 **2025 年已結束**的年會詳情頁，而且年會公告本來就會出現在我們已監測的 `news-list/2`（實測該列表含「2025 台灣區域麻醉暨止痛醫學會年會暨亞洲區域麻醉國際研討會」2025-10-14）。加它只會重複且盯住死頁面。
+
+**這個 task 的重點是一般化而非複製貼上。** 目前文字 diff 整套寫死給 AIRWAY：函式叫 `airway_lines`、快照檔名寫死、prompt 裡硬編「台灣呼吸道處理醫學會」、`collect()` 用 `cfg["source"] == "AIRWAY"` 判斷跳過。複製一份給 TWECCM 會讓兩份邏輯各自漂移。
+
+- [ ] **Step 1: 改名（純機械操作，先確保測試仍全過）**
+
+`extract.py` 裡 `airway_lines` → `page_lines`、`airway_new_lines` → `page_new_lines`（實作一字不改，它們本來就與來源無關，只是名字取壞了）。更新 `main.py` 與 `tests/test_society_extract.py` 的呼叫端與測試名稱。
+
+Run: `python3 -m pytest tests/ -m "not live"` → 應與改名前同樣全過。
+
+- [ ] **Step 2: 寫失敗測試（TWECCM 公告列表）**
+
+在 `tests/test_society_extract.py` 末尾追加：
+
+```python
+# ── TWECCM ────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def tweccm_events():
+    return extract.parse_tweccm(_fx("tweccm_download_20260912.html"))
+
+
+def test_tweccm_抽出四筆(tweccm_events):
+    assert len(tweccm_events) == 4
+
+
+def test_tweccm_首筆欄位(tweccm_events):
+    e = tweccm_events[0]
+    assert e.source == "TWECCM"
+    assert e.uid == "130"
+    assert e.title == "2026急重症照護”快閃擂台”競賽辦法,每場次限額4隊."
+    assert e.url == "https://www.tweccm.org.tw/download/infoFiles.asp?/130.html"
+    assert e.date_text == ""      # 該頁不提供日期，不硬掰
+
+
+def test_tweccm_uid取自檔案連結(tweccm_events):
+    assert [e.uid for e in tweccm_events] == ["130", "129", "128", "127"]
+
+
+def test_tweccm_無連結的項目跳過():
+    # 只有標題沒有檔案連結就沒有 uid，無法去重，只有這種情形才丟棄
+    html = '<div class="download-list"><ul><li>沒有附檔的公告</li></ul></div>'
+    assert extract.parse_tweccm(html) == []
+```
+
+- [ ] **Step 3: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_extract.py -k tweccm -v`
+Expected: `AttributeError: module 'society_watch.extract' has no attribute 'parse_tweccm'`
+
+- [ ] **Step 4: 實作 parse_tweccm**
+
+`extract.py` 追加常數與函式：
+
+```python
+TWECCM_DOWNLOAD_BASE = "https://www.tweccm.org.tw/download/"
+```
+
+```python
+def parse_tweccm(html: str) -> list[Event]:
+    """急重症聯合年會（SECC）的「其他公告」列表。
+
+    每則是一組 <ul>：第一個 <li> 是標題，第二個 <li> 內的
+    <a href="infoFiles.asp?/130.html"> 帶穩定 ID。該頁不提供日期，
+    date_text 留空而不硬掰。
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+    for block in soup.select(".download-list ul"):
+        items = block.select("li")
+        link = block.select_one("a[href]")
+        if not items or not link:
+            continue
+        m = re.search(r"/(\d+)\.html", link.get("href", ""))
+        if not m:
+            continue
+        events.append(Event(
+            source="TWECCM",
+            uid=m.group(1),
+            title=_clean(items[0].get_text(" ", strip=True)),
+            date_text="",
+            url=urljoin(TWECCM_DOWNLOAD_BASE, link["href"]),
+        ))
+    return events
+```
+
+- [ ] **Step 5: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_extract.py -v`
+Expected: 33 passed
+
+- [ ] **Step 6: 讓 LLM prompt 吃學會名**
+
+`llm.py` 的 `PROMPT_TEMPLATE` 第一行改成可帶入來源名稱，並讓 `build_prompt` / `classify` 多一個 `society` 參數：
+
+```python
+PROMPT_TEMPLATE = """以下是{society}網站新增的內容片段。
+請判斷其中包含哪些「活動、課程或工作坊」公告。
+```
+
+```python
+def build_prompt(new_lines: list[str], society: str) -> str:
+    return PROMPT_TEMPLATE.format(society=society, content="\n".join(new_lines))
+```
+
+`classify(new_lines, society, url)` 也要多吃 `url`，因為 `parse_response` 原本把 `AIRWAY_URL` 寫死。把 `parse_response_checked(raw, source, url)` 改成吃來源代號與網址，`parse_response` 同步。
+
+既有測試要跟著更新參數，斷言值不變。
+
+- [ ] **Step 7: 新增來源設定**
+
+`sources.py` 的 `SOURCES` 裡，AIRWAY 那筆 `"parser"` 由 `"airway"` 改成 `"text"`，並在其後追加兩筆：
+
+```python
+    {
+        "source": "TWECCM",
+        "label": "急重症聯合年會（SECC）",
+        "url": "https://www.tweccm.org.tw/download/index.asp",
+        "parser": "tweccm",
+        "kind": "其他公告",
+    },
+    {
+        "source": "TWECCM",
+        "label": "急重症聯合年會（SECC）",
+        # 首頁的「重要訊息」卡片才是會變的部分（報名、投稿、截止日）。
+        # 該頁有輪播與過期殘留（實測 2025/9/30 與 2026/09/20 兩組早鳥截止
+        # 並存且都不在註解內），所以一定要經 Haiku 過濾，不能直接推原文。
+        "url": "https://www.tweccm.org.tw/",
+        "parser": "text",
+        "kind": "首頁",
+    },
+```
+
+- [ ] **Step 8: 主流程一般化**
+
+`main.py` 的 `collect_airway()` 改寫為吃 cfg 的通用版本，快照檔名由來源代號決定：
+
+```python
+def collect_text_source(cfg: dict) -> tuple[list[Event], list[str], str | None]:
+    """無結構頁面的通用處理：整頁純文字與上次快照 diff，新增段落交給 Haiku。
+
+    回傳（事件, 本次全文行, 失敗原因）。只有 diff 出現新增行時才呼叫 Haiku。
+
+    注意 llm.classify() 在「回應無法解析」與「新增量異常」時會拋
+    LLMResponseError，由 collect() 的 except 接住 → 記成該站失敗 →
+    告警 + 不更新快照 + 下輪重試。若改成回空 list，模型回垃圾就會偽裝成
+    「今天沒有活動」，快照照樣前進而永久漏報。
+    """
+    source = cfg["source"]
+    html = fetch.get(cfg["url"])
+    lines = extract.page_lines(html)
+
+    snapshot_path = DATA_DIR / f"snapshot_{source.lower()}.txt"
+    previous = state.load_snapshot(snapshot_path)
+    if previous and len(lines) < len(previous) * 0.5:
+        return [], lines, f"純文字行數自 {len(previous)} 暴跌至 {len(lines)}，疑似改版"
+
+    if not previous:
+        # 首次執行：只建立快照，不送 LLM（整頁都會是「新增」，既貴又無意義）
+        return [], lines, None
+
+    new_lines = extract.page_new_lines(lines, previous)
+    return llm.classify(new_lines, cfg["label"], cfg["url"]), lines, None
+```
+
+`collect()` 的迴圈改成：文字來源不再用 `cfg["source"] == "AIRWAY"` 判斷跳過，而是依 `cfg["parser"] == "text"` 分派給 `collect_text_source(cfg)`。**這次不會重演先前那個「兩處用不同 key 判斷同一件事」的問題**，因為 cfg 是直接傳進去的，沒有第二次查表。
+
+快照的寫入要逐來源進行：`collect()` 回傳的第三個值改成 `dict[str, list[str]]`（來源代號 → 該輪全文行），`advance_state()` 逐一寫出。失敗的來源不放進 dict，該來源的快照就不會前進。
+
+- [ ] **Step 9: 更新主流程測試**
+
+`tests/test_society_main.py` 的 `env` fixture 把 `collect_airway` 換成 `collect_text_source`，`TOTAL_EVENTS` 由 58 改為 **62**（多了 TWECCM 公告 4 筆；兩個文字來源首次執行都回 0 筆）。`_fake_fetch` 的 `ALL_OK` 加入兩筆對應：
+
+```python
+    "tweccm.org.tw/download": "tweccm_download_20260912.html",
+    "tweccm.org.tw/": "tweccm_home_20260912.html",
+```
+
+並補一個測試：兩個文字來源各自有獨立快照，其中一個失敗不影響另一個。
+
+- [ ] **Step 10: 搬移既有快照檔**
+
+```bash
+git mv society_watch/airway_snapshot.txt society_watch/snapshot_airway.txt
+```
+
+**這一步不可省略。** 不搬的話下一輪 Actions 讀不到舊快照，會把 AIRWAY 整頁 117 行當成新增，直接撞 `MAX_NEW_LINES = 60` 而告警。
+
+- [ ] **Step 11: 全套回歸**
+
+Run: `python3 -m pytest tests/ -m "not live"` → 全數 passed
+
+- [ ] **Step 12: Commit**
+
+```bash
+git add society_watch/ tests/ docs/
+git commit -m "feat(society-watch): 新增急重症聯合年會，並把文字 diff 一般化"
+```
+
+---
+
 ## 完成後的驗收標準
 
 - [ ] `python3 -m pytest tests/ -m "not live"` 全數通過
@@ -3409,3 +3628,4 @@ git commit -m "feat(society-watch): 月度心跳，把靜默死亡變成可察�
 - [ ] GitHub Actions 手動觸發成功，LINE 收得到測試推播
 - [ ] 既有的日報 workflow 未受影響（`daily-fetch-classify` / `daily-push` 照常）
 - [ ] 首次執行當月收得到一則 💓 心跳訊息
+- [ ] TWECCM 兩個來源在 Actions 上跑得出 `✅`，且 `snapshot_tweccm.txt` 有被 commit 回 repo
