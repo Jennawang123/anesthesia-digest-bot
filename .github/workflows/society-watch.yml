@@ -1,0 +1,60 @@
+name: 學會活動監測
+
+on:
+  schedule:
+    # 每日 02:00 UTC = 10:00 台灣時間，與日報的 08:45／09:05 錯開
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: '首次執行：只建立狀態檔不推播（填 true）'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    # 最壞情況實測約 11 分鐘（7 個 URL × 重試 3 次 × timeout 30s ＋ 退避）。
+    # Actions 預設是 360 分鐘，遇到慢速滴水的伺服器會空轉數小時佔住額度，
+    # 不如快死快重試——狀態檔只在推播成功後才寫，被砍不會漏報，只會重推。
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic requests beautifulsoup4
+
+      - name: Run society watch
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+        run: |
+          if [ "${{ github.event.inputs.bootstrap }}" = "true" ]; then
+            python3 -m society_watch.main --bootstrap
+          else
+            python3 -m society_watch.main
+          fi
+
+      - name: Commit state
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add society_watch/seen.json society_watch/airway_snapshot.txt society_watch/alert_state.json society_watch/heartbeat.json
+          if git diff --cached --quiet; then
+            echo "狀態無變化，不 commit。"
+          else
+            git commit -m "chore: update society watch state [skip ci]"
+            git push
+          fi
