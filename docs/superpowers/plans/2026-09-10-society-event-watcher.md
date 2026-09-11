@@ -2129,7 +2129,7 @@ def should_alert(alerts: dict[str, str], source: str, today: date) -> bool:
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_state.py -v`
-Expected: 12 passed
+Expected: 13 passed
 
 - [ ] **Step 5: Commit**
 
@@ -2755,7 +2755,7 @@ def should_heartbeat(last: str | None, today: date) -> bool:
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_state.py -v`
-Expected: 12 passed
+Expected: 17 passed
 
 - [ ] **Step 5: 寫失敗測試（訊息格式）**
 
