@@ -30,6 +30,8 @@ PAIN_LIST_URL = "https://pain.org.tw/index.php/educlass_page/index/33/1/8/34"
 
 TWECCM_DOWNLOAD_BASE = "https://www.tweccm.org.tw/download/"
 
+TSCCM_NEWS_BASE = "https://www.tsccm.org.tw/news/"
+
 
 def _clean(text: str) -> str:
     """壓平連續空白。RAPM 的標題含大量換行與樣板註解。"""
@@ -201,6 +203,44 @@ def parse_tweccm(html: str) -> list[Event]:
             title=_clean(items[0].get_text(" ", strip=True)),
             date_text="",
             url=urljoin(TWECCM_DOWNLOAD_BASE, link["href"]),
+        ))
+    return events
+
+
+def parse_tsccm(html: str) -> list[Event]:
+    """中華民國重症醫學會最新資訊。
+
+    每則是一個 ul.list_td：第一個 li.w15p_lg 是日期（原文含「日期：」標籤），
+    li.w70p_lg 內的 <a href="news_info.asp?/983.html"> 帶穩定 ID。
+
+    注意該站是混編碼的：這頁 meta 宣告 utf-8，而課程頁宣告 big5，
+    兩頁的 HTTP 標頭都不帶 charset。解碼由 fetch._decode 的
+    「標頭 → 頁面 meta → 統計推斷」順序處理，parser 這層不必管。
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+    for block in soup.select("ul.list_td"):
+        link = block.select_one('a[href*="news_info.asp"]')
+        if not link:
+            continue
+        m = re.search(r"/(\d+)\.html", link.get("href", ""))
+        if not m:
+            continue
+
+        date_text = ""
+        date_el = block.select_one("li.w15p_lg")
+        if date_el:
+            label = date_el.select_one("span")
+            if label:
+                label.extract()
+            date_text = _clean(date_el.get_text(" ", strip=True))
+
+        events.append(Event(
+            source="TSCCM",
+            uid=m.group(1),
+            title=_clean(link.get_text(" ", strip=True)),
+            date_text=date_text,
+            url=urljoin(TSCCM_NEWS_BASE, link["href"]),
         ))
     return events
 

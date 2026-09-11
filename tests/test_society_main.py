@@ -50,18 +50,46 @@ ALL_OK = {
     "news-list/5": "rapm_newslist5_20260910.html",
     "educlass_page1_content": "pain_fragment_20260910.html",
     "tsamairway.org.tw": "airway_page_20260910.html",
-    # 順序有意義：下載頁的網址同時含有 "tweccm.org.tw/"，
-    # 首頁那筆若排在前面會把下載頁一起吃掉，公告列表靜默變成首頁內容
     "tweccm.org.tw/download": "tweccm_download_20260912.html",
-    "tweccm.org.tw/": "tweccm_home_20260912.html",
+    # tsccm（學會本體）與 tweccm（年會官網）只差一個字母，對應貼錯的話
+    # 兩站都還是回得出東西，筆數卻會靜默變成另一站的
+    "tsccm.org.tw/news": "tsccm_news_20260912.html",
 }
 
 # TSA 15 + TSCVA 6 + RAPM 16 + RAPM 11 + PAIN 10（今年）+ 0（明年空表）
-# + TWECCM 公告 4；兩個文字來源（AIRWAY、TWECCM 首頁）首次執行都回 0 筆
-TOTAL_EVENTS = 62
+# + TWECCM 公告 4 + TSCCM 最新資訊 9；唯一的文字來源 AIRWAY 首次執行回 0 筆
+TOTAL_EVENTS = 71
 
 AIRWAY_LINES = 117      # tests/test_society_extract.py 對同一份 fixture 的斷言
-TWECCM_HOME_LINES = 109
+
+# 移除 tweccm 首頁之後，SOURCES 裡只剩 AIRWAY 一筆 text 設定。但「每個文字來源
+# 各有獨立快照、其中一個失敗不影響另一個」是 collect_text_source 一般化後的核心
+# 保證，只剩一個真實來源時這件事測不出來（沒有第二份快照可以被蓋掉）。
+# 下面這筆合成設定就是用來當第二個文字來源，把該保證留在測試網裡。
+FAKE_TEXT_CFG = {
+    "source": "FAKETEXT",
+    "label": "測試用文字來源",
+    "url": "https://fake.example/text",
+    "parser": "text",
+}
+FAKE_TEXT_HTML = "<div>假來源第一行</div><div>假來源第二行</div>"
+FAKE_TEXT_LINES = 2
+
+
+def _fetch_two_text_sources(failures=None):
+    """只服務兩個文字來源的假抓取，給 SOURCES 被換成兩筆 text 設定的測試用。"""
+    failures = failures or {}
+    airway = (FIXTURES / "airway_page_20260910.html").read_text(encoding="utf-8")
+
+    def _get(url, **kwargs):
+        for key, exc in failures.items():
+            if key in url:
+                raise exc
+        if "fake.example" in url:
+            return FAKE_TEXT_HTML
+        return airway
+
+    return _get
 
 
 def _fake_text_source(cfg):
@@ -84,11 +112,7 @@ def test_收集全部來源事件(env):
     events, failures, snapshots = main.collect(date(2026, 9, 10))
     assert failures == []
     assert len(events) == TOTAL_EVENTS
-    # 兩個文字來源各自登記自己的快照，內容不會互相汙染
-    assert snapshots == {
-        "AIRWAY": ["AIRWAY", "A", "B"],
-        "TWECCM": ["TWECCM", "A", "B"],
-    }
+    assert snapshots == {"AIRWAY": ["AIRWAY", "A", "B"]}
 
 
 def test_tweccm公告列表有被抓進來(env):
@@ -96,6 +120,15 @@ def test_tweccm公告列表有被抓進來(env):
     tweccm = [e for e in events if e.source == "TWECCM"]
     assert len(tweccm) == 4
     assert tweccm[0].uid == "130"
+
+
+def test_tsccm最新資訊有被抓進來(env):
+    events, _, _ = main.collect(date(2026, 9, 10))
+    tsccm = [e for e in events if e.source == "TSCCM"]
+    assert len(tsccm) == 9
+    assert tsccm[0].uid == "983"
+    # 年會消息在這裡就看得到——這正是移除 tweccm 首頁 diff 的前提
+    assert any("SECC" in e.title for e in tsccm)
 
 
 def test_pain三個年份都有被抓(env):
@@ -114,19 +147,17 @@ def test_rapm兩個分類的告警key互不相干(env, monkeypatch):
     assert [f[0] for f in failures] == ["RAPM／友會活動"]
 
 
-def test_tweccm兩筆設定的告警key互不相干(tmp_path, monkeypatch):
-    # TWECCM 跟 RAPM 一樣共用 source 代號，公告列表與首頁是兩個不同的頁面，
-    # 其中一個壞掉不可以吃掉另一個的 7 天冷卻期
+def test_tweccm與tsccm是兩個獨立來源(env, monkeypatch):
+    # 兩個名字只差一個字母。tweccm 壞掉時 tsccm 必須照抓、告警 key 也要分得開，
+    # 否則其中一站的失敗會吃掉另一站的 7 天冷卻期
     import requests
-    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
     monkeypatch.setattr(
         main.fetch, "get",
-        _fake_fetch(ALL_OK, failures={"tweccm.org.tw/download": requests.ConnectionError("斷線")}),
+        _fake_fetch(ALL_OK, failures={"tweccm.org.tw": requests.ConnectionError("斷線")}),
     )
-    _, failures, snapshots = main.collect(date(2026, 9, 12))
+    events, failures, _ = main.collect(date(2026, 9, 12))
     assert [f[0] for f in failures] == ["TWECCM／其他公告"]
-    # 首頁那筆照樣成功，快照照樣登記
-    assert len(snapshots["TWECCM"]) == TWECCM_HOME_LINES
+    assert len([e for e in events if e.source == "TSCCM"]) == 9
 
 
 def test_單站失敗不中斷其他站(env, monkeypatch):
@@ -153,6 +184,8 @@ def test_解析出零筆視為疑似改版(env, monkeypatch):
 
 
 def test_文字來源失敗時不登記快照(env, monkeypatch):
+    monkeypatch.setattr(main, "SOURCES", list(main.SOURCES) + [FAKE_TEXT_CFG])
+
     def _one_fails(cfg):
         if cfg["source"] == "AIRWAY":
             return [], ["半截"], "行數暴跌"
@@ -164,13 +197,10 @@ def test_文字來源失敗時不登記快照(env, monkeypatch):
     # 失敗的來源不進 dict → advance_state 就不會推進它的快照
     assert "AIRWAY" not in snapshots
     # 另一個文字來源不受影響，照樣前進
-    assert snapshots["TWECCM"] == ["TWECCM", "A", "B"]
+    assert snapshots["FAKETEXT"] == ["FAKETEXT", "A", "B"]
 
 
 AIRWAY_CFG = next(c for c in main.SOURCES if c["source"] == "AIRWAY")
-TWECCM_HOME_CFG = next(
-    c for c in main.SOURCES if c["source"] == "TWECCM" and c["parser"] == "text"
-)
 
 
 def test_文字來源首次執行不送llm只建快照(tmp_path, monkeypatch):
@@ -181,7 +211,7 @@ def test_文字來源首次執行不送llm只建快照(tmp_path, monkeypatch):
     called = []
     monkeypatch.setattr(
         main.llm, "classify",
-        lambda lines, source, society, url: called.append(lines) or [],
+        lambda lines, source, society, url, previous_count: called.append(lines) or [],
     )
 
     events, lines, error = main.collect_text_source(AIRWAY_CFG)
@@ -195,7 +225,7 @@ def test_文字來源第二輪只把新增行送llm且帶對來源(tmp_path, mon
     # 一般化之後最容易靜默壞掉的地方：classify 若拿到別站的 source/label/url，
     # 事件會掛到錯誤的學會底下，而筆數與流程完全正常
     monkeypatch.setattr(main, "DATA_DIR", tmp_path)
-    main.state.save_snapshot(tmp_path / "snapshot_tweccm.txt", ["舊的一行"])
+    main.state.save_snapshot(tmp_path / "snapshot_faketext.txt", ["舊的一行"])
     monkeypatch.setattr(
         main.fetch, "get",
         lambda url, **kwargs: "<div>舊的一行</div><div>新的一行</div>",
@@ -203,45 +233,47 @@ def test_文字來源第二輪只把新增行送llm且帶對來源(tmp_path, mon
     called = []
     monkeypatch.setattr(
         main.llm, "classify",
-        lambda lines, source, society, url: called.append((lines, source, society, url)) or [],
+        lambda lines, source, society, url, previous_count: called.append((lines, source, society, url)) or [],
     )
 
-    main.collect_text_source(TWECCM_HOME_CFG)
+    main.collect_text_source(FAKE_TEXT_CFG)
     assert called == [(
-        ["新的一行"], "TWECCM", "急重症聯合年會（SECC）", "https://www.tweccm.org.tw/",
+        ["新的一行"], "FAKETEXT", "測試用文字來源", "https://fake.example/text",
     )]
 
 
 def test_兩個文字來源寫到不同的快照檔(tmp_path, monkeypatch):
     # 檔名若不隨來源改變，後跑的會整個蓋掉先跑的，兩邊從此每輪誤判整頁新增
     monkeypatch.setattr(main, "DATA_DIR", tmp_path)
-    monkeypatch.setattr(main.fetch, "get", _fake_fetch(ALL_OK))
+    monkeypatch.setattr(main, "SOURCES", [AIRWAY_CFG, FAKE_TEXT_CFG])
+    monkeypatch.setattr(main.fetch, "get", _fetch_two_text_sources())
     monkeypatch.setattr(main.notify, "push_line", lambda text: None)
     main.run(bootstrap=True, today=date(2026, 9, 12))
 
     airway = main.state.load_snapshot(tmp_path / "snapshot_airway.txt")
-    tweccm = main.state.load_snapshot(tmp_path / "snapshot_tweccm.txt")
+    faketext = main.state.load_snapshot(tmp_path / "snapshot_faketext.txt")
     assert len(airway) == AIRWAY_LINES
-    assert len(tweccm) == TWECCM_HOME_LINES
-    assert airway[:1] != tweccm[:1]
+    assert len(faketext) == FAKE_TEXT_LINES
+    assert airway[:1] != faketext[:1]
 
 
 def test_一個文字來源失敗不影響另一個的快照(tmp_path, monkeypatch):
     # 「失敗的來源不推進快照」的端到端版本：AIRWAY 斷線，它的舊快照必須原封不動，
-    # 而 TWECCM 首頁照樣寫出新的
+    # 而另一個文字來源照樣寫出新的
     import requests
     monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "SOURCES", [AIRWAY_CFG, FAKE_TEXT_CFG])
     main.state.save_snapshot(tmp_path / "snapshot_airway.txt", ["舊快照"])
     monkeypatch.setattr(
         main.fetch, "get",
-        _fake_fetch(ALL_OK, failures={"tsamairway.org.tw": requests.ConnectionError("斷線")}),
+        _fetch_two_text_sources(failures={"tsamairway.org.tw": requests.ConnectionError("斷線")}),
     )
     monkeypatch.setattr(main.notify, "push_line", lambda text: None)
     failures = main.run(bootstrap=True, today=date(2026, 9, 12))
 
     assert [f[0] for f in failures] == ["AIRWAY"]
     assert main.state.load_snapshot(tmp_path / "snapshot_airway.txt") == ["舊快照"]
-    assert len(main.state.load_snapshot(tmp_path / "snapshot_tweccm.txt")) == TWECCM_HOME_LINES
+    assert len(main.state.load_snapshot(tmp_path / "snapshot_faketext.txt")) == FAKE_TEXT_LINES
 
 
 def test_文字來源行數暴跌時回報疑似改版且不送llm(tmp_path, monkeypatch):
@@ -255,7 +287,7 @@ def test_文字來源行數暴跌時回報疑似改版且不送llm(tmp_path, mon
     called = []
     monkeypatch.setattr(
         main.llm, "classify",
-        lambda lines, source, society, url: called.append(lines) or [],
+        lambda lines, source, society, url, previous_count: called.append(lines) or [],
     )
 
     events, lines, error = main.collect_text_source(AIRWAY_CFG)
@@ -271,8 +303,10 @@ def test_文字來源拋例外時記成失敗且不推進快照(env, monkeypatch
 
     monkeypatch.setattr(main, "collect_text_source", boom)
     _, failures, snapshots = main.collect(date(2026, 9, 10))
-    assert [f[0] for f in failures] == ["AIRWAY", "TWECCM／首頁"]
-    assert all("LLMResponseError" in r for _, r in failures)
+    assert [f[0] for f in failures] == ["AIRWAY"]
+    # 整頁改版／模型回應無法解析，該去看的是網站不是程式碼
+    assert all("內容異常" in r for _, r in failures)
+    assert all("程式錯誤" not in r for _, r in failures)
     assert snapshots == {}
 
 
@@ -282,7 +316,7 @@ def test_bootstrap只寫狀態不推播(env):
     assert pushed == []
     assert len(main.state.load_seen(tmp_path / "seen.json")) == TOTAL_EVENTS
     assert main.state.load_snapshot(tmp_path / "snapshot_airway.txt") == ["AIRWAY", "A", "B"]
-    assert main.state.load_snapshot(tmp_path / "snapshot_tweccm.txt") == ["TWECCM", "A", "B"]
+    assert main.state.load_snapshot(tmp_path / "snapshot_airway.txt") == ["AIRWAY", "A", "B"]
 
 
 def test_第二次執行沒有新項目就不推播(env):
@@ -328,7 +362,7 @@ def test_推播失敗時狀態不前進(env, monkeypatch):
     # seen 沒補回 3105、兩份快照也都沒吃掉那行新公告 → 下一輪還會重推
     assert "TSA:3105" not in main.state.load_seen(tmp_path / "seen.json")
     assert main.state.load_snapshot(tmp_path / "snapshot_airway.txt") == ["AIRWAY", "A", "B"]
-    assert main.state.load_snapshot(tmp_path / "snapshot_tweccm.txt") == ["TWECCM", "A", "B"]
+    assert main.state.load_snapshot(tmp_path / "snapshot_airway.txt") == ["AIRWAY", "A", "B"]
 
 
 def test_事件推播失敗時告警仍已送出(env, monkeypatch):
@@ -384,7 +418,7 @@ def test_每個來源的parser名稱都查得到():
             continue
         assert cfg["parser"] in main.PARSERS, cfg
         checked += 1
-    assert checked == len(main.SOURCES) - 2      # 目前有兩筆 text 設定
+    assert checked == len(main.SOURCES) - 1      # 目前只有 AIRWAY 一筆 text 設定
 
 
 def test_程式錯誤與網站問題在告警上分得開():

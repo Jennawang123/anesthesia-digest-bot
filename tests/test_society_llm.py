@@ -9,11 +9,34 @@ import pytest  # noqa: E402
 from society_watch import llm  # noqa: E402
 
 AIRWAY_URL = "https://www.tsamairway.org.tw/最新資訊"
+# 目前 SOURCES 裡只剩 AIRWAY 一個 text 來源，但 llm 這層必須維持與來源無關：
+# 下面幾條用第二組 source/url 驗證它沒有把 AIRWAY 寫死。
 TWECCM_URL = "https://www.tweccm.org.tw/"
 
 
 def _parse(raw: str):
     return llm.parse_response(raw, "AIRWAY", AIRWAY_URL)
+
+
+class _TextBlock:
+    type = "text"
+
+    def __init__(self, text: str):
+        self.text = text
+
+
+def _fake_anthropic(reply: str):
+    """假的 Anthropic client。只有門檻邊界那條測試需要真的走到呼叫端，
+    其餘測試都在呼叫 API 之前就回來了，不必也不該連網。"""
+    class _Messages:
+        def create(self, **kwargs):
+            return type("_Resp", (), {"content": [_TextBlock(reply)]})()
+
+    class _Client:
+        def __init__(self, **kwargs):
+            self.messages = _Messages()
+
+    return _Client
 
 
 def test_prompt_含全部新增行():
@@ -25,7 +48,7 @@ def test_prompt_含全部新增行():
 
 
 def test_prompt_帶入呼叫端給的學會名():
-    # prompt 若還寫死呼吸道學會，TWECCM 首頁的內容會被貼上錯誤的來源脈絡
+    # prompt 若還寫死呼吸道學會，第二個文字來源的內容會被貼上錯誤的來源脈絡
     prompt = llm.build_prompt(["重要訊息"], "急重症聯合年會（SECC）")
     assert "急重症聯合年會（SECC）" in prompt
     assert "台灣呼吸道處理醫學會" not in prompt
@@ -90,23 +113,63 @@ def test_元素不是物件時跳過而不拋例外():
     assert [e.title for e in events] == ["工作坊B"]
 
 
+def test_門檻隨上一份快照的行數縮放():
+    # 攔的是「整頁改版」不是「今天公告比較多」。AIRWAY 現有 117 行 → 70 行，
+    # 一則公告約 10–13 行，容得下 5 則以上；固定 60 行時只容得下 5 則
+    assert llm.new_lines_cap(117) == 70
+    assert llm.new_lines_cap(117) > 60
+
+
+def test_小頁面仍有絕對下限():
+    # 比例門檻套在小頁面上會縮到荒謬的程度（50 行頁面 → 30 行 → 2 則公告就爆）
+    assert llm.new_lines_cap(50) == llm.MIN_NEW_LINES_CAP == 40
+    assert llm.new_lines_cap(0) == 40
+
+
 def test_新增行數超過上限時拋例外():
     # 整頁改版時不送一大包進去燒錢，改成拋例外讓 collect 記成失敗並告警
+    cap = llm.new_lines_cap(117)
     with pytest.raises(llm.LLMResponseError, match="疑似整頁改版"):
         llm.classify(
-            [f"第 {i} 行" for i in range(llm.MAX_NEW_LINES + 1)],
-            "AIRWAY", "台灣呼吸道處理醫學會", AIRWAY_URL,
+            [f"第 {i} 行" for i in range(cap + 1)],
+            "AIRWAY", "台灣呼吸道處理醫學會", AIRWAY_URL, 117,
         )
+
+
+def test_剛好等於上限時不算異常(monkeypatch):
+    # 邊界要是 > 而非 >=，否則正好貼齊門檻的那天會被誤判成改版而漏一整批
+    cap = llm.new_lines_cap(117)
+    monkeypatch.setattr(llm, "Anthropic", _fake_anthropic("[]"))
+    monkeypatch.setenv("CLAUDE_API_KEY", "x")
+    assert llm.classify(
+        [f"第 {i} 行" for i in range(cap)],
+        "AIRWAY", "台灣呼吸道處理醫學會", AIRWAY_URL, 117,
+    ) == []
+
+
+def test_改版告警原因不含浮動數字():
+    # 這串是 should_alert 的節流 key。內嵌「新增 N 行」的話每天都是新的壞法，
+    # 7 天冷卻永遠命中不了，變成天天吵
+    messages = set()
+    for extra in (1, 7, 300):
+        with pytest.raises(llm.LLMResponseError) as exc:
+            llm.classify(
+                [f"第 {i} 行" for i in range(llm.new_lines_cap(117) + extra)],
+                "AIRWAY", "台灣呼吸道處理醫學會", AIRWAY_URL, 117,
+            )
+        messages.add(str(exc.value))
+    assert len(messages) == 1, messages
+    assert not any(c.isdigit() for c in messages.pop())
 
 
 def test_沒有新增行時不建立client也不呼叫api():
     # CLAUDE_API_KEY 不存在時仍須正常回空 list
-    assert llm.classify([], "AIRWAY", "台灣呼吸道處理醫學會", AIRWAY_URL) == []
+    assert llm.classify([], "AIRWAY", "台灣呼吸道處理醫學會", AIRWAY_URL, 117) == []
 
 
 def test_事件的來源與網址取自呼叫端而非寫死():
     # 這條是一般化之後最容易靜默壞掉的地方：source 寫死成 AIRWAY 的話，
-    # TWECCM 首頁的事件會跟 AIRWAY 共用 seen.json 的命名空間、
+    # 第二個文字來源的事件會跟 AIRWAY 共用 seen.json 的命名空間、
     # 在通知裡被分到呼吸道學會底下，而且每一項看起來都正常
     raw = '[{"title": "口頭論文發表及海報論文展示通知", "date_text": "", "is_event": true}]'
     e = llm.parse_response(raw, "TWECCM", TWECCM_URL)[0]

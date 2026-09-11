@@ -273,3 +273,36 @@ def test_tweccm_無連結的項目跳過():
     # 只有標題沒有檔案連結就沒有 uid，無法去重，只有這種情形才丟棄
     html = '<div class="download-list"><ul><li>沒有附檔的公告</li></ul></div>'
     assert extract.parse_tweccm(html) == []
+
+
+# ── TSCCM ─────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def tsccm_events():
+    return extract.parse_tsccm(_fx("tsccm_news_20260912.html"))
+
+
+def test_tsccm_抽出九筆(tsccm_events):
+    # 該站 9 筆/頁、共 52 筆 6 頁。只抓第一頁：新項目一定在第一頁，
+    # 每天輪詢一次不可能單日新增超過 9 則（同 TSA 的滾動視窗邏輯）
+    assert len(tsccm_events) == 9
+
+
+def test_tsccm_首筆欄位(tsccm_events):
+    e = tsccm_events[0]
+    assert e.source == "TSCCM"
+    assert e.uid == "983"
+    assert e.date_text == "2026/09/07"
+    assert e.title == "早鳥報名延至9/20！ 「SECC Congress 2026 Taipei」暨 「急重症聯合學術年會」＋「第十屆亞太早期復健會議」"
+    assert e.url == "https://www.tsccm.org.tw/news/news_info.asp?/983.html"
+
+
+def test_tsccm_日期不含標籤文字(tsccm_events):
+    # 該欄原文是「日期： 2026/09/07」，標籤要拿掉
+    assert all("日期" not in e.date_text for e in tsccm_events)
+    assert all(e.date_text for e in tsccm_events)
+
+
+def test_tsccm_涵蓋secc報名消息(tsccm_events):
+    # 這是移除 tweccm 首頁 diff 的前提：年會消息在這裡就看得到
+    assert any("SECC" in e.title for e in tsccm_events)

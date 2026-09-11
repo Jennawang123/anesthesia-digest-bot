@@ -24,6 +24,7 @@ PARSERS = {
     "rapm": lambda html, cfg: extract.parse_rapm(html, kind=cfg["kind"]),
     "pain": lambda html, cfg: extract.parse_pain(html),
     "tweccm": lambda html, cfg: extract.parse_tweccm(html),
+    "tsccm": lambda html, cfg: extract.parse_tsccm(html),
 }
 
 
@@ -45,6 +46,10 @@ def _reason(error: Exception) -> str:
     # 但實際上該先看帳單餘額。
     if (type(error).__module__ or "").startswith("anthropic"):
         return f"Anthropic API 問題（先查餘額與月上限）{type(error).__name__}: {detail}"
+    # 整頁改版與模型回應無法解析都不是程式的錯，該去看的是網站。
+    # 標成「程式錯誤」會把人引導去翻 code，然後什麼也找不到。
+    if isinstance(error, llm.LLMResponseError):
+        return f"內容異常（先看網站是否改版）{detail}"
     return f"程式錯誤（需改 code）{type(error).__name__}: {detail}"
 
 
@@ -74,14 +79,20 @@ def collect_text_source(cfg: dict) -> tuple[list[Event], list[str], str | None]:
 
     previous = state.load_snapshot(snapshot_path(source))
     if previous and len(lines) < len(previous) * 0.5:
-        return [], lines, f"純文字行數自 {len(previous)} 暴跌至 {len(lines)}，疑似改版"
+        # 具體數字只印在 log：reason 是 should_alert 的節流 key，
+        # 內嵌每天浮動的行數會讓 7 天冷卻永遠對不上，變成天天告警。
+        print(f"    ⚠️ {source} 純文字行數自 {len(previous)} 暴跌至 {len(lines)}")
+        return [], lines, "純文字行數暴跌，疑似改版"
 
     if not previous:
         # 首次執行：只建立快照，不送 LLM（整頁都會是「新增」，既貴又無意義）
         return [], lines, None
 
     new_lines = extract.page_new_lines(lines, previous)
-    return llm.classify(new_lines, source, cfg["label"], cfg["url"]), lines, None
+    events = llm.classify(
+        new_lines, source, cfg["label"], cfg["url"], len(previous)
+    )
+    return events, lines, None
 
 
 def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], dict[str, list[str]]]:

@@ -1,4 +1,4 @@
-"""無結構頁面（AIRWAY 的 Wix 站、TWECCM 首頁）共用的 Haiku 抽取。
+"""無結構頁面（目前只有 AIRWAY 的 Wix 站）共用的 Haiku 抽取。
 
 只有 diff 出現新增行時才呼叫，沒新增就完全不呼叫，成本趨近於零。
 
@@ -20,7 +20,22 @@ MODEL = "claude-haiku-4-5"   # 完整 model id，不加日期後綴
 # 單次送給模型的新增行上限。整頁被判為新增（改版、頁面搬家）時，
 # 與其花錢送一大包進去、還可能被 max_tokens 截斷成半截 JSON，
 # 不如當成異常拋出去告警——快照不會前進，人看過再說。
-MAX_NEW_LINES = 60
+#
+# 攔的是「整頁改版」而不是「今天公告比較多」，所以門檻要隨頁面大小縮放。
+# AIRWAY 一則公告約 10–13 行（主辦／課程名／主講人／時間／地點／連結各一行），
+# 固定 60 行等於只容得下 5 則新公告，太緊。
+NEW_LINES_RATIO = 0.6
+MIN_NEW_LINES_CAP = 40
+
+
+def new_lines_cap(previous_count: int) -> int:
+    """依上一份快照的行數算出「新增太多＝疑似整頁改版」的門檻。
+
+    已知邊界：頁面若少於 MIN_NEW_LINES_CAP 行，門檻會大於頁面本身、
+    這道防護等於失效。可以接受——它擋的是「成本爆炸」與「整頁被誤判成
+    新增」，而對一個 20 行的頁面，整頁重寫既不貴也不難處理。
+    """
+    return max(MIN_NEW_LINES_CAP, int(previous_count * NEW_LINES_RATIO))
 
 class LLMResponseError(RuntimeError):
     """Haiku 回應無法解析，或新增量異常。
@@ -106,19 +121,25 @@ def parse_response(raw: str, source: str, url: str) -> list[Event]:
     return parse_response_checked(raw, source, url)[0]
 
 
-def classify(new_lines: list[str], source: str, society: str, url: str) -> list[Event]:
+def classify(
+    new_lines: list[str], source: str, society: str, url: str, previous_count: int
+) -> list[Event]:
     """呼叫 Haiku 判斷新增段落。沒有新增行就不呼叫 API。
 
     source 是來源代號（進 Event.key 的去重命名空間），society 是給模型看的
     學會名稱，url 是事件要連去的頁面。三者都不可省略成預設值——
     少傳一個就會靜默套到另一站身上。
+
+    previous_count 是上一份快照的行數，用來把改版門檻按頁面大小縮放。
     """
     if not new_lines:
         return []
-    if len(new_lines) > MAX_NEW_LINES:
-        raise LLMResponseError(
-            f"新增 {len(new_lines)} 行超過上限 {MAX_NEW_LINES}，疑似整頁改版"
-        )
+    cap = new_lines_cap(previous_count)
+    if len(new_lines) > cap:
+        # 數字不放進例外訊息：reason 字串是 should_alert 的節流 key，
+        # 內嵌每天都不同的數字會讓 7 天冷卻永遠命中不了，天天吵。
+        print(f"    ⚠️ {source} 新增 {len(new_lines)} 行超過上限 {cap}")
+        raise LLMResponseError("新增行數異常，疑似整頁改版")
 
     client = Anthropic(api_key=os.environ["CLAUDE_API_KEY"])
     resp = client.messages.create(

@@ -1,5 +1,10 @@
 """監測來源設定表。TSA/TSCVA/RAPM/PAIN/AIRWAY 經 2026-09-10 實抓驗證，
-TWECCM 經 2026-09-12 實抓驗證。
+TWECCM/TSCCM 經 2026-09-12 實抓驗證。
+
+tweccm.org.tw 只是年會官網，學會本體是 tsccm.org.tw。年會的報名／投稿
+消息在 TSCCM 最新資訊就報得到（結構化、零 LLM 成本），所以 tweccm 首頁
+那筆文字 diff 已移除：首頁本身就含「其他公告」的標題，留著會讓同一則公告
+以兩個不同 uid（TWECCM:130 與 TWECCM:<hash>）推兩次，去重擋不住。
 
 parser == "text" 代表無結構頁面，走「整頁純文字 diff ＋ Haiku」那條路；
 快照檔名由 source 決定（snapshot_{source}.txt），因此同一個 source
@@ -64,14 +69,11 @@ SOURCES = [
         "kind": "其他公告",
     },
     {
-        "source": "TWECCM",
-        "label": "急重症聯合年會（SECC）",
-        # 首頁的「重要訊息」卡片才是會變的部分（報名、投稿、截止日）。
-        # 該頁有輪播與過期殘留（實測 2025/9/30 與 2026/09/20 兩組早鳥截止
-        # 並存且都不在註解內），所以一定要經 Haiku 過濾，不能直接推原文。
-        "url": "https://www.tweccm.org.tw/",
-        "parser": "text",
-        "kind": "首頁",
+        "source": "TSCCM",
+        "label": "中華民國重症醫學會",
+        # 9 筆/頁、共 52 筆 6 頁。只抓第一頁就夠：新項目一定出現在第一頁。
+        "url": "https://www.tsccm.org.tw/news/news_list.asp",
+        "parser": "tsccm",
     },
 ]
 
