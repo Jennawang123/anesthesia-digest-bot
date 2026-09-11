@@ -2759,6 +2759,10 @@ LINE_CHANNEL_ACCESS_TOKEN=dummy LINE_USER_ID=dummy python3 -m society_watch.main
 ```
 Expected: 印出六列 `✅`（TSA/TSCVA/RAPM×2/PAIN/AIRWAY），總筆數約 55–60，末行為 `bootstrap 模式：只寫狀態檔，不推播。`，且產生 `society_watch/seen.json` 與 `society_watch/airway_snapshot.txt`。
 
+> **若只有 AIRWAY 失敗（`ConnectionError` / `Connection reset by peer`），先確認是不是本機網路擋掉 Wix，而不是程式或站方改版。** 2026-09-11 實測過一次：`www.tsamairway.org.tw` 與 `www.wix.com` 同時 HTTP 000、TLS 握手 read 0 bytes，DNS 解析正常（`wixdns.net` → `34.149.87.45`），而同時間 `anesth.org.tw` 回 200/0.6s——整個 Wix CDN 從該網路連不上。企業／醫院 VPN 擋 Wix 很常見。判斷方式：`curl -m 10 -o /dev/null -w "%{http_code}\n" https://www.wix.com/`，同樣 000 就是網路層問題，換網路再跑。GitHub Actions 的 runner 不受此限。
+>
+> 這種情況下 bootstrap 只會種進四站，**必須換網路重跑一次 bootstrap**，否則 AIRWAY 沒有初始快照，第一次成功抓取時會把整頁 117 行全當成新增（超過 `MAX_NEW_LINES = 60` 而觸發告警）。`run()` 的 bootstrap 分支會印出提醒。
+
 - [ ] **Step 3: 檢查狀態檔格式**
 
 Run: `head -5 society_watch/seen.json && tail -c 20 society_watch/seen.json | xxd | tail -1`
