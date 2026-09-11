@@ -188,9 +188,9 @@ def test_pain_缺text_info時退回整格文字不漏報():
     assert events[0].date_text == "2026 九月 15"
 
 
-# ── AIRWAY ────────────────────────────────────────────────────────────────────
+# ── 通用文字 diff（AIRWAY 與 TWECCM 首頁共用） ──────────────────────────────────
 
-def test_airway_去除script與style():
+def test_page_lines_去除script與style():
     html = """
     <html><head><style>.a{color:red}</style></head>
     <body><script>var x=1;</script>
@@ -199,47 +199,77 @@ def test_airway_去除script與style():
     <div>🗓️ 上課時間： 2026年6月13日</div>
     </body></html>
     """
-    lines = extract.airway_lines(html)
+    lines = extract.page_lines(html)
     assert lines == ["📣 主辦單位： 台灣呼吸道處理醫學會", "🗓️ 上課時間： 2026年6月13日"]
     assert not any("var x" in l or "color:red" in l for l in lines)
 
 
 def test_airway_真實wix頁抽取結果與快照一致():
     # 用真實 Wix 頁（僅去掉 script/style 以控制體積，註解與 entity 都保留）
-    # 端到端驗證 airway_lines，而非只斷言快照檔自己的行數
-    lines = extract.airway_lines(_fx("airway_page_20260910.html"))
+    # 端到端驗證 page_lines，而非只斷言快照檔自己的行數
+    lines = extract.page_lines(_fx("airway_page_20260910.html"))
     expected = [l for l in _fx("airway_text_20260910.txt").split("\n") if l.strip()]
     assert lines == expected
     assert len(lines) == 117
 
 
-def test_airway_去除html註解殘骸():
+def test_page_lines_去除html註解殘骸():
     # 內含 ">" 的註解會讓標籤 regex 提早收尾，把 "-->" 留成可見行。
     # 真實頁面的第一行原本就是這個殘骸。
-    lines = extract.airway_lines("<!-- 內含 > 符號的註解 --><div>正文</div>")
+    lines = extract.page_lines("<!-- 內含 > 符號的註解 --><div>正文</div>")
     assert lines == ["正文"]
 
 
-def test_airway_還原html_entity():
-    lines = extract.airway_lines("<div>課程名稱&nbsp;A&amp;B</div><div>&nbsp;</div>")
+def test_page_lines_還原html_entity():
+    lines = extract.page_lines("<div>課程名稱&nbsp;A&amp;B</div><div>&nbsp;</div>")
     assert lines == ["課程名稱 A&B"]   # 純 &nbsp; 的填充行會被濾掉
 
 
-def test_airway_無新增時回空list():
+def test_page_new_lines_無新增時回空list():
     old = ["A", "B", "C"]
-    assert extract.airway_new_lines(old, old) == []
+    assert extract.page_new_lines(old, old) == []
 
 
-def test_airway_只回新增的行():
+def test_page_new_lines_只回新增的行():
     old = ["A", "B"]
     new = ["A", "B", "C 新公告", "D"]
-    assert extract.airway_new_lines(new, old) == ["C 新公告", "D"]
+    assert extract.page_new_lines(new, old) == ["C 新公告", "D"]
 
 
-def test_airway_行順序改變不算新增():
+def test_page_new_lines_行順序改變不算新增():
     # Wix 版面調整常導致區塊順序變動，不應誤判為新公告
-    assert extract.airway_new_lines(["B", "A"], ["A", "B"]) == []
+    assert extract.page_new_lines(["B", "A"], ["A", "B"]) == []
 
 
-def test_airway_首次執行時舊快照為空則全部算新增():
-    assert extract.airway_new_lines(["A", "B"], []) == ["A", "B"]
+def test_page_new_lines_首次執行時舊快照為空則全部算新增():
+    assert extract.page_new_lines(["A", "B"], []) == ["A", "B"]
+
+
+# ── TWECCM ────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def tweccm_events():
+    return extract.parse_tweccm(_fx("tweccm_download_20260912.html"))
+
+
+def test_tweccm_抽出四筆(tweccm_events):
+    assert len(tweccm_events) == 4
+
+
+def test_tweccm_首筆欄位(tweccm_events):
+    e = tweccm_events[0]
+    assert e.source == "TWECCM"
+    assert e.uid == "130"
+    assert e.title == "2026急重症照護”快閃擂台”競賽辦法,每場次限額4隊."
+    assert e.url == "https://www.tweccm.org.tw/download/infoFiles.asp?/130.html"
+    assert e.date_text == ""      # 該頁不提供日期，不硬掰
+
+
+def test_tweccm_uid取自檔案連結(tweccm_events):
+    assert [e.uid for e in tweccm_events] == ["130", "129", "128", "127"]
+
+
+def test_tweccm_無連結的項目跳過():
+    # 只有標題沒有檔案連結就沒有 uid，無法去重，只有這種情形才丟棄
+    html = '<div class="download-list"><ul><li>沒有附檔的公告</li></ul></div>'
+    assert extract.parse_tweccm(html) == []

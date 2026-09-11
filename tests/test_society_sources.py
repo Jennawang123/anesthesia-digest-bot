@@ -8,9 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from society_watch import sources  # noqa: E402
 
 
-def test_五個來源代號齊全():
+def test_六個來源代號齊全():
     assert {s["source"] for s in sources.SOURCES} == {
-        "TSA", "TSCVA", "RAPM", "PAIN", "AIRWAY"
+        "TSA", "TSCVA", "RAPM", "PAIN", "AIRWAY", "TWECCM"
     }
 
 
@@ -41,8 +41,25 @@ def test_rapm有兩個分類():
     assert {s["kind"] for s in rapm} == {"學會活動", "友會活動"}
 
 
+def test_tweccm有公告列表與首頁兩筆():
+    tweccm = [s for s in sources.SOURCES if s["source"] == "TWECCM"]
+    assert len(tweccm) == 2
+    assert {s["kind"] for s in tweccm} == {"其他公告", "首頁"}
+    # 公告列表是結構化列表、首頁只能整頁 diff，兩者走的是不同路徑。
+    # 都設成同一個 parser 會讓其中一條靜默失去監測
+    assert {s["parser"] for s in tweccm} == {"tweccm", "text"}
+
+
+def test_同一個來源代號最多一筆text設定():
+    # text 來源的快照檔名是 snapshot_{source}.txt。同一個 source 有兩筆 text
+    # 設定的話，後跑的會把先跑的快照整個蓋掉，兩邊從此每輪都誤判整頁新增，
+    # 直接撞 MAX_NEW_LINES 天天告警——而測試筆數仍然分毫不差
+    text_sources = [s["source"] for s in sources.SOURCES if s["parser"] == "text"]
+    assert len(set(text_sources)) == len(text_sources), text_sources
+
+
 def test_每個來源都有網址與parser名稱():
-    assert len(sources.SOURCES) == 6      # 沒有這行，SOURCES 被清空時迴圈跑零圈也會過
+    assert len(sources.SOURCES) == 8      # 沒有這行，SOURCES 被清空時迴圈跑零圈也會過
     for s in sources.SOURCES:
         assert s["url"].startswith("https://")
         assert s["parser"]

@@ -1,4 +1,10 @@
-"""監測來源設定表。全部經 2026-09-10 實抓驗證。"""
+"""監測來源設定表。TSA/TSCVA/RAPM/PAIN/AIRWAY 經 2026-09-10 實抓驗證，
+TWECCM 經 2026-09-12 實抓驗證。
+
+parser == "text" 代表無結構頁面，走「整頁純文字 diff ＋ Haiku」那條路；
+快照檔名由 source 決定（snapshot_{source}.txt），因此同一個 source
+最多只能有一筆 text 設定，否則兩筆會互相覆蓋同一份快照。
+"""
 from datetime import date
 
 # 疼痛醫學會的 AJAX fragment endpoint（從頁面 JS 的 $("#main_content").load(...) 挖出，
@@ -48,7 +54,24 @@ SOURCES = [
         "source": "AIRWAY",
         "label": "台灣呼吸道處理醫學會",
         "url": "https://www.tsamairway.org.tw/最新資訊",
-        "parser": "airway",
+        "parser": "text",
+    },
+    {
+        "source": "TWECCM",
+        "label": "急重症聯合年會（SECC）",
+        "url": "https://www.tweccm.org.tw/download/index.asp",
+        "parser": "tweccm",
+        "kind": "其他公告",
+    },
+    {
+        "source": "TWECCM",
+        "label": "急重症聯合年會（SECC）",
+        # 首頁的「重要訊息」卡片才是會變的部分（報名、投稿、截止日）。
+        # 該頁有輪播與過期殘留（實測 2025/9/30 與 2026/09/20 兩組早鳥截止
+        # 並存且都不在註解內），所以一定要經 Haiku 過濾，不能直接推原文。
+        "url": "https://www.tweccm.org.tw/",
+        "parser": "text",
+        "kind": "首頁",
     },
 ]
 

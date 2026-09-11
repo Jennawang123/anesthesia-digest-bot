@@ -23,6 +23,7 @@ PARSERS = {
     "tscva": lambda html, cfg: extract.parse_tscva(html),
     "rapm": lambda html, cfg: extract.parse_rapm(html, kind=cfg["kind"]),
     "pain": lambda html, cfg: extract.parse_pain(html),
+    "tweccm": lambda html, cfg: extract.parse_tweccm(html),
 }
 
 
@@ -47,61 +48,93 @@ def _reason(error: Exception) -> str:
     return f"程式錯誤（需改 code）{type(error).__name__}: {detail}"
 
 
-def collect_airway() -> tuple[list[Event], list[str], str | None]:
-    """回傳（事件, 本次全文行, 失敗原因）。
+def snapshot_path(source: str) -> Path:
+    """文字來源的快照檔路徑。
 
-    只有 diff 出現新增行時才呼叫 Haiku，沒新增就完全不呼叫。
+    讀（collect_text_source）與寫（run.advance_state）共用這一個函式。
+    兩處各自組檔名的話，改了其中一處就會變成「永遠讀不到上一輪的快照」→
+    每輪整頁都算新增 → 撞 MAX_NEW_LINES 天天告警。
+    """
+    return DATA_DIR / f"snapshot_{source.lower()}.txt"
+
+
+def collect_text_source(cfg: dict) -> tuple[list[Event], list[str], str | None]:
+    """無結構頁面的通用處理：整頁純文字與上次快照 diff，新增段落交給 Haiku。
+
+    回傳（事件, 本次全文行, 失敗原因）。只有 diff 出現新增行時才呼叫 Haiku。
 
     注意 llm.classify() 在「回應無法解析」與「新增量異常」時會拋
-    LLMResponseError，由 collect() 的 except 接住 → 記成 AIRWAY 失敗 →
-    告警 + 不更新快照 + 下輪重試。這條路徑是刻意的：若改成回空 list，
-    模型回垃圾就會偽裝成「今天沒有活動」，快照照樣前進而永久漏報。
+    LLMResponseError，由 collect() 的 except 接住 → 記成該站失敗 →
+    告警 + 不更新快照 + 下輪重試。若改成回空 list，模型回垃圾就會偽裝成
+    「今天沒有活動」，快照照樣前進而永久漏報。
     """
-    cfg = next(s for s in SOURCES if s["source"] == "AIRWAY")
+    source = cfg["source"]
     html = fetch.get(cfg["url"])
-    lines = extract.airway_lines(html)
+    lines = extract.page_lines(html)
 
-    previous = state.load_snapshot(DATA_DIR / "airway_snapshot.txt")
+    previous = state.load_snapshot(snapshot_path(source))
     if previous and len(lines) < len(previous) * 0.5:
         return [], lines, f"純文字行數自 {len(previous)} 暴跌至 {len(lines)}，疑似改版"
 
-    new_lines = extract.airway_new_lines(lines, previous)
     if not previous:
-        # 首次執行：只建立快照，不送 LLM
+        # 首次執行：只建立快照，不送 LLM（整頁都會是「新增」，既貴又無意義）
         return [], lines, None
-    return llm.classify(new_lines), lines, None
+
+    new_lines = extract.page_new_lines(lines, previous)
+    return llm.classify(new_lines, source, cfg["label"], cfg["url"]), lines, None
 
 
-def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] | None]:
+def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], dict[str, list[str]]]:
     """逐站抓取與解析。單站失敗不影響其他站。
 
-    回傳（事件, 失敗清單, AIRWAY 本次全文行）。第三個值為 None 代表
-    AIRWAY 這輪失敗，呼叫端就**不可以**推進快照——快照是 AIRWAY 對
-    「什麼是新的」的唯一記憶，另外四站每輪重抓完整列表可自我修復，
-    只有它沒有第二份備援。
+    回傳（事件, 失敗清單, {來源代號: 該來源本次全文行}）。第三個值只收錄
+    **本輪成功的文字來源**；失敗的來源一律不放進去，呼叫端就不會推進它的
+    快照——快照是文字來源對「什麼是新的」的唯一記憶，其他站每輪重抓完整
+    列表可自我修復，只有它沒有第二份備援。
+
+    這裡不再用 cfg["source"] == "AIRWAY" 之類的名稱判斷來分派，改看
+    cfg["parser"]，而且 cfg 是直接傳進 collect_text_source 的、沒有第二次
+    查表，因此不會重演「兩處用不同 key 判斷同一件事」那種自相矛盾的訊號。
     """
     events: list[Event] = []
     failures: list[tuple[str, str]] = []
+    snapshots: dict[str, list[str]] = {}
 
     for cfg in SOURCES:
         source = cfg["source"]
-        # 用 source 判斷，與 collect_airway() 找設定的方式一致。
-        # 若這裡改用 cfg["parser"] 而字串打錯，AIRWAY 會落進下面的 PARSERS 查表
-        # 記一筆假失敗，但 collect_airway() 是按 source 找的、照樣成功——
-        # 結果是「事件正常推播，同時每週一則該站失敗告警」，訊號自相矛盾。
-        if cfg["source"] == "AIRWAY":
-            continue
-        # 同一個 source 可能有多筆設定（RAPM 的學會活動／友會活動）。
-        # 告警 key 若只用 source，其中一筆失敗會吃掉另一筆的 7 天冷卻期，
-        # 真故障會被另一個故障的節流紀錄遮住。
+        # 同一個 source 可能有多筆設定（RAPM 的學會活動／友會活動、
+        # TWECCM 的其他公告／首頁）。告警 key 若只用 source，其中一筆失敗
+        # 會吃掉另一筆的 7 天冷卻期，真故障會被另一個故障的節流紀錄遮住。
         alert_key = f"{source}／{cfg['kind']}" if cfg.get("kind") else source
+
+        if cfg["parser"] == "text":
+            try:
+                found, lines, text_error = collect_text_source(cfg)
+            except Exception as e:
+                print(f"  ❌ {alert_key} 抓取失敗：{type(e).__name__}: {e}")
+                traceback.print_exc()
+                failures.append((alert_key, _reason(e)))
+                continue
+            if text_error:
+                print(f"  ⚠️ {alert_key} {text_error}")
+                failures.append((alert_key, text_error))
+                continue
+            # 只有走到這一行才登記快照。上面兩條 continue 都刻意不登記，
+            # 那正是「失敗的來源不推進快照」這個保證的實作位置。
+            # 文字來源解析出 0 筆是常態（沒有新增行），不可比照列表站
+            # 當成「疑似改版」。
+            snapshots[source] = lines
+            events.extend(found)
+            print(f"  ✅ {alert_key} {len(found)} 筆")
+            continue
+
         urls = pain_urls(today) if cfg["parser"] == "pain" else [cfg["url"]]
         try:
             found: list[Event] = []
             for url in urls:
                 found.extend(PARSERS[cfg["parser"]](fetch.get(url), cfg))
         except Exception as e:
-            print(f"  ❌ {source} 抓取失敗：{type(e).__name__}: {e}")
+            print(f"  ❌ {alert_key} 抓取失敗：{type(e).__name__}: {e}")
             traceback.print_exc()   # 程式自身的 bug 要在 Actions log 留下行號
             failures.append((alert_key, _reason(e)))
             continue
@@ -110,48 +143,37 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] 
         # 但今年＋明年全空就確實異常，故此處統一判斷即可。
         if not found:
             failures.append((alert_key, "解析出 0 筆，疑似改版"))
-            print(f"  ⚠️ {source} 解析出 0 筆，疑似改版")
+            print(f"  ⚠️ {alert_key} 解析出 0 筆，疑似改版")
             continue
 
-        print(f"  ✅ {source}（{cfg.get('kind', '-')}）{len(found)} 筆")
+        print(f"  ✅ {alert_key} {len(found)} 筆")
         events.extend(found)
 
-    airway_lines_now: list[str] | None = None
-    try:
-        airway_events, lines, airway_error = collect_airway()
-        if airway_error:
-            failures.append(("AIRWAY", airway_error))
-        else:
-            events.extend(airway_events)
-            airway_lines_now = lines
-            print(f"  ✅ AIRWAY {len(airway_events)} 筆")
-    except Exception as e:
-        print(f"  ❌ AIRWAY 抓取失敗：{type(e).__name__}: {e}")
-        traceback.print_exc()
-        failures.append(("AIRWAY", _reason(e)))
-
-    return events, failures, airway_lines_now
+    return events, failures, snapshots
 
 
 def run(bootstrap: bool = False, today: date | None = None) -> list[tuple[str, str]]:
     today = today or date.today()
     seen_path = DATA_DIR / "seen.json"
-    snapshot_path = DATA_DIR / "airway_snapshot.txt"
     alerts_path = DATA_DIR / "alert_state.json"
     heartbeat_path = DATA_DIR / "heartbeat.json"
 
     print(f"執行日期：{today}｜模式：{'bootstrap' if bootstrap else '日常'}")
-    events, failures, airway_lines_now = collect(today)
+    events, failures, snapshots = collect(today)
 
     seen = state.load_seen(seen_path)
     fresh = state.filter_new(events, seen)
     print(f"抓到 {len(events)} 筆，其中新項目 {len(fresh)} 筆")
 
     def advance_state() -> None:
-        """把狀態推進到「已通知」。只在推播成功後呼叫。"""
+        """把狀態推進到「已通知」。只在推播成功後呼叫。
+
+        snapshots 只含本輪成功的文字來源，所以失敗的那個不會被推進；
+        逐來源寫出而非只寫一份，兩個文字來源的記憶才彼此獨立。
+        """
         state.save_seen(seen_path, seen | {e.key for e in events})
-        if airway_lines_now is not None:
-            state.save_snapshot(snapshot_path, airway_lines_now)
+        for source, lines in snapshots.items():
+            state.save_snapshot(snapshot_path(source), lines)
 
     if bootstrap:
         advance_state()

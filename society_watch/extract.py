@@ -1,4 +1,4 @@
-"""五個學會的 HTML → Event 抽取。
+"""各來源的 HTML → Event 抽取。
 
 每個 parser 只做「HTML 字串 → list[Event]」，不碰網路、不碰狀態、不碰通知，
 因此可對離線 fixture 完整測試。
@@ -27,6 +27,8 @@ TSCVA_MINOR_KEYWORDS = ("名單", "恭賀", "獲獎", "甄審條件")
 # 網址尾段的 34 是導覽狀態、不影響內容：實測 /33/1/8/34 載入的正是我們抓的
 # fragment /33/1/8/0；而看似更乾淨的 /33/ 反而不含載入器，換過去會更糟。
 PAIN_LIST_URL = "https://pain.org.tw/index.php/educlass_page/index/33/1/8/34"
+
+TWECCM_DOWNLOAD_BASE = "https://www.tweccm.org.tw/download/"
 
 
 def _clean(text: str) -> str:
@@ -176,13 +178,38 @@ def parse_pain(html: str) -> list[Event]:
     return events
 
 
-AIRWAY_URL = "https://www.tsamairway.org.tw/最新資訊"
+def parse_tweccm(html: str) -> list[Event]:
+    """急重症聯合年會（SECC）的「其他公告」列表。
+
+    每則是一組 <ul>：第一個 <li> 是標題，第二個 <li> 內的
+    <a href="infoFiles.asp?/130.html"> 帶穩定 ID。該頁不提供日期，
+    date_text 留空而不硬掰。
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+    for block in soup.select(".download-list ul"):
+        items = block.select("li")
+        link = block.select_one("a[href]")
+        if not items or not link:
+            continue
+        m = re.search(r"/(\d+)\.html", link.get("href", ""))
+        if not m:
+            continue
+        events.append(Event(
+            source="TWECCM",
+            uid=m.group(1),
+            title=_clean(items[0].get_text(" ", strip=True)),
+            date_text="",
+            url=urljoin(TWECCM_DOWNLOAD_BASE, link["href"]),
+        ))
+    return events
 
 
-def airway_lines(html: str) -> list[str]:
-    """Wix 頁面 → 可見純文字逐行。
+def page_lines(html: str) -> list[str]:
+    """任意 HTML 頁面 → 可見純文字逐行。
 
-    該站無「則」的結構可言，只能整頁取文字後與上次快照做 diff。
+    給沒有「則」的結構可言的來源用（AIRWAY 的 Wix 站、TWECCM 首頁），
+    只能整頁取文字後與上次快照做 diff。與來源無關，勿在此加任何站別特例。
     """
     text = re.sub(r"(?is)<script.*?</script>", "", html)
     text = re.sub(r"(?is)<style.*?</style>", "", text)
@@ -200,11 +227,11 @@ def airway_lines(html: str) -> list[str]:
     return [line.strip() for line in text.split("\n") if line.strip()]
 
 
-def airway_new_lines(current: list[str], previous: list[str]) -> list[str]:
+def page_new_lines(current: list[str], previous: list[str]) -> list[str]:
     """回傳 current 中不存在於 previous 的行，保持原順序。
 
-    用集合比對而非逐行位移比對：Wix 版面調整常使區塊順序變動，
-    位移比對會把整頁誤判為新增。
+    用集合比對而非逐行位移比對：Wix 版面調整、首頁輪播順序變動都會使區塊
+    順序改變，位移比對會把整頁誤判為新增。
     """
     seen = set(previous)
     return [line for line in current if line not in seen]
