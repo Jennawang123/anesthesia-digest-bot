@@ -6,6 +6,8 @@
 """
 import argparse
 import traceback
+
+import requests
 from datetime import date
 from pathlib import Path
 
@@ -21,6 +23,22 @@ PARSERS = {
     "rapm": lambda html, cfg: extract.parse_rapm(html, kind=cfg["kind"]),
     "pain": lambda html, cfg: extract.parse_pain(html),
 }
+
+
+def _reason(error: Exception) -> str:
+    """把例外轉成告警文字。
+
+    這串同時是 should_alert 的節流 key，所以要短而穩定——訊息每輪不同的話
+    7 天冷卻會失效變成天天吵。
+
+    另外要把「網站的問題」與「我們的程式壞了」分開講：parser 的 TypeError／
+    KeyError 也會走到這裡，跟斷線長得一樣，但它不會自己好。人看到
+    「程式錯誤」才知道要去改 code，而不是等站方修好。
+    """
+    detail = str(error).replace("\n", " ")[:80]
+    if isinstance(error, requests.RequestException):
+        return f"{type(error).__name__}: {detail}"
+    return f"程式錯誤（需改 code）{type(error).__name__}: {detail}"
 
 
 def collect_airway() -> tuple[list[Event], list[str], str | None]:
@@ -61,7 +79,11 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] 
 
     for cfg in SOURCES:
         source = cfg["source"]
-        if cfg["parser"] == "airway":
+        # 用 source 判斷，與 collect_airway() 找設定的方式一致。
+        # 若這裡改用 cfg["parser"] 而字串打錯，AIRWAY 會落進下面的 PARSERS 查表
+        # 記一筆假失敗，但 collect_airway() 是按 source 找的、照樣成功——
+        # 結果是「事件正常推播，同時每週一則該站失敗告警」，訊號自相矛盾。
+        if cfg["source"] == "AIRWAY":
             continue
         # 同一個 source 可能有多筆設定（RAPM 的學會活動／友會活動）。
         # 告警 key 若只用 source，其中一筆失敗會吃掉另一筆的 7 天冷卻期，
@@ -74,7 +96,8 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] 
                 found.extend(PARSERS[cfg["parser"]](fetch.get(url), cfg))
         except Exception as e:
             print(f"  ❌ {source} 抓取失敗：{type(e).__name__}: {e}")
-            failures.append((alert_key, f"{type(e).__name__}: {e}"))
+            traceback.print_exc()   # 程式自身的 bug 要在 Actions log 留下行號
+            failures.append((alert_key, _reason(e)))
             continue
 
         # found 是該站所有 URL 的累加結果。PAIN 的明年度清單正常為空，
@@ -99,7 +122,7 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] 
     except Exception as e:
         print(f"  ❌ AIRWAY 抓取失敗：{type(e).__name__}: {e}")
         traceback.print_exc()
-        failures.append(("AIRWAY", f"{type(e).__name__}: {e}"))
+        failures.append(("AIRWAY", _reason(e)))
 
     return events, failures, airway_lines_now
 

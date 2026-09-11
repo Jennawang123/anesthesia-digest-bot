@@ -2373,6 +2373,8 @@ def test_單站失敗不中斷其他站(env, monkeypatch):
     assert [f[0] for f in failures] == ["TSCVA"]
     assert any(e.source == "TSA" for e in events)
     assert not any(e.source == "TSCVA" for e in events)
+    # 也要斷言「排在失敗站之後」的站有跑到，否則 continue 改成 break 也會全過
+    assert any(e.source == "PAIN" for e in events)
 
 
 def test_解析出零筆視為疑似改版(env, monkeypatch):
@@ -2388,6 +2390,50 @@ def test_airway失敗時不回傳快照行(env, monkeypatch):
     monkeypatch.setattr(main, "collect_airway", lambda: ([], ["半截"], "行數暴跌"))
     _, failures, airway_lines = main.collect(date(2026, 9, 10))
     assert ("AIRWAY", "行數暴跌") in failures
+    assert airway_lines is None
+
+
+def test_airway首次執行不送llm只建快照(tmp_path, monkeypatch):
+    # 其餘測試都把 collect_airway 整個換掉，這裡是唯一真的跑它本體的地方
+    html = (FIXTURES / "airway_page_20260910.html").read_text(encoding="utf-8")
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main.fetch, "get", lambda url, **kwargs: html)
+    called = []
+    monkeypatch.setattr(main.llm, "classify", lambda lines: called.append(lines) or [])
+
+    events, lines, error = main.collect_airway()
+    assert (events, error) == ([], None)
+    assert len(lines) > 50
+    # 沒有舊快照時整頁都算「新增」，照送 Haiku 會直接撞上 MAX_NEW_LINES
+    assert called == []
+
+
+def test_airway行數暴跌時回報疑似改版且不送llm(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    main.state.save_snapshot(
+        tmp_path / "airway_snapshot.txt", [f"第 {i} 行" for i in range(100)]
+    )
+    monkeypatch.setattr(
+        main.fetch, "get", lambda url, **kwargs: "<html><body>只剩這一行</body></html>"
+    )
+    called = []
+    monkeypatch.setattr(main.llm, "classify", lambda lines: called.append(lines) or [])
+
+    events, lines, error = main.collect_airway()
+    assert events == []
+    assert error is not None and "暴跌" in error
+    assert called == []
+
+
+def test_airway拋例外時記成失敗且不推進快照(env, monkeypatch):
+    # llm.classify 回垃圾時會拋 LLMResponseError，必須變成告警而不是「今天沒活動」
+    def boom():
+        raise main.llm.LLMResponseError("Haiku 回應無法解析為 JSON 陣列")
+
+    monkeypatch.setattr(main, "collect_airway", boom)
+    _, failures, airway_lines = main.collect(date(2026, 9, 10))
+    assert [f[0] for f in failures] == ["AIRWAY"]
+    assert "LLMResponseError" in failures[0][1]
     assert airway_lines is None
 
 
@@ -2443,6 +2489,10 @@ def test_事件推播失敗時告警仍已送出(env, monkeypatch):
     # 告警排在事件推播之前，否則推播一炸，當天的異常告警也一起消失
     tmp_path, pushed, _ = env
     main.run(bootstrap=True, today=date(2026, 9, 10))
+    # 造出一則新項目，事件推播才會真的發生（也才炸得起來）
+    seen = main.state.load_seen(tmp_path / "seen.json")
+    seen.discard("TSA:3105")
+    main.state.save_seen(tmp_path / "seen.json", seen)
 
     import requests
     monkeypatch.setattr(
@@ -2473,6 +2523,38 @@ def test_bootstrap遇到失敗站會提醒重跑(env, monkeypatch, capsys):
     main.run(bootstrap=True, today=date(2026, 9, 10))
     out = capsys.readouterr().out
     assert "TSCVA" in out and "再跑一次 bootstrap" in out
+
+
+def test_每個來源的parser名稱都查得到():
+    # PARSERS 查表打錯字會被 except 吞成「該站抓取失敗」，
+    # 降級成每 7 天一則告警而不是大聲失敗。這條讓它在測試階段就炸
+    for cfg in main.SOURCES:
+        if cfg["source"] == "AIRWAY":
+            continue
+        assert cfg["parser"] in main.PARSERS, cfg
+
+
+def test_程式錯誤與網站問題在告警上分得開():
+    # parser 的 TypeError 會跟斷線走同一條路，但它不會自己好。
+    # 人要看得出來該去改 code，而不是等站方修好
+    import requests
+    assert main._reason(requests.ConnectionError("斷線")).startswith("ConnectionError")
+    assert main._reason(TypeError("parser 壞了")).startswith("程式錯誤")
+
+
+def test_告警原因長度受限以免節流失效():
+    # 這串同時是 should_alert 的節流 key，訊息每輪不同的話 7 天冷卻會失效
+    long = main._reason(TypeError("x" * 500))
+    assert len(long) < 130
+
+
+def test_程式錯誤會記進failure而非靜默(env, monkeypatch):
+    def boom(html, cfg):
+        raise TypeError("parser 自己壞了")
+
+    monkeypatch.setitem(main.PARSERS, "tsa", boom)
+    _, failures, _ = main.collect(date(2026, 9, 10))
+    assert any(k == "TSA" and "程式錯誤" in r for k, r in failures)
 ```
 
 - [ ] **Step 2: 執行測試確認失敗**
@@ -2493,6 +2575,8 @@ Expected: **collection error**（不是 test failed）——`ImportError: cannot
 """
 import argparse
 import traceback
+
+import requests
 from datetime import date
 from pathlib import Path
 
@@ -2508,6 +2592,22 @@ PARSERS = {
     "rapm": lambda html, cfg: extract.parse_rapm(html, kind=cfg["kind"]),
     "pain": lambda html, cfg: extract.parse_pain(html),
 }
+
+
+def _reason(error: Exception) -> str:
+    """把例外轉成告警文字。
+
+    這串同時是 should_alert 的節流 key，所以要短而穩定——訊息每輪不同的話
+    7 天冷卻會失效變成天天吵。
+
+    另外要把「網站的問題」與「我們的程式壞了」分開講：parser 的 TypeError／
+    KeyError 也會走到這裡，跟斷線長得一樣，但它不會自己好。人看到
+    「程式錯誤」才知道要去改 code，而不是等站方修好。
+    """
+    detail = str(error).replace("\n", " ")[:80]
+    if isinstance(error, requests.RequestException):
+        return f"{type(error).__name__}: {detail}"
+    return f"程式錯誤（需改 code）{type(error).__name__}: {detail}"
 
 
 def collect_airway() -> tuple[list[Event], list[str], str | None]:
@@ -2548,7 +2648,11 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] 
 
     for cfg in SOURCES:
         source = cfg["source"]
-        if cfg["parser"] == "airway":
+        # 用 source 判斷，與 collect_airway() 找設定的方式一致。
+        # 若這裡改用 cfg["parser"] 而字串打錯，AIRWAY 會落進下面的 PARSERS 查表
+        # 記一筆假失敗，但 collect_airway() 是按 source 找的、照樣成功——
+        # 結果是「事件正常推播，同時每週一則該站失敗告警」，訊號自相矛盾。
+        if cfg["source"] == "AIRWAY":
             continue
         # 同一個 source 可能有多筆設定（RAPM 的學會活動／友會活動）。
         # 告警 key 若只用 source，其中一筆失敗會吃掉另一筆的 7 天冷卻期，
@@ -2561,7 +2665,8 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] 
                 found.extend(PARSERS[cfg["parser"]](fetch.get(url), cfg))
         except Exception as e:
             print(f"  ❌ {source} 抓取失敗：{type(e).__name__}: {e}")
-            failures.append((alert_key, f"{type(e).__name__}: {e}"))
+            traceback.print_exc()   # 程式自身的 bug 要在 Actions log 留下行號
+            failures.append((alert_key, _reason(e)))
             continue
 
         # found 是該站所有 URL 的累加結果。PAIN 的明年度清單正常為空，
@@ -2586,7 +2691,7 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] 
     except Exception as e:
         print(f"  ❌ AIRWAY 抓取失敗：{type(e).__name__}: {e}")
         traceback.print_exc()
-        failures.append(("AIRWAY", f"{type(e).__name__}: {e}"))
+        failures.append(("AIRWAY", _reason(e)))
 
     return events, failures, airway_lines_now
 
@@ -2663,7 +2768,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_main.py -v`
-Expected: 13 passed
+Expected: 19 passed
 
 - [ ] **Step 5: 全套測試回歸**
 
@@ -3013,7 +3118,7 @@ Expected: FAIL，斷言失敗（沒有任何以 💓 開頭的訊息）
 - [ ] **Step 12: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_main.py -v`
-Expected: 18 passed
+Expected: 24 passed
 
 - [ ] **Step 13: 把心跳狀態檔納入 Actions commit**
 

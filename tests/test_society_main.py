@@ -249,3 +249,35 @@ def test_bootstrap遇到失敗站會提醒重跑(env, monkeypatch, capsys):
     main.run(bootstrap=True, today=date(2026, 9, 10))
     out = capsys.readouterr().out
     assert "TSCVA" in out and "再跑一次 bootstrap" in out
+
+
+def test_每個來源的parser名稱都查得到():
+    # PARSERS 查表打錯字會被 except 吞成「該站抓取失敗」，
+    # 降級成每 7 天一則告警而不是大聲失敗。這條讓它在測試階段就炸
+    for cfg in main.SOURCES:
+        if cfg["source"] == "AIRWAY":
+            continue
+        assert cfg["parser"] in main.PARSERS, cfg
+
+
+def test_程式錯誤與網站問題在告警上分得開():
+    # parser 的 TypeError 會跟斷線走同一條路，但它不會自己好。
+    # 人要看得出來該去改 code，而不是等站方修好
+    import requests
+    assert main._reason(requests.ConnectionError("斷線")).startswith("ConnectionError")
+    assert main._reason(TypeError("parser 壞了")).startswith("程式錯誤")
+
+
+def test_告警原因長度受限以免節流失效():
+    # 這串同時是 should_alert 的節流 key，訊息每輪不同的話 7 天冷卻會失效
+    long = main._reason(TypeError("x" * 500))
+    assert len(long) < 130
+
+
+def test_程式錯誤會記進failure而非靜默(env, monkeypatch):
+    def boom(html, cfg):
+        raise TypeError("parser 自己壞了")
+
+    monkeypatch.setitem(main.PARSERS, "tsa", boom)
+    _, failures, _ = main.collect(date(2026, 9, 10))
+    assert any(k == "TSA" and "程式錯誤" in r for k, r in failures)
