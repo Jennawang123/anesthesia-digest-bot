@@ -78,22 +78,48 @@ def save_snapshot(path: Path, lines: list[str]) -> None:
 ALERT_COOLDOWN_DAYS = 7
 
 
-def load_alerts(path: Path) -> dict[str, str]:
+def load_alerts(path: Path) -> dict[str, dict]:
+    """回傳 {告警key: {"date": ISO日期, "reason": 失敗原因}}。"""
     if not Path(path).exists():
         return {}
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else {}
 
 
-def save_alerts(path: Path, alerts: dict[str, str]) -> None:
-    Path(path).write_text(
+def save_alerts(path: Path, alerts: dict[str, dict]) -> None:
+    # 要走 _atomic_write：這個檔只有在「真的需要告警的那天」才會被讀，
+    # 留下半截檔的話平常完全正常，偏偏在出事那天讓整個 run 死在告警之前。
+    _atomic_write(
+        path,
         json.dumps(alerts, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
     )
 
 
-def should_alert(alerts: dict[str, str], source: str, today: date) -> bool:
-    """同一站 7 天內最多告警一次，避免站掛掉時天天吵。"""
-    last = alerts.get(source)
-    if not last:
+def record_alert(alerts: dict[str, dict], source: str, today: date, reason: str) -> None:
+    alerts[source] = {"date": today.isoformat(), "reason": reason}
+
+
+def should_alert(alerts: dict[str, dict], source: str, today: date, reason: str) -> bool:
+    """該不該為這次失敗送告警。
+
+    節流是「同一站、同一種壞法」7 天一次。換一種壞法要立刻說：
+    連線失敗與「解析出 0 筆，疑似改版」是兩個不同的問題、要做的事也不同，
+    第二個若被第一個的冷卻期吃掉，就會靜默七天。
+
+    這個檔是 commit 進 public repo、可能被手動編輯的，所以一律 fail-open：
+    值壞掉、型別不對、或日期落在未來（時鐘偏移或手改）都當成「該告警」。
+    寧可多吵一次，也不要因為一個壞掉的欄位而靜默——更不要讓 ValueError
+    穿出去，那會讓整個 run 死在告警之前，連當天的活動推播都一起沒了。
+    """
+    entry = alerts.get(source)
+    if not isinstance(entry, dict):
         return True
-    return today - date.fromisoformat(last) >= timedelta(days=ALERT_COOLDOWN_DAYS)
+    if entry.get("reason") != reason:
+        return True
+    try:
+        last = date.fromisoformat(entry.get("date", ""))
+    except (TypeError, ValueError):
+        return True
+    if last > today:
+        return True
+    return today - last >= timedelta(days=ALERT_COOLDOWN_DAYS)

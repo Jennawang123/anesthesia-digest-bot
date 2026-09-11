@@ -1103,6 +1103,7 @@ git commit -m "feat(society-watch): Wix 站新增段落的 Haiku 抽取"
 """狀態層測試。"""
 import json
 import sys
+from datetime import date
 
 import pytest
 from pathlib import Path
@@ -1175,6 +1176,78 @@ def test_寫入失敗不會留下半截檔案(tmp_path, monkeypatch):
 
     assert state.load_seen(p) == {"TSA:1"}          # 舊內容完好
     assert not list(tmp_path.glob("*.tmp"))         # 暫存檔已清掉
+
+
+def test_首次失敗就告警():
+    assert state.should_alert({}, "TSA", date(2026, 9, 10), "連線失敗") is True
+
+
+def test_七天內同樣的壞法不再告警():
+    alerts = {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 14), "連線失敗") is False
+
+
+def test_滿七天後再次告警():
+    alerts = {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 17), "連線失敗") is True
+
+
+def test_冷卻期內換一種壞法要立刻告警():
+    # 連線失敗與「解析出 0 筆，疑似改版」是兩個不同的問題、要做的事也不同，
+    # 第二個被第一個的冷卻期吃掉就會靜默七天
+    alerts = {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 11), "解析出 0 筆，疑似改版") is True
+
+
+def test_不同站各自計算節流():
+    alerts = {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}}
+    assert state.should_alert(alerts, "PAIN", date(2026, 9, 11), "連線失敗") is True
+
+
+def test_告警紀錄壞掉時一律fail_open():
+    # 這個檔 commit 在 public repo 裡、可能被手動改壞。
+    # 壞掉要當成「該告警」，而不是靜默，更不能讓例外穿出去把整個 run 弄死
+    today = date(2026, 9, 11)
+    for broken in ["2026-09-10", "", None, 20260910, [], {"date": "2026/09/10"},
+                   {"date": "九月十日"}, {"date": None}, {}]:
+        assert state.should_alert({"TSA": broken}, "TSA", today, "連線失敗") is True
+
+
+def test_未來日期不會造成長期靜默():
+    # 手改或時鐘偏移寫進未來日期的話，原本會一路靜默到那一天
+    alerts = {"TSA": {"date": "2027-01-01", "reason": "連線失敗"}}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 11), "連線失敗") is True
+
+
+def test_告警紀錄讀寫(tmp_path):
+    p = tmp_path / "alerts.json"
+    assert state.load_alerts(p) == {}
+    alerts = {}
+    state.record_alert(alerts, "TSA", date(2026, 9, 10), "連線失敗")
+    state.save_alerts(p, alerts)
+    assert state.load_alerts(p) == {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}}
+
+
+def test_告警紀錄也要原子寫入(tmp_path, monkeypatch):
+    # 這個檔只在「真的需要告警的那天」被讀，留半截檔的話平常完全正常，
+    # 偏偏在出事那天讓整個 run 死在告警之前
+    p = tmp_path / "alerts.json"
+    state.save_alerts(p, {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}})
+
+    def boom(*args, **kwargs):
+        raise KeyboardInterrupt("模擬 Actions 取消")
+
+    monkeypatch.setattr(state.os, "replace", boom)
+    with pytest.raises(KeyboardInterrupt):
+        state.save_alerts(p, {"TSA": {"date": "2026-09-99", "reason": "壞掉"}})
+    assert state.load_alerts(p)["TSA"]["date"] == "2026-09-10"
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_告警檔不是dict時回空(tmp_path):
+    p = tmp_path / "alerts.json"
+    p.write_text('["壞掉的格式"]', encoding="utf-8")
+    assert state.load_alerts(p) == {}
 ```
 
 - [ ] **Step 2: 執行測試確認失敗**
@@ -1196,6 +1269,7 @@ seen.json 只增不減：TSA 是 15 筆滾動視窗，舊活動會掉出列表�
 import json
 import os
 import tempfile
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Iterable
 
@@ -1261,6 +1335,56 @@ def load_snapshot(path: Path) -> list[str]:
 
 def save_snapshot(path: Path, lines: list[str]) -> None:
     _atomic_write(path, "\n".join(lines) + "\n")
+
+
+ALERT_COOLDOWN_DAYS = 7
+
+
+def load_alerts(path: Path) -> dict[str, dict]:
+    """回傳 {告警key: {"date": ISO日期, "reason": 失敗原因}}。"""
+    if not Path(path).exists():
+        return {}
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else {}
+
+
+def save_alerts(path: Path, alerts: dict[str, dict]) -> None:
+    # 要走 _atomic_write：這個檔只有在「真的需要告警的那天」才會被讀，
+    # 留下半截檔的話平常完全正常，偏偏在出事那天讓整個 run 死在告警之前。
+    _atomic_write(
+        path,
+        json.dumps(alerts, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+    )
+
+
+def record_alert(alerts: dict[str, dict], source: str, today: date, reason: str) -> None:
+    alerts[source] = {"date": today.isoformat(), "reason": reason}
+
+
+def should_alert(alerts: dict[str, dict], source: str, today: date, reason: str) -> bool:
+    """該不該為這次失敗送告警。
+
+    節流是「同一站、同一種壞法」7 天一次。換一種壞法要立刻說：
+    連線失敗與「解析出 0 筆，疑似改版」是兩個不同的問題、要做的事也不同，
+    第二個若被第一個的冷卻期吃掉，就會靜默七天。
+
+    這個檔是 commit 進 public repo、可能被手動編輯的，所以一律 fail-open：
+    值壞掉、型別不對、或日期落在未來（時鐘偏移或手改）都當成「該告警」。
+    寧可多吵一次，也不要因為一個壞掉的欄位而靜默——更不要讓 ValueError
+    穿出去，那會讓整個 run 死在告警之前，連當天的活動推播都一起沒了。
+    """
+    entry = alerts.get(source)
+    if not isinstance(entry, dict):
+        return True
+    if entry.get("reason") != reason:
+        return True
+    try:
+        last = date.fromisoformat(entry.get("date", ""))
+    except (TypeError, ValueError):
+        return True
+    if last > today:
+        return True
+    return today - last >= timedelta(days=ALERT_COOLDOWN_DAYS)
 ```
 
 - [ ] **Step 4: 執行測試確認通過**
@@ -2054,16 +2178,7 @@ git commit -m "feat(society-watch): 通知格式化、區塊邊界拆分與 LINE
 
 在 `tests/test_society_state.py` 末尾追加：
 
-先把測試檔頂端的 import 區改成（新增 `from datetime import date` 一行）：
-
-```python
-import json
-import sys
-from datetime import date
-from pathlib import Path
-```
-
-再於檔案末尾追加：
+在測試檔頂端的 import 區**插入**一行 `from datetime import date`（其餘既有的 import 一行都不要動，尤其 `import pytest` 是既有測試在用的），再把檔案末尾的告警測試改成下列內容：
 
 ```python
 def test_首次失敗就告警():
@@ -2094,7 +2209,8 @@ def test_告警紀錄讀寫(tmp_path):
 
 - [ ] **Step 2: 執行測試確認失敗**
 
-Run: `python3 -m pytest tests/test_society_state.py -k alert -v`
+Run: `python3 -m pytest tests/test_society_state.py -k 告警 -v`
+（測試名是中文，`-k alert` 一個都選不到卻仍回非 0 退出碼，會偽裝成「確認失敗」）
 Expected: FAIL，`AttributeError: module 'society_watch.state' has no attribute 'should_alert'`
 
 - [ ] **Step 3: 實作**
@@ -2129,7 +2245,7 @@ def should_alert(alerts: dict[str, str], source: str, today: date) -> bool:
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_state.py -v`
-Expected: 13 passed
+Expected: 18 passed
 
 - [ ] **Step 5: Commit**
 
@@ -2508,11 +2624,11 @@ def run(bootstrap: bool = False, today: date | None = None) -> None:
     # 告警先送：事件推播若拋例外，當天的異常告警才不會跟著一起消失
     if failures:
         alerts = state.load_alerts(alerts_path)
-        due = [f for f in failures if state.should_alert(alerts, f[0], today)]
+        due = [f for f in failures if state.should_alert(alerts, f[0], today, f[1])]
         if due:
             notify.push_line(notify.format_alert(due))
-            for source, _ in due:
-                alerts[source] = today.isoformat()
+            for source, reason in due:
+                state.record_alert(alerts, source, today, reason)
             state.save_alerts(alerts_path, alerts)
             print(f"已送出 {len(due)} 則告警。")
         else:
@@ -2755,7 +2871,7 @@ def should_heartbeat(last: str | None, today: date) -> bool:
 - [ ] **Step 4: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_state.py -v`
-Expected: 17 passed
+Expected: 22 passed
 
 - [ ] **Step 5: 寫失敗測試（訊息格式）**
 

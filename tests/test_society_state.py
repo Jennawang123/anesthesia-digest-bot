@@ -77,26 +77,72 @@ def test_寫入失敗不會留下半截檔案(tmp_path, monkeypatch):
 
 
 def test_首次失敗就告警():
-    assert state.should_alert({}, "TSA", date(2026, 9, 10)) is True
+    assert state.should_alert({}, "TSA", date(2026, 9, 10), "連線失敗") is True
 
 
-def test_七天內重複失敗不再告警():
-    alerts = {"TSA": "2026-09-10"}
-    assert state.should_alert(alerts, "TSA", date(2026, 9, 14)) is False
+def test_七天內同樣的壞法不再告警():
+    alerts = {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 14), "連線失敗") is False
 
 
 def test_滿七天後再次告警():
-    alerts = {"TSA": "2026-09-10"}
-    assert state.should_alert(alerts, "TSA", date(2026, 9, 17)) is True
+    alerts = {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 17), "連線失敗") is True
+
+
+def test_冷卻期內換一種壞法要立刻告警():
+    # 連線失敗與「解析出 0 筆，疑似改版」是兩個不同的問題、要做的事也不同，
+    # 第二個被第一個的冷卻期吃掉就會靜默七天
+    alerts = {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 11), "解析出 0 筆，疑似改版") is True
 
 
 def test_不同站各自計算節流():
-    alerts = {"TSA": "2026-09-10"}
-    assert state.should_alert(alerts, "PAIN", date(2026, 9, 11)) is True
+    alerts = {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}}
+    assert state.should_alert(alerts, "PAIN", date(2026, 9, 11), "連線失敗") is True
+
+
+def test_告警紀錄壞掉時一律fail_open():
+    # 這個檔 commit 在 public repo 裡、可能被手動改壞。
+    # 壞掉要當成「該告警」，而不是靜默，更不能讓例外穿出去把整個 run 弄死
+    today = date(2026, 9, 11)
+    for broken in ["2026-09-10", "", None, 20260910, [], {"date": "2026/09/10"},
+                   {"date": "九月十日"}, {"date": None}, {}]:
+        assert state.should_alert({"TSA": broken}, "TSA", today, "連線失敗") is True
+
+
+def test_未來日期不會造成長期靜默():
+    # 手改或時鐘偏移寫進未來日期的話，原本會一路靜默到那一天
+    alerts = {"TSA": {"date": "2027-01-01", "reason": "連線失敗"}}
+    assert state.should_alert(alerts, "TSA", date(2026, 9, 11), "連線失敗") is True
 
 
 def test_告警紀錄讀寫(tmp_path):
     p = tmp_path / "alerts.json"
     assert state.load_alerts(p) == {}
-    state.save_alerts(p, {"TSA": "2026-09-10"})
-    assert state.load_alerts(p) == {"TSA": "2026-09-10"}
+    alerts = {}
+    state.record_alert(alerts, "TSA", date(2026, 9, 10), "連線失敗")
+    state.save_alerts(p, alerts)
+    assert state.load_alerts(p) == {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}}
+
+
+def test_告警紀錄也要原子寫入(tmp_path, monkeypatch):
+    # 這個檔只在「真的需要告警的那天」被讀，留半截檔的話平常完全正常，
+    # 偏偏在出事那天讓整個 run 死在告警之前
+    p = tmp_path / "alerts.json"
+    state.save_alerts(p, {"TSA": {"date": "2026-09-10", "reason": "連線失敗"}})
+
+    def boom(*args, **kwargs):
+        raise KeyboardInterrupt("模擬 Actions 取消")
+
+    monkeypatch.setattr(state.os, "replace", boom)
+    with pytest.raises(KeyboardInterrupt):
+        state.save_alerts(p, {"TSA": {"date": "2026-09-99", "reason": "壞掉"}})
+    assert state.load_alerts(p)["TSA"]["date"] == "2026-09-10"
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_告警檔不是dict時回空(tmp_path):
+    p = tmp_path / "alerts.json"
+    p.write_text('["壞掉的格式"]', encoding="utf-8")
+    assert state.load_alerts(p) == {}
