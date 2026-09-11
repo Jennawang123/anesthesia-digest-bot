@@ -175,7 +175,8 @@ def test_第二次執行沒有新項目就不推播(env):
     tmp_path, pushed, _ = env
     main.run(bootstrap=True, today=date(2026, 9, 10))
     main.run(bootstrap=False, today=date(2026, 9, 11))
-    assert pushed == []
+    # 心跳是無條件的，這裡只斷言「沒有活動通知」
+    assert not any(t.startswith("🔔") for t in pushed)
 
 
 def test_有新項目就推播(env):
@@ -186,8 +187,9 @@ def test_有新項目就推播(env):
     main.state.save_seen(tmp_path / "seen.json", seen)
 
     main.run(bootstrap=False, today=date(2026, 9, 11))
-    assert len(pushed) == 1
-    assert "3105" in pushed[0]
+    events_pushed = [t for t in pushed if t.startswith("🔔")]
+    assert len(events_pushed) == 1
+    assert "3105" in events_pushed[0]
 
 
 def test_推播失敗時狀態不前進(env, monkeypatch):
@@ -281,3 +283,78 @@ def test_程式錯誤會記進failure而非靜默(env, monkeypatch):
     monkeypatch.setitem(main.PARSERS, "tsa", boom)
     _, failures, _ = main.collect(date(2026, 9, 10))
     assert any(k == "TSA" and "程式錯誤" in r for k, r in failures)
+
+
+def test_每月第一次成功執行會送心跳(env):
+    tmp_path, pushed, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    main.run(bootstrap=False, today=date(2026, 9, 11))
+    assert any(t.startswith("💓") for t in pushed)
+
+
+def test_同月第二次不再送心跳(env):
+    tmp_path, pushed, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    main.run(bootstrap=False, today=date(2026, 9, 11))
+    pushed.clear()
+    main.run(bootstrap=False, today=date(2026, 9, 12))
+    assert not any(t.startswith("💓") for t in pushed)
+
+
+def test_跨月會再送一次心跳(env):
+    tmp_path, pushed, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    main.run(bootstrap=False, today=date(2026, 9, 11))
+    pushed.clear()
+    main.run(bootstrap=False, today=date(2026, 10, 1))
+    assert any(t.startswith("💓") for t in pushed)
+
+
+def test_bootstrap不送心跳(env):
+    tmp_path, pushed, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    assert pushed == []
+
+
+def test_推播失敗那輪不送心跳也不記錄(env, monkeypatch):
+    # 心跳排在 advance_state 之後，語意是「一個完整週期跑完了」
+    tmp_path, _, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    seen = main.state.load_seen(tmp_path / "seen.json")
+    seen.discard("TSA:3105")
+    main.state.save_seen(tmp_path / "seen.json", seen)
+
+    def boom(text):
+        raise RuntimeError("LINE 掛了")
+
+    monkeypatch.setattr(main.notify, "push_line", boom)
+    with pytest.raises(RuntimeError):
+        main.run(bootstrap=False, today=date(2026, 9, 11))
+    assert main.state.load_heartbeat(tmp_path / "heartbeat.json") is None
+
+
+def test_心跳推播失敗就不記錄以免下月缺一拍(env, monkeypatch):
+    # save_heartbeat 必須排在心跳自己的 push_line 之後。順序反過來的話，
+    # 心跳推播失敗那個月會被記成「已送」而永久缺一拍——正好製造這功能要防的假警報
+    tmp_path, _, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+
+    def push(text):
+        if text.startswith("💓"):
+            raise RuntimeError("心跳送不出去")
+
+    monkeypatch.setattr(main.notify, "push_line", push)
+    with pytest.raises(RuntimeError):
+        main.run(bootstrap=False, today=date(2026, 9, 11))
+
+    assert main.state.load_heartbeat(tmp_path / "heartbeat.json") is None
+    assert main.state.load_seen(tmp_path / "seen.json")          # 活動狀態仍已推進
+
+
+def test_心跳狀態檔壞掉時當成該送(tmp_path, monkeypatch):
+    # heartbeat.json 也會 commit 進 public repo。load_alerts 有 isinstance 守門、
+    # should_alert 有 try/except，這裡不該是唯一裸奔的那個
+    p = tmp_path / "heartbeat.json"
+    for broken in ['[]', 'null', '"x"', '不是 json', '{"last": 202609}']:
+        p.write_text(broken, encoding="utf-8")
+        assert main.state.load_heartbeat(p) is None, broken

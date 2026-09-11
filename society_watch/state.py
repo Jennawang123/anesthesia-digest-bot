@@ -123,3 +123,35 @@ def should_alert(alerts: dict[str, dict], source: str, today: date, reason: str)
     if last > today:
         return True
     return today - last >= timedelta(days=ALERT_COOLDOWN_DAYS)
+
+
+def load_heartbeat(path: Path) -> str | None:
+    """回傳上次送出心跳的年月字串（例 "2026-09"），沒有或壞掉就回 None。
+
+    這個檔也 commit 進 public repo、可能被手動改壞，比照 load_alerts 一律
+    fail-open：回 None 代表「該送」，送完會覆寫成正確值而自動痊癒。
+    寧可多送一則，也不要讓 JSONDecodeError 穿出去把整個 run 弄成紅燈。
+    """
+    if not Path(path).exists():
+        return None
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    last = data.get("last")
+    return last if isinstance(last, str) else None
+
+
+def save_heartbeat(path: Path, year_month: str) -> None:
+    _atomic_write(path, json.dumps({"last": year_month}, ensure_ascii=False, indent=2) + "\n")
+
+
+def should_heartbeat(last: str | None, today: date) -> bool:
+    """該月是否還沒送過心跳。
+
+    刻意不綁「每月 1 號」：1 號那天若剛好抓取失敗，該月就永遠缺一拍，
+    使用者會以為監測停擺而虛驚。改成「每月第一次成功執行」即可。
+    """
+    return last != today.strftime("%Y-%m")

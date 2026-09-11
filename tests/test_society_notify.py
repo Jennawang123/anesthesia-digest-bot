@@ -135,3 +135,15 @@ def test_max_chars過小時明確報錯():
     # CI 要等到 timeout 才會發現
     with pytest.raises(ValueError):
         notify.split_message("【學會】\n" + "字" * 200, max_chars=40)
+
+
+def test_心跳訊息含來源數與已記錄則數():
+    msg = notify.format_heartbeat(source_count=6, seen_count=318, fresh_count=0)
+    assert msg.startswith("💓")
+    assert "6" in msg and "318" in msg
+
+
+def test_心跳訊息說明沒收到代表什麼():
+    # 心跳的價值在於建立可預期的節奏，使用者必須知道「沒收到」是訊號
+    msg = notify.format_heartbeat(source_count=6, seen_count=1, fresh_count=0)
+    assert "沒收到" in msg

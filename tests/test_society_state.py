@@ -146,3 +146,25 @@ def test_告警檔不是dict時回空(tmp_path):
     p = tmp_path / "alerts.json"
     p.write_text('["壞掉的格式"]', encoding="utf-8")
     assert state.load_alerts(p) == {}
+
+
+def test_心跳狀態讀寫(tmp_path):
+    p = tmp_path / "heartbeat.json"
+    assert state.load_heartbeat(p) is None
+    state.save_heartbeat(p, "2026-09")
+    assert state.load_heartbeat(p) == "2026-09"
+
+
+def test_該月尚未送過就要送():
+    assert state.should_heartbeat(None, date(2026, 9, 11)) is True
+    assert state.should_heartbeat("2026-08", date(2026, 9, 11)) is True
+
+
+def test_同月不重複送():
+    # 同一個月手動再觸發一次 workflow 不應該再送一則
+    assert state.should_heartbeat("2026-09", date(2026, 9, 30)) is False
+
+
+def test_心跳不綁定每月一號():
+    # 1 號當天若網路失敗，該月第一次成功執行仍要送，否則會缺一拍造成假警報
+    assert state.should_heartbeat("2026-08", date(2026, 9, 17)) is True

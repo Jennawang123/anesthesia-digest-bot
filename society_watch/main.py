@@ -132,6 +132,7 @@ def run(bootstrap: bool = False, today: date | None = None) -> None:
     seen_path = DATA_DIR / "seen.json"
     snapshot_path = DATA_DIR / "airway_snapshot.txt"
     alerts_path = DATA_DIR / "alert_state.json"
+    heartbeat_path = DATA_DIR / "heartbeat.json"
 
     print(f"執行日期：{today}｜模式：{'bootstrap' if bootstrap else '日常'}")
     events, failures, airway_lines_now = collect(today)
@@ -180,6 +181,20 @@ def run(bootstrap: bool = False, today: date | None = None) -> None:
     # 推播成功才推進狀態。push_line 內的 raise_for_status 會讓失敗穿出去，
     # 於是這行到不了，下一輪重推——重複優於漏報。
     advance_state()
+
+    # 月度心跳排在這之後，語意是「一個完整週期跑完了」。
+    # 它存在的理由見 §10：LINE 回 200 不代表送達，userId 填錯或使用者封鎖
+    # 官方帳號時整條線會靜默死亡而毫無訊號。心跳建立可預期的節奏，
+    # 讓「沒收到」本身成為訊號。心跳自己失敗不影響漏報保證。
+    last_beat = state.load_heartbeat(heartbeat_path)
+    if state.should_heartbeat(last_beat, today):
+        notify.push_line(notify.format_heartbeat(
+            source_count=len(SOURCES),
+            seen_count=len(seen | {e.key for e in events}),
+            fresh_count=len(fresh),
+        ))
+        state.save_heartbeat(heartbeat_path, today.strftime("%Y-%m"))
+        print("已送出月度心跳。")
 
 
 def main() -> None:

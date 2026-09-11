@@ -126,6 +126,19 @@ def format_alert(failures: list[tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def format_heartbeat(source_count: int, seen_count: int, fresh_count: int) -> str:
+    """月度心跳。內容刻意帶幾個數字，讓它同時是一份極簡健康報告。"""
+    return "\n".join([
+        "💓 學會監測運作正常",
+        "",
+        f"・監測來源：{source_count} 個設定",
+        f"・已記錄項目：{seen_count} 則",
+        f"・本次新項目：{fresh_count} 則",
+        "",
+        "（每月一則。若某個月沒收到，表示監測可能已停擺，請查看 GitHub Actions。）",
+    ])
+
+
 def push_line(text: str) -> None:
     """推播一則訊息。
 
