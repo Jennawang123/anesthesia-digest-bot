@@ -2676,6 +2676,247 @@ git push
 
 ---
 
+## Task 15: 月度心跳（通道存活證明）
+
+**Files:**
+- Modify: `society_watch/state.py`
+- Modify: `society_watch/notify.py`
+- Modify: `society_watch/main.py`
+- Modify: `tests/test_society_state.py`
+- Modify: `tests/test_society_notify.py`
+- Modify: `tests/test_society_main.py`
+- Modify: `.github/workflows/society-watch.yml`
+
+**為什麼需要：** §10 記的那個破口——LINE 回 HTTP 200 只代表平台收下，不代表送達。`LINE_USER_ID` 填錯或使用者封鎖官方帳號時，`push_line` 看起來完全成功、狀態照常前進、每則都被標記已推播而永遠不再出現，**沒有任何訊號**。程式端偵測不到，只能建立一個可預期的節奏：每月一則心跳，沒收到就代表這條線可能已停擺。
+
+**三個設計決定：**
+1. 觸發條件是「每月第一次**成功**執行」，不是「每月 1 號」——1 號當天若剛好網路失敗就永遠缺那一拍，會造成假警報。
+2. 無條件發送，不管當月有沒有新活動。節奏必須可預期才有偵測價值。
+3. 排在 `advance_state()` 之後，語意是「一個完整週期跑完了」。心跳自己推播失敗不影響漏報保證。
+
+- [ ] **Step 1: 寫失敗測試（狀態層）**
+
+在 `tests/test_society_state.py` 末尾追加：
+
+```python
+def test_心跳狀態讀寫(tmp_path):
+    p = tmp_path / "heartbeat.json"
+    assert state.load_heartbeat(p) is None
+    state.save_heartbeat(p, "2026-09")
+    assert state.load_heartbeat(p) == "2026-09"
+
+
+def test_該月尚未送過就要送():
+    assert state.should_heartbeat(None, date(2026, 9, 11)) is True
+    assert state.should_heartbeat("2026-08", date(2026, 9, 11)) is True
+
+
+def test_同月不重複送():
+    # 同一個月手動再觸發一次 workflow 不應該再送一則
+    assert state.should_heartbeat("2026-09", date(2026, 9, 30)) is False
+
+
+def test_心跳不綁定每月一號():
+    # 1 號當天若網路失敗，該月第一次成功執行仍要送，否則會缺一拍造成假警報
+    assert state.should_heartbeat("2026-08", date(2026, 9, 17)) is True
+```
+
+- [ ] **Step 2: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_state.py -k 心跳 -v`
+Expected: FAIL，`AttributeError: module 'society_watch.state' has no attribute 'load_heartbeat'`
+
+- [ ] **Step 3: 實作狀態層**
+
+在 `society_watch/state.py` 末尾追加：
+
+```python
+def load_heartbeat(path: Path) -> str | None:
+    """回傳上次送出心跳的年月字串（例 "2026-09"），沒有就回 None。"""
+    if not Path(path).exists():
+        return None
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return data.get("last")
+
+
+def save_heartbeat(path: Path, year_month: str) -> None:
+    _atomic_write(path, json.dumps({"last": year_month}, ensure_ascii=False, indent=2) + "\n")
+
+
+def should_heartbeat(last: str | None, today: date) -> bool:
+    """該月是否還沒送過心跳。
+
+    刻意不綁「每月 1 號」：1 號那天若剛好抓取失敗，該月就永遠缺一拍，
+    使用者會以為監測停擺而虛驚。改成「每月第一次成功執行」即可。
+    """
+    return last != today.strftime("%Y-%m")
+```
+
+- [ ] **Step 4: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_state.py -v`
+Expected: 12 passed
+
+- [ ] **Step 5: 寫失敗測試（訊息格式）**
+
+在 `tests/test_society_notify.py` 末尾追加：
+
+```python
+def test_心跳訊息含來源數與已記錄則數():
+    msg = notify.format_heartbeat(source_count=6, seen_count=318, fresh_count=0)
+    assert msg.startswith("💓")
+    assert "6" in msg and "318" in msg
+
+
+def test_心跳訊息說明沒收到代表什麼():
+    # 心跳的價值在於建立可預期的節奏，使用者必須知道「沒收到」是訊號
+    msg = notify.format_heartbeat(source_count=6, seen_count=1, fresh_count=0)
+    assert "沒收到" in msg
+```
+
+- [ ] **Step 6: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_notify.py -k 心跳 -v`
+Expected: FAIL，`AttributeError: module 'society_watch.notify' has no attribute 'format_heartbeat'`
+
+- [ ] **Step 7: 實作訊息格式**
+
+在 `society_watch/notify.py` 的 `format_alert` 之後追加：
+
+```python
+def format_heartbeat(source_count: int, seen_count: int, fresh_count: int) -> str:
+    """月度心跳。內容刻意帶幾個數字，讓它同時是一份極簡健康報告。"""
+    return "\n".join([
+        "💓 學會監測運作正常",
+        "",
+        f"・監測來源：{source_count} 個設定",
+        f"・已記錄項目：{seen_count} 則",
+        f"・本次新項目：{fresh_count} 則",
+        "",
+        "（每月一則。若某個月沒收到，表示監測可能已停擺，請查看 GitHub Actions。）",
+    ])
+```
+
+- [ ] **Step 8: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_notify.py -v`
+Expected: 18 passed
+
+- [ ] **Step 9: 寫失敗測試（主流程）**
+
+在 `tests/test_society_main.py` 末尾追加：
+
+```python
+def test_每月第一次成功執行會送心跳(env):
+    tmp_path, pushed, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    main.run(bootstrap=False, today=date(2026, 9, 11))
+    assert any(t.startswith("💓") for t in pushed)
+
+
+def test_同月第二次不再送心跳(env):
+    tmp_path, pushed, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    main.run(bootstrap=False, today=date(2026, 9, 11))
+    pushed.clear()
+    main.run(bootstrap=False, today=date(2026, 9, 12))
+    assert not any(t.startswith("💓") for t in pushed)
+
+
+def test_跨月會再送一次心跳(env):
+    tmp_path, pushed, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    main.run(bootstrap=False, today=date(2026, 9, 11))
+    pushed.clear()
+    main.run(bootstrap=False, today=date(2026, 10, 1))
+    assert any(t.startswith("💓") for t in pushed)
+
+
+def test_bootstrap不送心跳(env):
+    tmp_path, pushed, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    assert pushed == []
+
+
+def test_推播失敗那輪不送心跳也不記錄(env, monkeypatch):
+    # 心跳排在 advance_state 之後，語意是「一個完整週期跑完了」
+    tmp_path, _, _ = env
+    main.run(bootstrap=True, today=date(2026, 9, 10))
+    seen = main.state.load_seen(tmp_path / "seen.json")
+    seen.discard("TSA:3105")
+    main.state.save_seen(tmp_path / "seen.json", seen)
+
+    def boom(text):
+        raise RuntimeError("LINE 掛了")
+
+    monkeypatch.setattr(main.notify, "push_line", boom)
+    with pytest.raises(RuntimeError):
+        main.run(bootstrap=False, today=date(2026, 9, 11))
+    assert main.state.load_heartbeat(tmp_path / "heartbeat.json") is None
+```
+
+- [ ] **Step 10: 執行測試確認失敗**
+
+Run: `python3 -m pytest tests/test_society_main.py -k 心跳 -v`
+Expected: FAIL，斷言失敗（沒有任何以 💓 開頭的訊息）
+
+- [ ] **Step 11: 實作主流程**
+
+在 `society_watch/main.py` 的 `run()` 裡，`heartbeat_path` 加到路徑宣告區：
+
+```python
+    heartbeat_path = DATA_DIR / "heartbeat.json"
+```
+
+並把函式最後一行 `advance_state()` 換成：
+
+```python
+    # 推播成功才推進狀態。push_line 內的 raise_for_status 會讓失敗穿出去，
+    # 於是這行到不了，下一輪重推——重複優於漏報。
+    advance_state()
+
+    # 月度心跳排在這之後，語意是「一個完整週期跑完了」。
+    # 它存在的理由見 §10：LINE 回 200 不代表送達，userId 填錯或使用者封鎖
+    # 官方帳號時整條線會靜默死亡而毫無訊號。心跳建立可預期的節奏，
+    # 讓「沒收到」本身成為訊號。心跳自己失敗不影響漏報保證。
+    last_beat = state.load_heartbeat(heartbeat_path)
+    if state.should_heartbeat(last_beat, today):
+        notify.push_line(notify.format_heartbeat(
+            source_count=len(SOURCES),
+            seen_count=len(seen | {e.key for e in events}),
+            fresh_count=len(fresh),
+        ))
+        state.save_heartbeat(heartbeat_path, today.strftime("%Y-%m"))
+        print("已送出月度心跳。")
+```
+
+- [ ] **Step 12: 執行測試確認通過**
+
+Run: `python3 -m pytest tests/test_society_main.py -v`
+Expected: 18 passed
+
+- [ ] **Step 13: 把心跳狀態檔納入 Actions commit**
+
+修改 `.github/workflows/society-watch.yml` 的 `Commit state` step，`git add` 那行改成：
+
+```bash
+          git add society_watch/seen.json society_watch/airway_snapshot.txt society_watch/alert_state.json society_watch/heartbeat.json
+```
+
+- [ ] **Step 14: 全套回歸**
+
+Run: `python3 -m pytest tests/ -m "not live"`
+Expected: 全數 passed
+
+- [ ] **Step 15: Commit**
+
+```bash
+git add society_watch/ tests/ .github/workflows/society-watch.yml
+git commit -m "feat(society-watch): 月度心跳，把靜默死亡變成可察覺的訊息中斷"
+```
+
+---
+
 ## 完成後的驗收標準
 
 - [ ] `python3 -m pytest tests/ -m "not live"` 全數通過
@@ -2684,3 +2925,4 @@ git push
 - [ ] `society_watch/seen.json` 為排序、一則一行、結尾有換行
 - [ ] GitHub Actions 手動觸發成功，LINE 收得到測試推播
 - [ ] 既有的日報 workflow 未受影響（`daily-fetch-classify` / `daily-push` 照常）
+- [ ] 首次執行當月收得到一則 💓 心跳訊息
