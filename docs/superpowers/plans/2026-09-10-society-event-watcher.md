@@ -2847,7 +2847,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add society_watch/seen.json society_watch/airway_snapshot.txt society_watch/alert_state.json
+          git add society_watch/seen.json society_watch/airway_snapshot.txt society_watch/alert_state.json society_watch/heartbeat.json
           if git diff --cached --quiet; then
             echo "狀態無變化，不 commit。"
           else
@@ -2902,6 +2902,11 @@ git push
 ---
 
 ## Task 15: 月度心跳（通道存活證明）
+
+> **執行順序：這個 task 要排在 Task 14 之前。** 它只改 `state.py` / `notify.py` / `main.py` 與對應測試；
+> workflow 的 `git add` 已經在 Task 14 的範本裡含 `heartbeat.json`，所以 **Step 13 不需要做**，
+> 只要在 Task 14 建立 workflow 後確認那一行有 `heartbeat.json` 即可。
+> 這樣 workflow 只寫一次，部署也只跑一次。
 
 **Files:**
 - Modify: `society_watch/state.py`
@@ -3120,13 +3125,9 @@ Expected: FAIL，斷言失敗（沒有任何以 💓 開頭的訊息）
 Run: `python3 -m pytest tests/test_society_main.py -v`
 Expected: 24 passed
 
-- [ ] **Step 13: 把心跳狀態檔納入 Actions commit**
+- [ ] **Step 13: （不需執行）workflow 的 `git add` 已含 `heartbeat.json`**
 
-修改 `.github/workflows/society-watch.yml` 的 `Commit state` step，`git add` 那行改成：
-
-```bash
-          git add society_watch/seen.json society_watch/airway_snapshot.txt society_watch/alert_state.json society_watch/heartbeat.json
-```
+Task 14 的 workflow 範本已經包含 `society_watch/heartbeat.json`。建立 workflow 後確認那一行有它即可，不需在此修改。
 
 - [ ] **Step 14: 全套回歸**
 
