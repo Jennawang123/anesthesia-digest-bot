@@ -358,3 +358,42 @@ def test_心跳狀態檔壞掉時當成該送(tmp_path, monkeypatch):
     for broken in ['[]', 'null', '"x"', '不是 json', '{"last": 202609}']:
         p.write_text(broken, encoding="utf-8")
         assert main.state.load_heartbeat(p) is None, broken
+
+
+def test_run回傳failures供呼叫端判斷(env, monkeypatch):
+    import requests
+    monkeypatch.setattr(
+        main.fetch, "get",
+        _fake_fetch(ALL_OK, failures={"congress.tscva.org.tw": requests.ConnectionError("斷線")}),
+    )
+    failures = main.run(bootstrap=True, today=date(2026, 9, 10))
+    assert [f[0] for f in failures] == ["TSCVA"]
+
+
+def test_anthropic錯誤不會被標成程式錯誤():
+    # 餘額用盡與月上限都會走到這裡。標成「程式錯誤」會把人引導去查程式碼，
+    # 但實際上該先看帳單餘額
+    class _FakeAnthropicError(Exception):
+        pass
+    _FakeAnthropicError.__module__ = "anthropic"
+
+    reason = main._reason(_FakeAnthropicError("credit balance is too low"))
+    assert "先查餘額" in reason
+    assert "程式錯誤" not in reason
+
+
+def test_全站皆失敗時以非零狀態結束(env, monkeypatch):
+    # 告警是同站同壞法 7 天一次，第 2～7 天會變成「全綠燈、零訊息」，
+    # 跟「今天真的沒有新活動」在 Actions 摘要頁上完全同形
+    import requests
+
+    def all_down(url, **kwargs):
+        raise requests.ConnectionError("全掛")
+
+    monkeypatch.setattr(main.fetch, "get", all_down)
+    monkeypatch.setattr(main, "collect_airway", lambda: (_ for _ in ()).throw(
+        requests.ConnectionError("全掛")))
+    monkeypatch.setattr(main.sys, "argv", ["main"])
+    with pytest.raises(SystemExit) as exc:
+        main.main()
+    assert exc.value.code == 1

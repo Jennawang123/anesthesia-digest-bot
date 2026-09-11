@@ -5,6 +5,7 @@
     python3 -m society_watch.main               # 日常執行
 """
 import argparse
+import sys
 import traceback
 
 import requests
@@ -38,6 +39,11 @@ def _reason(error: Exception) -> str:
     detail = str(error).replace("\n", " ")[:80]
     if isinstance(error, requests.RequestException):
         return f"{type(error).__name__}: {detail}"
+    # Anthropic SDK 的例外要單獨標示：餘額用盡與額度上限都長這樣，
+    # 若跟 parser 的 TypeError 一起標成「程式錯誤」，會把人引導去查程式碼，
+    # 但實際上該先看帳單餘額。
+    if (type(error).__module__ or "").startswith("anthropic"):
+        return f"Anthropic API 問題（先查餘額與月上限）{type(error).__name__}: {detail}"
     return f"程式錯誤（需改 code）{type(error).__name__}: {detail}"
 
 
@@ -127,7 +133,7 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] 
     return events, failures, airway_lines_now
 
 
-def run(bootstrap: bool = False, today: date | None = None) -> None:
+def run(bootstrap: bool = False, today: date | None = None) -> list[tuple[str, str]]:
     today = today or date.today()
     seen_path = DATA_DIR / "seen.json"
     snapshot_path = DATA_DIR / "airway_snapshot.txt"
@@ -156,7 +162,7 @@ def run(bootstrap: bool = False, today: date | None = None) -> None:
                 f"⚠️ {names} 本次失敗，未種進狀態檔。"
                 "修好後請再跑一次 bootstrap，否則下次成功時會把該站現存項目一次推出。"
             )
-        return
+        return failures
 
     # 告警先送：事件推播若拋例外，當天的異常告警才不會跟著一起消失
     if failures:
@@ -196,6 +202,8 @@ def run(bootstrap: bool = False, today: date | None = None) -> None:
         state.save_heartbeat(heartbeat_path, today.strftime("%Y-%m"))
         print("已送出月度心跳。")
 
+    return failures
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="學會活動監測與推播")
@@ -204,7 +212,14 @@ def main() -> None:
         help="首次執行：只建立狀態檔，不推播（避免把現存約 50 則一次推出）",
     )
     args = parser.parse_args()
-    run(bootstrap=args.bootstrap)
+    failures = run(bootstrap=args.bootstrap)
+
+    # 全站皆失敗時以非零狀態結束。否則 collect() 把每站的例外都吃進 failures、
+    # 告警又是同站同壞法 7 天一次，於是第 2～7 天會是「完全綠燈、零訊息」，
+    # 跟「今天真的沒有新活動」在 Actions 摘要頁上長得一模一樣。
+    if len(failures) >= len(SOURCES):
+        print("❌ 所有來源都失敗，以非零狀態結束讓 Actions 亮紅燈。")
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

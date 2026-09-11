@@ -37,6 +37,9 @@ jobs:
 
       - name: Run society watch
         env:
+          # Actions 的 log 是 pipe，stdout 會 block-buffered 而 stderr 不會，
+          # 出事時 traceback 會跟「哪一站失敗」完全錯位，排查困難
+          PYTHONUNBUFFERED: "1"
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
@@ -48,13 +51,25 @@ jobs:
           fi
 
       - name: Commit state
+        # always()：告警送出後 save_alerts 已寫檔，若接著事件推播失敗就跳過
+        # commit，7 天冷卻紀錄會遺失而隔天重複告警。加上它沒有反向風險——
+        # state.py 的每個 save_* 都排在對應的 push_line 之後，磁碟上出現的
+        # 狀態永遠只代表「已經送出去的東西」。
+        if: always()
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add society_watch/seen.json society_watch/airway_snapshot.txt society_watch/alert_state.json society_watch/heartbeat.json
+          # 必須用 -A：git add 只要有一個 pathspec 不存在就整條 exit 128
+          # 且什麼都不 stage（實測）。而 alert_state.json 只在有失敗時產生、
+          # heartbeat.json 只在當月第一次執行時產生，bootstrap 更是兩個都不會有。
+          # 逐檔列舉等於保證第一次就 fatal，狀態永遠 commit 不回去 → 每天重推全部。
+          # society_watch/ 底下只有 .py 與狀態檔，__pycache__ 已被 .gitignore 排除。
+          git add -A society_watch/
           if git diff --cached --quiet; then
             echo "狀態無變化，不 commit。"
           else
             git commit -m "chore: update society watch state [skip ci]"
-            git push
+            # 撞到並行寫入（排程延遲、或使用者自己 push）就 rebase 後重試，
+            # 否則整輪狀態隨 runner 蒸發
+            git push || (git pull --rebase origin main && git push)
           fi

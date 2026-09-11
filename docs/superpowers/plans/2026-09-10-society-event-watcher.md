@@ -2711,6 +2711,45 @@ def test_心跳狀態檔壞掉時當成該送(tmp_path, monkeypatch):
     for broken in ['[]', 'null', '"x"', '不是 json', '{"last": 202609}']:
         p.write_text(broken, encoding="utf-8")
         assert main.state.load_heartbeat(p) is None, broken
+
+
+def test_run回傳failures供呼叫端判斷(env, monkeypatch):
+    import requests
+    monkeypatch.setattr(
+        main.fetch, "get",
+        _fake_fetch(ALL_OK, failures={"congress.tscva.org.tw": requests.ConnectionError("斷線")}),
+    )
+    failures = main.run(bootstrap=True, today=date(2026, 9, 10))
+    assert [f[0] for f in failures] == ["TSCVA"]
+
+
+def test_anthropic錯誤不會被標成程式錯誤():
+    # 餘額用盡與月上限都會走到這裡。標成「程式錯誤」會把人引導去查程式碼，
+    # 但實際上該先看帳單餘額
+    class _FakeAnthropicError(Exception):
+        pass
+    _FakeAnthropicError.__module__ = "anthropic"
+
+    reason = main._reason(_FakeAnthropicError("credit balance is too low"))
+    assert "先查餘額" in reason
+    assert "程式錯誤" not in reason
+
+
+def test_全站皆失敗時以非零狀態結束(env, monkeypatch):
+    # 告警是同站同壞法 7 天一次，第 2～7 天會變成「全綠燈、零訊息」，
+    # 跟「今天真的沒有新活動」在 Actions 摘要頁上完全同形
+    import requests
+
+    def all_down(url, **kwargs):
+        raise requests.ConnectionError("全掛")
+
+    monkeypatch.setattr(main.fetch, "get", all_down)
+    monkeypatch.setattr(main, "collect_airway", lambda: (_ for _ in ()).throw(
+        requests.ConnectionError("全掛")))
+    monkeypatch.setattr(main.sys, "argv", ["main"])
+    with pytest.raises(SystemExit) as exc:
+        main.main()
+    assert exc.value.code == 1
 ```
 
 - [ ] **Step 2: 執行測試確認失敗**
@@ -2730,6 +2769,7 @@ Expected: **collection error**（不是 test failed）——`ImportError: cannot
     python3 -m society_watch.main               # 日常執行
 """
 import argparse
+import sys
 import traceback
 
 import requests
@@ -2763,6 +2803,11 @@ def _reason(error: Exception) -> str:
     detail = str(error).replace("\n", " ")[:80]
     if isinstance(error, requests.RequestException):
         return f"{type(error).__name__}: {detail}"
+    # Anthropic SDK 的例外要單獨標示：餘額用盡與額度上限都長這樣，
+    # 若跟 parser 的 TypeError 一起標成「程式錯誤」，會把人引導去查程式碼，
+    # 但實際上該先看帳單餘額。
+    if (type(error).__module__ or "").startswith("anthropic"):
+        return f"Anthropic API 問題（先查餘額與月上限）{type(error).__name__}: {detail}"
     return f"程式錯誤（需改 code）{type(error).__name__}: {detail}"
 
 
@@ -2852,7 +2897,7 @@ def collect(today: date) -> tuple[list[Event], list[tuple[str, str]], list[str] 
     return events, failures, airway_lines_now
 
 
-def run(bootstrap: bool = False, today: date | None = None) -> None:
+def run(bootstrap: bool = False, today: date | None = None) -> list[tuple[str, str]]:
     today = today or date.today()
     seen_path = DATA_DIR / "seen.json"
     snapshot_path = DATA_DIR / "airway_snapshot.txt"
@@ -2881,7 +2926,7 @@ def run(bootstrap: bool = False, today: date | None = None) -> None:
                 f"⚠️ {names} 本次失敗，未種進狀態檔。"
                 "修好後請再跑一次 bootstrap，否則下次成功時會把該站現存項目一次推出。"
             )
-        return
+        return failures
 
     # 告警先送：事件推播若拋例外，當天的異常告警才不會跟著一起消失
     if failures:
@@ -2921,6 +2966,8 @@ def run(bootstrap: bool = False, today: date | None = None) -> None:
         state.save_heartbeat(heartbeat_path, today.strftime("%Y-%m"))
         print("已送出月度心跳。")
 
+    return failures
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="學會活動監測與推播")
@@ -2929,7 +2976,14 @@ def main() -> None:
         help="首次執行：只建立狀態檔，不推播（避免把現存約 50 則一次推出）",
     )
     args = parser.parse_args()
-    run(bootstrap=args.bootstrap)
+    failures = run(bootstrap=args.bootstrap)
+
+    # 全站皆失敗時以非零狀態結束。否則 collect() 把每站的例外都吃進 failures、
+    # 告警又是同站同壞法 7 天一次，於是第 2～7 天會是「完全綠燈、零訊息」，
+    # 跟「今天真的沒有新活動」在 Actions 摘要頁上長得一模一樣。
+    if len(failures) >= len(SOURCES):
+        print("❌ 所有來源都失敗，以非零狀態結束讓 Actions 亮紅燈。")
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
@@ -3004,6 +3058,9 @@ jobs:
 
       - name: Run society watch
         env:
+          # Actions 的 log 是 pipe，stdout 會 block-buffered 而 stderr 不會，
+          # 出事時 traceback 會跟「哪一站失敗」完全錯位，排查困難
+          PYTHONUNBUFFERED: "1"
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
@@ -3015,25 +3072,41 @@ jobs:
           fi
 
       - name: Commit state
+        # always()：告警送出後 save_alerts 已寫檔，若接著事件推播失敗就跳過
+        # commit，7 天冷卻紀錄會遺失而隔天重複告警。加上它沒有反向風險——
+        # state.py 的每個 save_* 都排在對應的 push_line 之後，磁碟上出現的
+        # 狀態永遠只代表「已經送出去的東西」。
+        if: always()
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add society_watch/seen.json society_watch/airway_snapshot.txt society_watch/alert_state.json society_watch/heartbeat.json
+          # 必須用 -A：git add 只要有一個 pathspec 不存在就整條 exit 128
+          # 且什麼都不 stage（實測）。而 alert_state.json 只在有失敗時產生、
+          # heartbeat.json 只在當月第一次執行時產生，bootstrap 更是兩個都不會有。
+          # 逐檔列舉等於保證第一次就 fatal，狀態永遠 commit 不回去 → 每天重推全部。
+          # society_watch/ 底下只有 .py 與狀態檔，__pycache__ 已被 .gitignore 排除。
+          git add -A society_watch/
           if git diff --cached --quiet; then
             echo "狀態無變化，不 commit。"
           else
             git commit -m "chore: update society watch state [skip ci]"
-            git push
+            # 撞到並行寫入（排程延遲、或使用者自己 push）就 rebase 後重試，
+            # 否則整輪狀態隨 runner 蒸發
+            git push || (git pull --rebase origin main && git push)
           fi
 ```
 
 - [ ] **Step 2: 本機乾跑一次確認能抓到真實資料**
 
+> **本機跑出來的狀態檔不要 commit，跑完請刪掉。** 真正的 bootstrap 改在 GitHub Actions
+> 上用 `workflow_dispatch` 輸入 `bootstrap=true` 執行——runner 連得到 Wix，本機不一定。
+> 初始狀態應該由實際執行環境產生。
+
 Run:
 ```bash
 LINE_CHANNEL_ACCESS_TOKEN=dummy LINE_USER_ID=dummy python3 -m society_watch.main --bootstrap
 ```
-Expected: 印出六列 `✅`（TSA/TSCVA/RAPM×2/PAIN/AIRWAY），總筆數約 55–60，末行為 `bootstrap 模式：只寫狀態檔，不推播。`，且產生 `society_watch/seen.json` 與 `society_watch/airway_snapshot.txt`。
+Expected: 印出六列 `✅`（TSA/TSCVA/RAPM×2/PAIN/AIRWAY），總筆數約 70（TSA 15／TSCVA 6／RAPM 27／PAIN 22，另 AIRWAY），末行為 `bootstrap 模式：只寫狀態檔，不推播。`，且產生 `society_watch/seen.json` 與 `society_watch/airway_snapshot.txt`。
 
 > **若只有 AIRWAY 失敗（`ConnectionError` / `Connection reset by peer`），先確認是不是本機網路擋掉 Wix，而不是程式或站方改版。** 2026-09-11 實測過一次：`www.tsamairway.org.tw` 與 `www.wix.com` 同時 HTTP 000、TLS 握手 read 0 bytes，DNS 解析正常（`wixdns.net` → `34.149.87.45`），而同時間 `anesth.org.tw` 回 200/0.6s——整個 Wix CDN 從該網路連不上。企業／醫院 VPN 擋 Wix 很常見。判斷方式：`curl -m 10 -o /dev/null -w "%{http_code}\n" https://www.wix.com/`，同樣 000 就是網路層問題，換網路再跑。GitHub Actions 的 runner 不受此限。
 >
@@ -3307,7 +3380,7 @@ Expected: FAIL，斷言失敗（沒有任何以 💓 開頭的訊息）
 - [ ] **Step 12: 執行測試確認通過**
 
 Run: `python3 -m pytest tests/test_society_main.py -v`
-Expected: 26 passed
+Expected: 29 passed
 
 - [ ] **Step 13: （不需執行）workflow 的 `git add` 已含 `heartbeat.json`**
 
