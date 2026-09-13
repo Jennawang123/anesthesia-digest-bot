@@ -377,7 +377,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">美國西南部</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">u0910b</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">u0913a</span></div>
     </div>
   </div>
   <div class="content">
@@ -882,9 +882,15 @@ function sanityCheck(hit,refs,src){
     // 它會成為後續檢查的基準，反而把正確的座標擋掉。
     return src!=='photon';
   }
-  const cLat=pts.reduce((s,p)=>s+p.lat,0)/pts.length;
-  const cLng=pts.reduce((s,p)=>s+p.lng,0)/pts.length;
-  return haversine(hit.lat,hit.lng,cLat,cLng)<=GEO_MAX_KM;
+  // 比「離最近的一個參照點多遠」，不是「離平均中心多遠」。同一天跨區的行程
+  // （長程移動日、搭飛機換區）平均中心會落在兩群之間，離兩端都很遠，
+  // 結果當天所有座標一起被判成誤配。改成最近鄰之後，只要靠近當天任何一個已知
+  // 座標就算合理，而真正的誤配（離每一點都很遠）照樣擋得下來。
+  //
+  // 注意這一關擋不住「跨區日的第一筆目的地座標」——那一天當下的參照全在出發地，
+  // 正當的目的地座標離每一點都很遠。那種情況靠使用者手動採用（adoptRejectedGeo），
+  // 不是靠放寬門檻：門檻放寬到容得下任何跨區，等於沒有檢查。
+  return pts.some(p=>haversine(hit.lat,hit.lng,p.lat,p.lng)<=GEO_MAX_KM);
 }
 
 // ─── 地理編碼：查詢與節流佇列 ───────────────────────
@@ -950,13 +956,16 @@ async function geoRun(){
 async function geoResolve(raw,refs){
   const cands=geoCandidates(raw);
   if(!cands.length)return {fail:'no-match'};
-  let sawNetwork=false,sawReject=false;
+  let sawNetwork=false,sawReject=false,rejected=null;
   for(const c of cands){
     let hit=null;
     try{hit=await geoNominatim(c);}
     catch(e){sawNetwork=true;continue;}
     if(!hit)continue;
     if(sanityCheck(hit,refs,'nominatim'))return {lat:hit.lat,lng:hit.lng,src:'nominatim',q:c};
+    // 被距離擋下的座標留著，讓使用者自己看一眼決定要不要採用（跨區日就靠這個）。
+    // 只留第一個：候選字串是由精確到粗略排序的，第一個最接近使用者填的東西。
+    if(!rejected)rejected={lat:hit.lat,lng:hit.lng,src:'nominatim',q:c};
     sawReject=true;
   }
   // Nominatim 全數失敗才試 Photon，且套用同一套檢查（它最會編答案）
@@ -966,9 +975,10 @@ async function geoResolve(raw,refs){
     catch(e){sawNetwork=true;continue;}
     if(!hit)continue;
     if(sanityCheck(hit,refs,'photon'))return {lat:hit.lat,lng:hit.lng,src:'photon',q:c};
+    if(!rejected)rejected={lat:hit.lat,lng:hit.lng,src:'photon',q:c};
     sawReject=true;
   }
-  if(sawReject)return {fail:'sanity-reject'};
+  if(sawReject)return {fail:'sanity-reject',rejected};
   if(sawNetwork)return {fail:'network'};
   return {fail:'no-match'};
 }
@@ -977,6 +987,18 @@ async function geoResolve(raw,refs){
 // （實測某公寓的各種寫法全滅），這時填一個附近城鎮當定位地名即可，
 // 顯示用的 loc 保持原樣，地圖與安全資訊都用得到座標。
 function geoQueryOf(act){return (act.geoQ||act.loc||'').trim();}
+// 使用者按「就是這裡」採用的座標，等 saveAct 一起寫進去——新增活動的當下還沒有
+// id，沒辦法直接寫 Firebase。_rejectedGeo 是這次查詢被擋下的那一筆，按鈕的資料來源。
+let pendingActGeo=null,_rejectedGeo=null;
+// 手動採用：距離檢查是在替機器判斷「這答案可不可信」，但機器分不出「跨區移動」
+// 和「查錯地方」，使用者看得出來。採用的座標打上 locked，之後的自動重掃與離群複查
+// 都不再碰它，否則背景掃描下一輪就把它清掉了。
+function adoptRejectedGeo(){
+  if(!_rejectedGeo)return;
+  pendingActGeo={lat:_rejectedGeo.lat,lng:_rejectedGeo.lng,q:_rejectedGeo.q,src:_rejectedGeo.src,locked:true};
+  const el=document.getElementById('a_geo_result');
+  if(el)el.innerHTML=`🔒 已採用：${esc(pendingActGeo.q)}（${pendingActGeo.lat.toFixed(3)}, ${pendingActGeo.lng.toFixed(3)}）<br>儲存後就不會再被自動檢查改掉。`;
+}
 // 讓使用者在編輯活動時就能確認查得到什麼，不必存檔後回設定頁看狀態面板
 async function tryActGeo(){
   const el=document.getElementById('a_geo_result');
@@ -985,6 +1007,13 @@ async function tryActGeo(){
   el.textContent='🔍 查詢中…';
   const did=document.getElementById('ma-did').value;
   const res=await geoResolve(q,dayKnownPoints(lastSched[did]||{}));
+  if(res.fail==='sanity-reject'&&res.rejected){
+    _rejectedGeo=res.rejected;pendingActGeo=null;
+    el.innerHTML=`⛔ 查到 <b>${esc(res.rejected.q)}</b>（${res.rejected.lat.toFixed(3)}, ${res.rejected.lng.toFixed(3)}），離當天其他行程很遠。<br>`
+      +`不是你要的地方就改填更明確的地名再查一次；確定是跨區移動的話按下面這顆。<br>`
+      +`<button type="button" class="btn btn-b" style="margin-top:8px" onclick="adoptRejectedGeo()">就是這裡，直接採用</button>`;
+    return;
+  }
   if(res.fail){
     el.innerHTML=res.fail==='sanity-reject'
       ? '⛔ 查到的位置離當天行程太遠，已略過。請改填更明確的地名'
@@ -1013,13 +1042,15 @@ async function ensureActGeo(sched,force=false){
     for(const [did,day] of Object.entries(sched||{})){
       const refs=dayKnownPoints(day);
       const resolved=Object.entries(day.acts||{}).filter(([aid,a])=>a.geo)
-        .map(([aid,a])=>({aid,lat:a.geo.lat,lng:a.geo.lng,loc:a.loc}));
+        .map(([aid,a])=>({aid,lat:a.geo.lat,lng:a.geo.lng,loc:a.loc,locked:!!a.geo.locked}));
       for(const [aid,act] of Object.entries(day.acts||{})){
         const q=geoQueryOf(act);
         if(!q)continue;
         // 已有座標時平常跳過；但「立即更新」是使用者主動要求重查，
         // 必須連已成功的也重跑——通過檢查但其實錯的座標，正是這條管線最擔心的錯誤模式。
-        if(act.geo&&!force)continue;
+        // 手動採用的座標連「立即更新」都不重查：那是使用者親自確認過的，
+        // 重查只會再被距離檢查擋一次，然後把它換成 geoFail。
+        if(act.geo&&(!force||act.geo.locked))continue;
         if(!force&&act.geoFail&&!GEO_RETRY_REASONS.includes(act.geoFail.reason))continue;
         const res=await geoEnqueue(()=>geoResolve(q,refs));
         const base='/schedule/'+did+'/acts/'+aid;
@@ -1037,11 +1068,14 @@ async function ensureActGeo(sched,force=false){
   }finally{_geoScanning=false;}
 }
 
-// 當天全部解析完後，用中位中心複查一次。這是為了消除順序依賴：
-// 當天第一筆解析時 refs 必定是空的，sanityCheck 的距離檢查對它形同略過，
-// 若它誤配，就成為當天所有後續判斷的錨點，反而把正確的座標一一擋掉。
-// 用中位數而非平均，離群點才不會把中心拉向自己。
+// 當天全部解析完後複查一次，消除順序依賴：當天第一筆解析時 refs 必定是空的，
+// sanityCheck 的距離檢查對它形同略過，若它誤配，就成為當天所有後續判斷的錨點，
+// 反而把正確的座標一一擋掉。
 // 少於 3 筆無法判斷誰是離群（2 筆相距很遠時，沒有依據說哪一筆才是錯的），跳過。
+//
+// 判定改成「離最近的另一筆座標多遠」，本來是「離中位中心多遠」。中位中心在跨區
+// 的日子會落在人數多的那一群裡，把另一群正當的座標整批當成離群刪掉。
+// 看最近鄰的話，成群的座標互相擔保，只有真正孤零零的那一筆才會被清掉。
 //
 // 門檻刻意比 GEO_MAX_KM 寬：這一關要抓的是「跨區誤配」（挪威城市配到冰島、
 // 首都圈公寓配到東南部），不是「當天開很遠」。冰島南岸長程日端到端可達 400km，
@@ -1050,10 +1084,10 @@ async function ensureActGeo(sched,force=false){
 const GEO_PRUNE_KM=700;
 async function pruneDayOutliers(did,resolved){
   if(resolved.length<3)return;
-  const med=a=>{const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
-  const cLat=med(resolved.map(r=>r.lat)),cLng=med(resolved.map(r=>r.lng));
   for(const r of resolved){
-    if(haversine(r.lat,r.lng,cLat,cLng)<=GEO_PRUNE_KM)continue;
+    // 手動採用的座標是使用者親自確認過的，這一關不碰它
+    if(r.locked)continue;
+    if(resolved.some(o=>o!==r&&haversine(r.lat,r.lng,o.lat,o.lng)<=GEO_PRUNE_KM))continue;
     await DB.ref('/schedule/'+did+'/acts/'+r.aid+'/geo').remove();
     await DB.ref('/schedule/'+did+'/acts/'+r.aid+'/geoFail')
       .set({at:new Date().toISOString(),tried:geoCandidates(r.loc||''),reason:'sanity-reject'});
@@ -2806,6 +2840,7 @@ function openActM(did){
   document.getElementById('a_name').value='';
   document.getElementById('a_loc').value='';document.getElementById('a_note').value='';
   document.getElementById('a_geoq').value='';document.getElementById('a_geo_result').textContent='';
+  pendingActGeo=null;_rejectedGeo=null;
   document.getElementById('a_custom_ico').value='';
   curActImages=[];renderActImgPreviews();
   curActCosts=[];ensureActCostRow();
@@ -2824,8 +2859,9 @@ function openActEdit(did,aid){
     document.getElementById('a_name').value=a.name||'';
     document.getElementById('a_loc').value=a.loc||'';document.getElementById('a_note').value=a.note||'';
     document.getElementById('a_geoq').value=a.geoQ||'';
+    pendingActGeo=null;_rejectedGeo=null;
     document.getElementById('a_geo_result').innerHTML=a.geo
-      ? `✅ 已定位：${esc(a.geo.q||'')}（${a.geo.lat.toFixed(3)}, ${a.geo.lng.toFixed(3)}）`
+      ? `${a.geo.locked?'🔒 手動採用':'✅ 已定位'}：${esc(a.geo.q||'')}（${a.geo.lat.toFixed(3)}, ${a.geo.lng.toFixed(3)}）`
       : (a.geoFail?'❌ 目前查不到座標，可填上方的定位用地名再按試查':'');
     curAC=a.cat||'sight';renderACGrid();
     document.getElementById('a_custom_ico').value=a.customIco||'';
@@ -2891,6 +2927,8 @@ function saveAct(){
       if(prev.geo)obj.geo=prev.geo;
       if(prev.geoFail)obj.geoFail=prev.geoFail;
     }
+    // 手動採用的座標蓋過上面的沿用，並清掉失敗紀錄——不清的話背景掃描還當它沒定位。
+    if(pendingActGeo){obj.geo={...pendingActGeo,at:new Date().toISOString()};obj.geoFail=null;}
     DB.ref('/schedule/'+did+'/acts/'+id).set(obj);
     DB.ref('/expenses/actcost_'+did+'_'+id).remove();
     const prevCostCount=actCostList(prev).length;
@@ -3632,6 +3670,14 @@ function _selftest(){
     ok('Photon 無參照時一律拒絕', sanityCheck(US,[],'photon')===false);
     ok('Photon 有參照且合理則通過', sanityCheck(US,refs,'photon')===true);
     ok('Photon 有參照但不合理被擋', sanityCheck(FAR,refs,'photon')===false);
+    // 跨區日：當天參照全在聖地牙哥，遠方的正當座標一樣過不了——這是預期行為，
+    // 靠使用者手動採用（adoptRejectedGeo），不是靠放寬門檻。
+    const HB ={lat:36.8791,lng:-111.5104,cc:'us'};   // Horseshoe Bend（Page, AZ）
+    const ANT={lat:36.8619,lng:-111.3743,cc:'us'};   // Antelope Canyon，距 HB 約 12km
+    ok('跨區的遠方座標仍被擋（要手動採用）', sanityCheck(HB,refs,'nominatim')===false);
+    // 但只要當天已經有一筆 Page 的座標當參照，同區的第二筆就該自動通過。
+    // 舊的平均中心寫法在這裡會失敗：三點中心落在加州沙漠，離 Antelope Canyon 約 470km。
+    ok('當天已有遠方參照時，鄰近座標通過', sanityCheck(ANT,[...refs,{lat:HB.lat,lng:HB.lng}],'nominatim')===true);
     // 門檻本身：改小回冰島的數值，長程移動日的正確座標就會被誤刪
     ok('GEO_MAX_KM 容得下當日長程', GEO_MAX_KM>=450);
     ok('GEO_PRUNE_KM 容得下端到端 590km', GEO_PRUNE_KM>=600);
