@@ -1589,6 +1589,11 @@ function syncWeather(sched){
 // 旅程本身的設定（標題/成員/出發日/天數/照片/主要城市）存在 Firebase /config，
 // 這樣換裝置不用重填，也不會兩台各存一份互相打架。
 const TRIP_KEYS=['title','members','start','days','photo','city','cityQuery','lat','lng','tz'];
+// 寫死的連線資訊：iOS 清掉網站資料後，有網路就能自動恢復，不必重新輸入（爸媽不會記得網址和金鑰）。
+// Firebase Web API Key 本來就會出現在前端，保護靠 Security Rules（2026-09-10 已鎖 auth != null）。
+const DEF_FB_URL='https://iceland-2026-f13e6-default-rtdb.asia-southeast1.firebasedatabase.app', DEF_FB_KEY='AIzaSyA9HD7bn85xuBR-FYWzsShtuf2zUef-1uY';
+// 本機有值優先用本機（維持既有裝置行為），沒有才用寫死的
+function deviceCfg(dev){dev=dev||{};return {...dev,url:dev.url||DEF_FB_URL,apiKey:dev.apiKey||DEF_FB_KEY};}
 // 本機只留連線資訊：Firebase 網址 + API Key（其餘旅程設定一律以 /config 為準）
 function saveDevice(){localStorage.setItem('iceland_trip',JSON.stringify({url:CFG.url,apiKey:CFG.apiKey||'',fs:fsLevel()}));}
 // ─── 離線快照 ───────────────────────────────────────
@@ -1661,10 +1666,9 @@ function doSetup(){
 window.onload=()=>{
   // 讓 app 在完全沒網路時打得開；不支援或註冊失敗都不影響其他功能
   if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
-  const s=localStorage.getItem('iceland_trip');
-  if(!s)return;
-  const dev=JSON.parse(s);
-  CFG={...dev};
+  let dev={};
+  try{dev=JSON.parse(localStorage.getItem('iceland_trip')||'{}')||{};}catch(_){}
+  CFG=deviceCfg(dev);
   try{CFG.url=new URL(CFG.url||'').origin;}catch{}
   // 舊版本把整份設定都存在 localStorage，保留下來當作 /config 不存在時的遷移來源
   TRIP_KEYS.forEach(k=>{if(dev[k]!==undefined)CFG[k]=dev[k];});
@@ -3710,6 +3714,15 @@ function _selftest(){
     ok('按鈕不跟著放大', (()=>{const v=px('.btn');return v===null||Math.abs(v-17)<1;})());
     ok('tab 標籤不跟著放大', (()=>{const el=document.querySelector('.ti span:last-child');return !el||parseFloat(getComputedStyle(el).fontSize)<20;})());
     CFG.fs=saved;applyFontScale();
+  }
+
+  // ---- 寫死連線資訊 ----
+  {
+    ok('本機沒設定時用寫死的網址', deviceCfg({}).url===DEF_FB_URL);
+    ok('本機有網址時優先用本機', deviceCfg({url:'https://x.firebasedatabase.app'}).url==='https://x.firebasedatabase.app');
+    ok('apiKey 空字串視為沒設定', deviceCfg({url:'u',apiKey:''}).apiKey===DEF_FB_KEY);
+    ok('其他裝置設定（字級）保留', deviceCfg({fs:'l'}).fs==='l');
+    ok('null 也不會炸', deviceCfg(null).url===DEF_FB_URL);
   }
 
   // ---- 離線唯讀 ----

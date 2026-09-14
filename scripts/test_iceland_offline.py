@@ -69,6 +69,9 @@ def serve(d):
 def new_page(browser, api_key='', seed=True):
     """開一個全新的 context（等於一台全新的手機）。seed=False 表示 localStorage 全空。"""
     ctx = browser.new_context()
+    # apiKey 留空時 app 會補上寫死的真實 key：擋掉 Firebase 登入端點，避免在真實專案建立匿名帳號
+    for pat in ('https://identitytoolkit.googleapis.com/**', 'https://securetoken.googleapis.com/**'):
+        ctx.route(pat, lambda route: route.abort())
     if seed:
         dev = json.dumps({'url': FAKE_URL, 'apiKey': api_key})
         ctx.add_init_script(
@@ -221,6 +224,25 @@ def test_auth_offline(browser):
     ctx.close()
 
 
+def test_default_cfg(browser):
+    # 會用真實網址與 key 開 app：擋掉 Service Worker 與 Firebase SDK，SDK 載不進來就不會連線
+    ctx = browser.new_context(service_workers='block')
+    ctx.route('https://www.gstatic.com/firebasejs/**', lambda route: route.abort())
+    page = ctx.new_page()
+    page.goto(BASE)
+    page.wait_for_timeout(1500)
+    r = page.evaluate("""()=>({
+      setupHidden: document.getElementById('setup').style.display==='none',
+      appShown: document.getElementById('app').style.display==='flex',
+      url: CFG.url, key: CFG.apiKey, def: typeof DEF_FB_URL==='string' ? DEF_FB_URL : null })""")
+    # 失敗訊息不可印出 r：裡面有真實網址與 apiKey
+    check('localStorage 全空時不停在 Setup 畫面', r['setupHidden'] and r['appShown'])
+    check('localStorage 全空時使用寫死的網址', r['def'] and r['url'] == r['def'])
+    check('寫死的網址是冰島專案', 'iceland-2026-f13e6' in (r['url'] or ''))
+    check('寫死的 apiKey 有值', (r['key'] or '').startswith('AIza'))
+    ctx.close()
+
+
 TESTS = {
     'selftest': test_selftest,
     'ro_state': test_ro_state,
@@ -228,6 +250,7 @@ TESTS = {
     'background_silent': test_background_silent,
     'sw_offline': test_sw_offline,
     'auth_offline': test_auth_offline,
+    'default_cfg': test_default_cfg,
 }
 
 
