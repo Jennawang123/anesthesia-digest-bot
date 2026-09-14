@@ -150,10 +150,31 @@ def test_blocks_writes(browser):
     ctx.close()
 
 
+def test_background_silent(browser):
+    ctx, page = new_page(browser)
+    page.wait_for_selector('#app', state='visible')
+    r = page.evaluate("""async()=>{
+      window._w=0;
+      const w={set(){_w++;return Promise.resolve()},update(){_w++;return Promise.resolve()},
+               remove(){_w++;return Promise.resolve()},once(){},on(){},
+               get(){return Promise.resolve({val:()=>null})}};
+      DB={ref:()=>w};
+      setFbOnline(false);
+      document.getElementById('toast').textContent='';
+      await ensureActGeo(lastSched,true); await ensureFacilities(lastSched,true);
+      await ensureSafety(lastSched,true); await ensureLegs(lastSched,true);
+      await fixDates(false); createFullSchedule();
+      return {writes:_w,toast:document.getElementById('toast').textContent};}""")
+    check('離線時背景補資料不寫入', r['writes'] == 0, r['writes'])
+    check('背景跳過不跳提示', r['toast'] == '', r['toast'])
+    ctx.close()
+
+
 TESTS = {
     'selftest': test_selftest,
     'ro_state': test_ro_state,
     'blocks_writes': test_blocks_writes,
+    'background_silent': test_background_silent,
 }
 
 
