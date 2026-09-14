@@ -388,7 +388,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0908a</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0914a</span></div>
     </div>
   </div>
   <div id="ro-banner"></div>
@@ -1722,8 +1722,9 @@ function applyTripCfg(cfg){
 }
 
 // ─── Firebase ────────────────────────────────────────
-// API Key 跟資料庫網址一樣存在本機 localStorage，每台裝置各自貼一次，
-// 刻意不寫死在檔案裡（這個 repo 是 public，寫死等於把金鑰放進 Git 歷史）。
+// 網址與 API Key 以本機 localStorage 為優先，沒有時用檔案裡寫死的 DEF_FB_URL/DEF_FB_KEY（見 deviceCfg）。
+// 2026-09-14 起寫死：規則已鎖 auth != null，Web API Key 本來就公開在前端，保護靠 Security Rules
+// 與 Google Cloud 的 HTTP 參照網址限制。
 function fbInit(dbUrl){
   const conf={databaseURL:dbUrl};
   if(CFG.apiKey)conf.apiKey=CFG.apiKey.trim();
