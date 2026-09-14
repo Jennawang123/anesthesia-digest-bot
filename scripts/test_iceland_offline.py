@@ -170,11 +170,64 @@ def test_background_silent(browser):
     ctx.close()
 
 
+def wait_sw(page):
+    page.evaluate("navigator.serviceWorker.ready.then(()=>true)")
+    # 第一次安裝後頁面還沒被 SW 接管，重載一次讓 clients.claim 生效後的導覽走 SW
+    page.reload()
+    page.wait_for_selector('#app', state='visible')
+
+
+def test_sw_offline(browser):
+    ctx, page = new_page(browser)
+    page.wait_for_selector('#app', state='visible')
+    wait_sw(page)
+    n_lib = page.evaluate("caches.open('lib-v0914a').then(c=>c.keys()).then(k=>k.length)")
+    check('安裝時預抓 5 支函式庫', n_lib >= 5, n_lib)
+    tile = 'https://tile.openstreetmap.org/5/15/9.png'
+    page.evaluate(f"fetch('{tile}',{{mode:'cors'}}).then(r=>r.ok)")
+
+    ctx.set_offline(True)
+    page.reload()
+    page.wait_for_selector('#app', state='visible')
+    check('完全離線重開：頁面打得開、標題來自快照',
+          page.evaluate("document.getElementById('appTitle').textContent") == '測試旅程')
+    check('完全離線重開：行程由快照渲染', '藍湖溫泉' in page.content())
+    check('完全離線重開：唯讀', page.evaluate("document.body.classList.contains('ro')"))
+    page.wait_for_timeout(4500)
+    check('完全離線重開：4 秒後出現離線橫幅',
+          page.evaluate("document.getElementById('ro-banner').classList.contains('show')"))
+    check('完全離線重開：Firebase 錯誤橫幅沒出現',
+          page.evaluate("document.getElementById('fb-err-banner').style.display") == 'none')
+    check('完全離線重開：SDK 載入失敗橫幅沒出現',
+          page.evaluate("document.getElementById('fb-retry-banner').style.display") == 'none')
+    check('完全離線重開：Firebase SDK 從快取載入', page.evaluate("typeof firebase") == 'object')
+    check('完全離線重開：Leaflet 從快取載入', page.evaluate("loadLeaflet()") is True)
+    check('完全離線：看過的圖磚從快取取得',
+          page.evaluate(f"fetch('{tile}',{{mode:'cors'}}).then(r=>r.ok,()=>false)") is True)
+    ctx.close()
+
+
+def test_auth_offline(browser):
+    ctx, page = new_page(browser, api_key='AIzaOfflineTestFakeKey000000000000000')
+    page.wait_for_selector('#app', state='visible')
+    wait_sw(page)
+    ctx.set_offline(True)
+    page.reload()
+    page.wait_for_selector('#app', state='visible')
+    page.wait_for_timeout(5000)
+    check('有 apiKey 時離線重開：不跳匿名登入失敗',
+          page.evaluate("document.getElementById('fb-err-banner').style.display") == 'none')
+    check('有 apiKey 時離線重開：維持唯讀', page.evaluate("document.body.classList.contains('ro')"))
+    ctx.close()
+
+
 TESTS = {
     'selftest': test_selftest,
     'ro_state': test_ro_state,
     'blocks_writes': test_blocks_writes,
     'background_silent': test_background_silent,
+    'sw_offline': test_sw_offline,
+    'auth_offline': test_auth_offline,
 }
 
 
