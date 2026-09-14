@@ -92,8 +92,32 @@ def test_selftest(browser):
     ctx.close()
 
 
+def test_ro_state(browser):
+    ctx, page = new_page(browser)
+    page.wait_for_selector('#app', state='visible')
+    check('開 app 立即是唯讀（body.ro）', page.evaluate("document.body.classList.contains('ro')"))
+    check('頭 4 秒內不顯示離線橫幅',
+          not page.evaluate("document.getElementById('ro-banner').classList.contains('show')"))
+    page.wait_for_timeout(4500)
+    check('4 秒後仍未連上 → 顯示橫幅',
+          page.evaluate("document.getElementById('ro-banner').classList.contains('show')"))
+    check('橫幅帶快照時間',
+          '離線唯讀' in page.evaluate("document.getElementById('ro-banner').textContent"))
+    page.evaluate('setFbOnline(true)')
+    check('連上後 ro 移除', not page.evaluate("document.body.classList.contains('ro')"))
+    check('連上後橫幅隱藏',
+          not page.evaluate("document.getElementById('ro-banner').classList.contains('show')"))
+    page.evaluate('setFbOnline(false)')
+    check('寬限期過後斷線 → 立即顯示橫幅',
+          page.evaluate("document.getElementById('ro-banner').classList.contains('show')"))
+    check('淡化編輯鈕：FAB opacity 0.4',
+          page.evaluate("getComputedStyle(document.getElementById('fab')).opacity") == '0.4')
+    ctx.close()
+
+
 TESTS = {
     'selftest': test_selftest,
+    'ro_state': test_ro_state,
 }
 
 
