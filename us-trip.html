@@ -1489,7 +1489,7 @@ function renderOfflineStat(){
   el.innerHTML=rows.join('<br>');
 }
 async function refreshOfflineData(){
-  if(!navigator.onLine){toast('⚠️ 目前離線，請連上網路再更新');return;}
+  if(roBlock())return;
   // 背景掃描還在跑時，ensureXxx 會因為旗標而直接 return，按鈕就成了「跳成功訊息但什麼都沒做」。
   if(_geoScanning||_facScanning||_safetyScanning||_legScanning){toast('⏳ 背景更新中，請稍候再試');return;}
   const btn=document.querySelector('#offlineStat')?.parentNode?.querySelector('button');
@@ -2020,6 +2020,7 @@ function datesMatchCfg(sched,cfg){
 
 // Fix dates only (keep activities intact)
 function fixDates(showToast=false){
+  if(!_fbOnline){if(showToast)roBlock();return Promise.resolve();}
   if(!CFG.start||!CFG.days){if(showToast)toast('⚠️ 請先設定出發日期與天數');return Promise.resolve();}
   const u={},newDateOf={};
   const dayNo=did=>parseInt(String(did).replace(/\D/g,''))||0;
@@ -2085,6 +2086,7 @@ function switchAcc(t){
 }
 let fabMenuOpen=false;
 function fabTap(){
+  if(roBlock())return;
   // 一次只顯示一天之後，這裡再寫死 day1 就等於「不管在看哪天，新增的都跑去第一天」
   if(curTab==='sched'){
     const did=curDay||defaultDay(lastSched);
@@ -2106,6 +2108,7 @@ function initDnD(){
     const row=e.target.closest('.act-row');
     // 只從 ⠿ 把手才能啟動拖曳，避免長按行程列本身就誤觸排序
     if(!row||!e.target.closest('.act-handle'))return;
+    if(roBlock())return;
     DG.sx=e.touches[0].clientX;DG.sy=e.touches[0].clientY;
     DG.timer=setTimeout(()=>{
       const did=row.dataset.did,aid=row.dataset.aid;
@@ -2189,6 +2192,7 @@ function initDnD(){
     aids.splice(srcIdx,1);aids.splice(tgtIdx,0,DG.aid);
     const upd={};
     aids.forEach((a,i)=>upd['/schedule/'+tgt+'/acts/'+a+'/order']=i);
+    if(roBlock())return;
     DB.ref('/').update(upd);
     toast('✅ 已重新排序');
   }
@@ -2210,6 +2214,7 @@ function initDnD(){
   box.addEventListener('dragstart',e=>{
     const row=e.target.closest('.act-row');if(!row)return;
     if(_actDragFromHandle)return; // 交給 initActDnD 處理
+    if(roBlock()){e.preventDefault();return;}
     e.dataTransfer.setData('dnd',JSON.stringify({did:row.dataset.did,aid:row.dataset.aid}));
     setTimeout(()=>row.classList.add('dragging'),0);
   });
@@ -2261,12 +2266,14 @@ function initNoteDnD(){
     // 整批重寫：舊記事沒有 order 欄位，只寫被拖的那一筆的話，它會跟一群 order=0
     // 的記事混在一起，排出來的順序無法預期。
     const upd={};ids.forEach((id,i)=>upd['/notes/'+id+'/order']=i);
+    if(roBlock())return;
     DB.ref('/').update(upd);
     toast('✅ 已重新排序');
   }
   box.addEventListener('touchstart',e=>{
     const card=e.target.closest('.note-card');
     if(!card||!e.target.closest('.note-handle'))return;   // 只認把手，捲動記事本才不會誤觸
+    if(roBlock())return;
     NG.sx=e.touches[0].clientX;NG.sy=e.touches[0].clientY;NG.lastY=NG.sy;
     NG.timer=setTimeout(()=>{
       const nid=card.dataset.nid,n=lastNotes[nid];if(!n)return;
@@ -2310,6 +2317,7 @@ function initActDnD(){
   box.addEventListener('touchstart',e=>{_actDragFromHandle=!!e.target.closest('.act-handle');},{passive:true});
   box.addEventListener('dragstart',e=>{
     if(!_actDragFromHandle)return;
+    if(roBlock()){e.preventDefault();return;}
     const row=e.target.closest('.act-row');
     if(!row)return;
     ADG.on=true;ADG.did=row.dataset.did;ADG.aid=row.dataset.aid;ADG.srcEl=row;
@@ -2345,12 +2353,14 @@ function initActDnD(){
     aids.splice(srcIdx,1);aids.splice(tgtIdx,0,ADG.aid);
     const updates={};
     aids.forEach((a,i)=>updates['/schedule/'+did+'/acts/'+a+'/order']=i);
+    if(roBlock()){ADG.on=false;return;}
     DB.ref('/').update(updates);
     ADG.on=false;
   });
 }
 
 function moveAct(fromDid,aid,act,toDid){
+  if(roBlock())return;
   DB.ref('/schedule/'+toDid+'/date').once('value',snap=>{
     const newDate=snap.val()||'';
     DB.ref('/schedule/'+toDid+'/acts/'+aid).set(act);
@@ -2849,6 +2859,7 @@ function toggleDay(did){
   if(card.classList.contains('open'))mountDayMap(did);
 }
 function openDayM(did){
+  if(roBlock())return;
   const day=lastSched[did]||{};
   document.getElementById('md-id').value=did;
   document.getElementById('md-lbl').value=day.label||'';
@@ -2859,6 +2870,7 @@ function openDayM(did){
   setTimeout(()=>document.getElementById('md-lbl').focus(),280);
 }
 function saveDayM(){
+  if(roBlock())return;
   const did=document.getElementById('md-id').value,lbl=document.getElementById('md-lbl').value.trim();
   if(!lbl){toast('請輸入標題');return;}
   const cityName=document.getElementById('md_city').value.trim();
@@ -2872,6 +2884,7 @@ function saveDayM(){
 }
 
 function openActM(did){
+  if(roBlock())return;
   document.getElementById('m-act-t').textContent='新增活動';
   document.getElementById('ma-did').value=did;document.getElementById('ma-aid').value='';
   document.getElementById('a_name').value='';
@@ -2889,6 +2902,7 @@ function openActM(did){
   openM('m-act');setTimeout(()=>document.getElementById('a_name').focus(),280);
 }
 function openActEdit(did,aid){
+  if(roBlock())return;
   DB.ref('/schedule/'+did+'/acts/'+aid).once('value',snap=>{
     const a=snap.val();if(!a)return;
     document.getElementById('m-act-t').textContent='編輯活動';
@@ -2928,6 +2942,7 @@ function fillStayInputs(s){
   if(src)src.textContent=s?.src?`時間來源：${s.src}（僅供參考，以訂房確認信為準）`:'';
 }
 function saveAct(){
+  if(roBlock())return;
   const did=document.getElementById('ma-did').value,aid=document.getElementById('ma-aid').value;
   const name=document.getElementById('a_name').value.trim();if(!name){toast('請輸入活動名稱');return;}
   const costs=curActCosts.map(c=>({desc:(c.desc||'').trim(),amt:parseFloat(c.amt),cur:c.cur||DEF_CUR,paidBy:c.paidBy||CFG.members[0],split:c.split||'both'})).filter(c=>!isNaN(c.amt)&&c.amt>0);
@@ -2986,6 +3001,7 @@ function saveAct(){
   });
 }
 function delAct(did,aid){
+  if(roBlock())return;
   if(!confirm('確定刪除此活動？'))return;
   DB.ref('/schedule/'+did+'/acts/'+aid).once('value',snap=>{
     const n=actCostList(snap.val()).length;
@@ -3000,6 +3016,7 @@ function delAct(did,aid){
 // 照片不帶（照片是「去過了」的紀錄，不是計畫），花費預設也不帶——
 // 憑空多一筆金額很難察覺，少一筆卻一眼看得出來，所以寧可讓使用者主動勾。
 function openCopyAct(did,aid){
+  if(roBlock())return;
   const act=(lastSched[did]?.acts||{})[aid];if(!act)return;
   document.getElementById('mc-did').value=did;document.getElementById('mc-aid').value=aid;
   document.getElementById('mc-name').textContent=act.name||'';
@@ -3013,6 +3030,7 @@ function openCopyAct(did,aid){
   openM('m-copy');
 }
 function doCopyAct(){
+  if(roBlock())return;
   const did=document.getElementById('mc-did').value,aid=document.getElementById('mc-aid').value;
   const toDid=document.getElementById('mc_day').value;
   const withCosts=document.getElementById('mc_costs').checked;
@@ -3054,6 +3072,7 @@ function selCur(c){curCur=c;renderCurChips('cur-row-exp',c,'selCur');}
 function selSplit(m){curSplit=m;renderSplitPicker('split-row-exp',m,'selSplit');}
 
 function openExpM(){
+  if(roBlock())return;
   document.getElementById('m-exp-t').textContent='新增支出';document.getElementById('me-id').value='';
   document.getElementById('e_desc').value='';document.getElementById('e_amt').value='';document.getElementById('e_date').value=today();
   curCat='food';renderCatGrid();selPayer(0);selCur(DEF_CUR);selSplit('both');
@@ -3061,6 +3080,7 @@ function openExpM(){
 }
 
 function openExpEdit(eid){
+  if(roBlock())return;
   DB.ref('/expenses/'+eid).once('value',snap=>{
     const e=snap.val();if(!e)return;
     document.getElementById('m-exp-t').textContent='編輯支出';document.getElementById('me-id').value=eid;
@@ -3070,6 +3090,7 @@ function openExpEdit(eid){
   });
 }
 function saveExp(){
+  if(roBlock())return;
   const desc=document.getElementById('e_desc').value.trim(),amtStr=document.getElementById('e_amt').value,amt=parseFloat(amtStr);
   if(!desc){toast('請輸入描述');return;}if(!amtStr||isNaN(amt)||amt<=0){toast('請輸入正確金額');return;}
   const eid=document.getElementById('me-id').value||('e'+uid());
@@ -3077,7 +3098,7 @@ function saveExp(){
   DB.ref('/expenses/'+eid).set({desc,amt,cur:curCur,cat:curCat,paidBy:CFG.members[curPayer],split:curSplit,date:document.getElementById('e_date').value||today(),at:new Date().toISOString()})
     .then(()=>{sync(false);closeM('m-exp');toast('✅ 已儲存');}).catch(e=>{sync(false);toast('⚠️ 儲存失敗：'+e.message);});
 }
-function delExp(eid){if(!confirm('確定刪除？'))return;DB.ref('/expenses/'+eid).remove().then(()=>toast('🗑️ 已刪除'));}
+function delExp(eid){if(roBlock())return;if(!confirm('確定刪除？'))return;DB.ref('/expenses/'+eid).remove().then(()=>toast('🗑️ 已刪除'));}
 
 function calcDaySpend(exps,dateStr){
   const totals=new Map();
@@ -3292,6 +3313,7 @@ function renderExp(exps){
 
 // ─── Settings ────────────────────────────────────────
 function saveCfg(){
+  if(roBlock())return;
   CFG.title=document.getElementById('c_title').value.trim()||CFG.title;
   const newMembers=['c_m1','c_m2'].map(id=>document.getElementById(id).value.trim());
   if(newMembers.some(m=>!m)){toast('⚠️ 兩位旅伴都要有名字，未更新名單');}
@@ -3339,7 +3361,7 @@ function saveApiKey(){
   setTimeout(()=>location.reload(),700);
 }
 // 清空行程/記帳/記事本，但保留 /config（不然所有裝置都會退回設定畫面）
-function clearAll(){if(!confirm('⚠️ 確定清空所有資料？'))return;if(!confirm('再次確認：清空全部？'))return;DB.ref('/').update({schedule:{},expenses:{},notes:{}}).then(()=>toast('✅ 已清空'));}
+function clearAll(){if(roBlock())return;if(!confirm('⚠️ 確定清空所有資料？'))return;if(!confirm('再次確認：清空全部？'))return;DB.ref('/').update({schedule:{},expenses:{},notes:{}}).then(()=>toast('✅ 已清空'));}
 
 // ─── Notes ───────────────────────────────────────────
 // 手動排序用的欄位。舊資料沒有 order，一律當成 0，所以它們之間仍照建立時間新到舊排；
@@ -3418,9 +3440,11 @@ function renderNoteCard(nid,n){
   </div>`;
 }
 function toggleTodoItem(nid,idx,done){
+  if(roBlock()){renderNotes(lastNotes);return;}
   DB.ref('/notes/'+nid+'/items/'+idx+'/done').set(done);
 }
 function delNote(nid){
+  if(roBlock())return;
   if(!confirm('確定刪除？'))return;
   DB.ref('/notes/'+nid).remove();
   toast('🗑️ 已刪除');
@@ -3449,6 +3473,7 @@ function addTodoItem(){
 }
 function removeTodoItem(i){curTodoItems.splice(i,1);renderTodoItemsEdit();}
 function openTodoM(){
+  if(roBlock())return;
   document.getElementById('m-todo-t').textContent='新增待辦清單';
   document.getElementById('mt-id').value='';
   document.getElementById('t_title').value='';
@@ -3456,6 +3481,7 @@ function openTodoM(){
   openM('m-todo');setTimeout(()=>document.getElementById('t_title').focus(),280);
 }
 function openTodoEdit(nid){
+  if(roBlock())return;
   const n=lastNotes[nid];if(!n)return;
   document.getElementById('m-todo-t').textContent='編輯待辦清單';
   document.getElementById('mt-id').value=nid;
@@ -3465,6 +3491,7 @@ function openTodoEdit(nid){
   openM('m-todo');
 }
 function saveTodo(){
+  if(roBlock())return;
   const nid=document.getElementById('mt-id').value||('n'+uid());
   const title=document.getElementById('t_title').value.trim();
   // 項目可以就地編輯之後，內容有可能被清成空字串；空項目存進去只會變成一列點不到的空白
@@ -3494,6 +3521,7 @@ function renderNoteImgPreviews(){
 }
 function removeNoteImg(i){curNoteImages.splice(i,1);renderNoteImgPreviews();}
 function openNoteM(type){
+  if(roBlock())return;
   if(type!=='note'){openTodoM();return;}
   document.getElementById('m-note-t').textContent='新增記事';
   document.getElementById('mn-id').value='';
@@ -3503,6 +3531,7 @@ function openNoteM(type){
   openM('m-note');setTimeout(()=>document.getElementById('n_title').focus(),280);
 }
 function openNoteEdit(nid){
+  if(roBlock())return;
   const n=lastNotes[nid];if(!n)return;
   document.getElementById('m-note-t').textContent='編輯記事';
   document.getElementById('mn-id').value=nid;
@@ -3512,6 +3541,7 @@ function openNoteEdit(nid){
   openM('m-note');
 }
 function saveNote(){
+  if(roBlock())return;
   const nid=document.getElementById('mn-id').value||('n'+uid());
   const title=document.getElementById('n_title').value.trim();
   const content=document.getElementById('n_content').value.trim();

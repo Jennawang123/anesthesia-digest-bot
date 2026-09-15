@@ -118,9 +118,45 @@ def test_ro_state(browser):
     ctx.close()
 
 
+def test_blocks_writes(browser):
+    ctx, page = new_page(browser)
+    page.wait_for_selector('#app', state='visible')
+    r = page.evaluate("""()=>{
+      window._w=0;
+      const w={set(){_w++;return Promise.resolve()},update(){_w++;return Promise.resolve()},
+               remove(){_w++;return Promise.resolve()},once(){_w++},on(){},
+               get(){_w++;return Promise.resolve({val:()=>null})}};
+      DB={ref:()=>w};            // 裸賦值才蓋得到頂層 let DB
+      setFbOnline(false);
+      const out={};
+      fabTap();
+      out.fabModal=!!document.querySelector('.ov.open');
+      out.toast=document.getElementById('toast').textContent;
+      document.getElementById('e_desc').value='測試';document.getElementById('e_amt').value='100';
+      saveExp(); delExp('e1'); toggleTodoItem('n1',0,true); delNote('n1'); saveCfg(); clearAll();
+      moveAct('day1','a1',{name:'x'},'day2'); saveAct(); saveDayM(); saveNote(); saveTodo(); doCopyAct();
+      openActM('day1'); openActEdit('day1','a1'); openCopyAct('day1','a1'); openDayM('day1');
+      openExpM(); openExpEdit('e1'); openNoteM('note'); openNoteEdit('n1'); openTodoM(); openTodoEdit('n1');
+      out.writes=_w;
+      out.modal=!!document.querySelector('.ov.open');
+      setFbOnline(true);
+      document.getElementById('e_desc').value='測試';document.getElementById('e_amt').value='100';
+      saveExp();
+      out.writesOnline=_w;
+      return out;}""")
+    check('唯讀時按 ＋ 不開表單', not r['fabModal'])
+    check('唯讀時跳提示', '離線唯讀' in r['toast'], r['toast'])
+    check('唯讀時所有儲存／刪除／開編輯都沒有碰資料庫', r['writes'] == 0, r['writes'])
+    check('唯讀時沒有任何表單被打開', not r['modal'])
+    check('唯讀時刪除不跳確認視窗（守門在 confirm 之前）', page.dialogs == [], page.dialogs)
+    check('連上後 saveExp 正常寫入', r['writesOnline'] > 0, r['writesOnline'])
+    ctx.close()
+
+
 TESTS = {
     'selftest': test_selftest,
     'ro_state': test_ro_state,
+    'blocks_writes': test_blocks_writes,
 }
 
 
