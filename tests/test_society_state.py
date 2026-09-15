@@ -151,20 +151,36 @@ def test_告警檔不是dict時回空(tmp_path):
 def test_心跳狀態讀寫(tmp_path):
     p = tmp_path / "heartbeat.json"
     assert state.load_heartbeat(p) is None
-    state.save_heartbeat(p, "2026-09")
-    assert state.load_heartbeat(p) == "2026-09"
+    state.save_heartbeat(p, "2026-W38")
+    assert state.load_heartbeat(p) == "2026-W38"
 
 
-def test_該月尚未送過就要送():
+def test_該週尚未送過就要送():
     assert state.should_heartbeat(None, date(2026, 9, 11)) is True
-    assert state.should_heartbeat("2026-08", date(2026, 9, 11)) is True
+    assert state.should_heartbeat("2026-W36", date(2026, 9, 11)) is True
 
 
-def test_同月不重複送():
-    # 同一個月手動再觸發一次 workflow 不應該再送一則
-    assert state.should_heartbeat("2026-09", date(2026, 9, 30)) is False
+def test_同週不重複送():
+    # 同一週（週一 9/14 到週日 9/20）手動再觸發一次 workflow 不應該再送一則
+    assert state.should_heartbeat("2026-W38", date(2026, 9, 14)) is False
+    assert state.should_heartbeat("2026-W38", date(2026, 9, 20)) is False
 
 
-def test_心跳不綁定每月一號():
-    # 1 號當天若網路失敗，該月第一次成功執行仍要送，否則會缺一拍造成假警報
-    assert state.should_heartbeat("2026-08", date(2026, 9, 17)) is True
+def test_週日到週一換週():
+    assert state.should_heartbeat("2026-W38", date(2026, 9, 21)) is True
+
+
+def test_心跳不綁定每週一():
+    # 週一當天若網路失敗，該週第一次成功執行仍要送，否則會缺一拍造成假警報
+    assert state.should_heartbeat("2026-W37", date(2026, 9, 17)) is True
+
+
+def test_舊版月份格式會送一拍後改寫():
+    assert state.should_heartbeat("2026-09", date(2026, 9, 15)) is True
+
+
+def test_跨年週次用ISO年份():
+    # 2027-01-01 是週五，屬於 2026 年第 53 週
+    assert state.heartbeat_period(date(2027, 1, 1)) == "2026-W53"
+    assert state.should_heartbeat("2026-W53", date(2027, 1, 3)) is False
+    assert state.heartbeat_period(date(2027, 1, 4)) == "2027-W01"

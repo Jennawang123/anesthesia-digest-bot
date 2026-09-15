@@ -126,7 +126,9 @@ def should_alert(alerts: dict[str, dict], source: str, today: date, reason: str)
 
 
 def load_heartbeat(path: Path) -> str | None:
-    """回傳上次送出心跳的年月字串（例 "2026-09"），沒有或壞掉就回 None。
+    """回傳上次送出心跳的週次字串（例 "2026-W38"），沒有或壞掉就回 None。
+
+    舊版以月為單位存 "2026-09"；讀到舊值與任何週次都不相等，只會多送一拍後自動改寫。
 
     這個檔也 commit 進 public repo、可能被手動改壞，比照 load_alerts 一律
     fail-open：回 None 代表「該送」，送完會覆寫成正確值而自動痊癒。
@@ -144,14 +146,21 @@ def load_heartbeat(path: Path) -> str | None:
     return last if isinstance(last, str) else None
 
 
-def save_heartbeat(path: Path, year_month: str) -> None:
-    _atomic_write(path, json.dumps({"last": year_month}, ensure_ascii=False, indent=2) + "\n")
+def save_heartbeat(path: Path, week: str) -> None:
+    _atomic_write(path, json.dumps({"last": week}, ensure_ascii=False, indent=2) + "\n")
+
+
+def heartbeat_period(today: date) -> str:
+    """ISO 週次（週一起算）。年份要用 isocalendar 的年，不能用 today.year：
+    2027-01-01 屬於 2026-W53，用日曆年會拼出不存在的 2027-W53 而多送一拍。"""
+    iso_year, iso_week, _ = today.isocalendar()
+    return f"{iso_year}-W{iso_week:02d}"
 
 
 def should_heartbeat(last: str | None, today: date) -> bool:
-    """該月是否還沒送過心跳。
+    """該週是否還沒送過心跳。
 
-    刻意不綁「每月 1 號」：1 號那天若剛好抓取失敗，該月就永遠缺一拍，
-    使用者會以為監測停擺而虛驚。改成「每月第一次成功執行」即可。
+    刻意不綁「每週一」：週一那天若剛好抓取失敗，該週就永遠缺一拍，
+    使用者會以為監測停擺而虛驚。改成「每週第一次成功執行」即可。
     """
-    return last != today.strftime("%Y-%m")
+    return last != heartbeat_period(today)

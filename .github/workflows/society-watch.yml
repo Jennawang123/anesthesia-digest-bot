@@ -61,7 +61,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # 必須用 -A：git add 只要有一個 pathspec 不存在就整條 exit 128
           # 且什麼都不 stage（實測）。而 alert_state.json 只在有失敗時產生、
-          # heartbeat.json 只在當月第一次執行時產生，bootstrap 更是兩個都不會有。
+          # heartbeat.json 只在當週第一次執行時產生，bootstrap 更是兩個都不會有。
           # 逐檔列舉等於保證第一次就 fatal，狀態永遠 commit 不回去 → 每天重推全部。
           # society_watch/ 底下只有 .py 與狀態檔，__pycache__ 已被 .gitignore 排除。
           git add -A society_watch/

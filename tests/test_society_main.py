@@ -444,14 +444,14 @@ def test_程式錯誤會記進failure而非靜默(env, monkeypatch):
     assert any(k == "TSA" and "程式錯誤" in r for k, r in failures)
 
 
-def test_每月第一次成功執行會送心跳(env):
+def test_每週第一次成功執行會送心跳(env):
     tmp_path, pushed, _ = env
     main.run(bootstrap=True, today=date(2026, 9, 10))
     main.run(bootstrap=False, today=date(2026, 9, 11))
     assert any(t.startswith("💓") for t in pushed)
 
 
-def test_同月第二次不再送心跳(env):
+def test_同週第二次不再送心跳(env):
     tmp_path, pushed, _ = env
     main.run(bootstrap=True, today=date(2026, 9, 10))
     main.run(bootstrap=False, today=date(2026, 9, 11))
@@ -460,12 +460,12 @@ def test_同月第二次不再送心跳(env):
     assert not any(t.startswith("💓") for t in pushed)
 
 
-def test_跨月會再送一次心跳(env):
+def test_跨週會再送一次心跳(env):
     tmp_path, pushed, _ = env
     main.run(bootstrap=True, today=date(2026, 9, 10))
     main.run(bootstrap=False, today=date(2026, 9, 11))
     pushed.clear()
-    main.run(bootstrap=False, today=date(2026, 10, 1))
+    main.run(bootstrap=False, today=date(2026, 9, 14))
     assert any(t.startswith("💓") for t in pushed)
 
 
@@ -492,9 +492,9 @@ def test_推播失敗那輪不送心跳也不記錄(env, monkeypatch):
     assert main.state.load_heartbeat(tmp_path / "heartbeat.json") is None
 
 
-def test_心跳推播失敗就不記錄以免下月缺一拍(env, monkeypatch):
+def test_心跳推播失敗就不記錄以免下週缺一拍(env, monkeypatch):
     # save_heartbeat 必須排在心跳自己的 push_line 之後。順序反過來的話，
-    # 心跳推播失敗那個月會被記成「已送」而永久缺一拍——正好製造這功能要防的假警報
+    # 心跳推播失敗那一週會被記成「已送」而永久缺一拍——正好製造這功能要防的假警報
     tmp_path, _, _ = env
     main.run(bootstrap=True, today=date(2026, 9, 10))
 

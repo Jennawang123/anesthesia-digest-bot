@@ -221,7 +221,7 @@ def run(bootstrap: bool = False, today: date | None = None) -> list[tuple[str, s
     # 於是這行到不了，下一輪重推——重複優於漏報。
     advance_state()
 
-    # 月度心跳排在這之後，語意是「一個完整週期跑完了」。
+    # 每週心跳排在這之後，語意是「一個完整週期跑完了」。
     # 它存在的理由見 §10：LINE 回 200 不代表送達，userId 填錯或使用者封鎖
     # 官方帳號時整條線會靜默死亡而毫無訊號。心跳建立可預期的節奏，
     # 讓「沒收到」本身成為訊號。心跳自己失敗不影響漏報保證。
@@ -232,8 +232,8 @@ def run(bootstrap: bool = False, today: date | None = None) -> list[tuple[str, s
             seen_count=len(seen | {e.key for e in events}),
             fresh_count=len(fresh),
         ))
-        state.save_heartbeat(heartbeat_path, today.strftime("%Y-%m"))
-        print("已送出月度心跳。")
+        state.save_heartbeat(heartbeat_path, state.heartbeat_period(today))
+        print("已送出每週心跳。")
 
     return failures
 
