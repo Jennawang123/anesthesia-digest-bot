@@ -654,7 +654,7 @@ input,select{background:var(--bg-base);color:var(--text-primary);border:1px soli
     <input id="cfg-key" placeholder="your-api-key">
     <button class="btn" onclick="saveConfig()">儲存</button>
     <!-- iOS 主畫面 App 的快取很頑固，出問題時要能先確認跑的是哪一版 -->
-    <div style="margin-top:10px;text-align:center;color:var(--text-secondary);font-size:12px">版本 2026-09-15a</div>
+    <div style="margin-top:10px;text-align:center;color:var(--text-secondary);font-size:12px">版本 2026-09-15b</div>
     <button class="mclose" onclick="closeOverlay('cfg-overlay')">取消</button>
   </div>
 </div>
@@ -682,6 +682,10 @@ function H(json=true) {
   const h = {'x-api-key': KEY};
   if (json) h['Content-Type'] = 'application/json';
   return h;
+}
+// 用手機本地時區的日期；toISOString() 是 UTC，台灣早上 8 點前會變成前一天
+function localDate(d=new Date()){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 async function api(path, opts={}) {
   const r = await fetch(API+path, {headers:H(),...opts});
@@ -1023,7 +1027,13 @@ async function loadIncome(){
   if(!API) return;
   const ym=buildMonths('sel-inc');
   try{
-    const [summary,allIncome]=await Promise.all([api(`/finance/summary/${ym}`),api('/finance/income')]);
+    const months=Array.from({length:12},(_,i)=>{
+      const d=new Date(); d.setMonth(d.getMonth()-11+i);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    });
+    // 近 12 個月＋選取月份一次打包查，不要一個月打一支 API（每支都要跨區連一次資料庫）
+    const [batch,allIncome]=await Promise.all([api(`/finance/summary/months?months=${[...months,ym].join(',')}`),api('/finance/income')]);
+    const sums=batch.slice(0,12), summary=batch[12];
     document.getElementById('inc-total').textContent=`NT$${summary.total_income.toLocaleString()}`;
     // 結餘卡片
     const bal=summary.balance;
@@ -1042,11 +1052,6 @@ async function loadIncome(){
           </div>
         </div>`).join('')
       :'<div class="empty">點 ＋ 收入 新增</div>';
-    const months=Array.from({length:12},(_,i)=>{
-      const d=new Date(); d.setMonth(d.getMonth()-11+i);
-      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    });
-    const sums=await Promise.all(months.map(m=>api(`/finance/summary/${m}`)));
     if(incChart) incChart.destroy();
     incChart=new Chart(document.getElementById('inc-chart'),{
       type:'line',
@@ -1254,8 +1259,8 @@ async function loadInvestment(){
 async function loadAssets(){
   if(!API) return;
   try{
-    [_holdings,_liabs,_cash]=await Promise.all([api('/finance/holdings'),api('/finance/liabilities'),api('/finance/cash')]);
-    const [history,ftTrades]=await Promise.all([api('/finance/networth/daily'),api('/finance/futures')]);
+    let history,ftTrades;
+    [_holdings,_liabs,_cash,history,ftTrades]=await Promise.all([api('/finance/holdings'),api('/finance/liabilities'),api('/finance/cash'),api('/finance/networth/daily'),api('/finance/futures')]);
     await Promise.all([fetchAllPrices(_holdings), fetchUsdRate()]);
 
     // TW stocks summary
@@ -1303,7 +1308,7 @@ async function loadAssets(){
     calcNetWorth();
     renderNWChart(history);
     // Auto-save daily snapshot
-    const _today=new Date().toISOString().slice(0,10);
+    const _today=localDate();
     const _s=window._snap||{totalA:0,totalL:0};
     if(_s.totalA>0) api('/finance/networth/daily-snapshot',{method:'POST',body:JSON.stringify({date:_today,total_assets:_s.totalA,total_liabilities:_s.totalL})}).catch(()=>{});
   }catch(e){console.error(e);}
@@ -1969,7 +1974,7 @@ function openAddFutures(){
   document.getElementById('ft-direction').value='多';
   document.getElementById('ft-contracts').value='1';
   document.getElementById('ft-point-value').value='50';
-  document.getElementById('ft-entry-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('ft-entry-date').value=localDate();
   document.getElementById('ft-entry-price').value='';
   document.getElementById('ft-exit-date').value='';
   document.getElementById('ft-exit-price').value='';
@@ -2050,7 +2055,7 @@ document.querySelectorAll('.overlay').forEach(el=>{
 
 // ── Init ──────────────────────────────────────────────────────
 buildMonths('sel-exp'); buildMonths('sel-inc');
-const today=new Date().toISOString().slice(0,10);
+const today=localDate();
 document.getElementById('at-date').value=today;
 document.getElementById('cfg-url').value=API;
 document.getElementById('cfg-key').value=KEY;
