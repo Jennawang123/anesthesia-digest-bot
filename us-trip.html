@@ -1072,7 +1072,7 @@ let _geoScanning=false;
 // 查得到卻被標成 sanity-reject 卡死，就是因為判定當下那天還沒有任何座標。
 const GEO_RETRY_REASONS=['network','sanity-reject'];
 async function ensureActGeo(sched,force=false){
-  if(_geoScanning)return;
+  if(_geoScanning||!_fbOnline)return;
   _geoScanning=true;
   try{
     for(const [did,day] of Object.entries(sched||{})){
@@ -1119,7 +1119,7 @@ async function ensureActGeo(sched,force=false){
 // 美國版再放寬一階：聖地牙哥→大峽谷這種端到端 590km 的日子必須容得下。
 const GEO_PRUNE_KM=700;
 async function pruneDayOutliers(did,resolved){
-  if(resolved.length<3)return;
+  if(resolved.length<3||!_fbOnline)return;
   for(const r of resolved){
     // 手動採用的座標是使用者親自確認過的，這一關不碰它
     if(r.locked)continue;
@@ -1288,7 +1288,7 @@ function tileKey(t){return 't'+t.map(v=>v.toFixed(2).replace('-','n').replace('.
 function bboxCovers(a,b){return Array.isArray(a)&&Array.isArray(b)&&a[0]<=b[0]&&a[1]<=b[1]&&a[2]>=b[2]&&a[3]>=b[3];}
 let _facScanning=false;
 async function ensureFacilities(sched,force=false){
-  if(_facScanning||!navigator.onLine||!DB)return;
+  if(_facScanning||!_fbOnline||!DB)return;
   const pts=[];
   Object.values(sched||{}).forEach(day=>Object.values(day.acts||{}).forEach(a=>{
     if(a.geo&&typeof a.geo.lat==='number')pts.push({lat:a.geo.lat,lng:a.geo.lng});
@@ -1371,7 +1371,7 @@ const legKey=(a,b)=>[a.lat,a.lng,b.lat,b.lng].map(v=>v.toFixed(4).replace('.','d
 let _legScanning=false;
 const LEG_MAX_PER_RUN=12;
 async function ensureLegs(sched,force=false){
-  if(_legScanning||!navigator.onLine)return;
+  if(_legScanning||!_fbOnline)return;
   _legScanning=true;
   try{
     let n=0;
@@ -1412,7 +1412,7 @@ let _safetyScanning=false;
 // 沒有門檻的話每編輯一次行程就重打一輪 Overpass + OSRM，而幾百公尺不會改變最近的警局是哪間。
 const SAFETY_MOVE_KM=1;
 async function ensureSafety(sched,force=false){
-  if(_safetyScanning||!navigator.onLine)return;
+  if(_safetyScanning||!_fbOnline)return;
   _safetyScanning=true;
   try{
     const days=Object.entries(sched||{}).sort((a,b)=>(parseInt(a[0].replace(/\D/g,''))||0)-(parseInt(b[0].replace(/\D/g,''))||0));
@@ -1895,12 +1895,19 @@ function fbInit(dbUrl){
 // 因為規則不綁 uid，大家讀寫的仍是同一份資料。
 // 沒填 API Key 就完全跳過登入，維持開放規則的舊行為——現有四個人的
 // localStorage 裡沒有 apiKey 欄位，靠這個分支才不會一升級就連不上。
+// SDK 剛初始化時 currentUser 還沒從 IndexedDB 還原；直接判斷的話離線會走到 signInAnonymously 而失敗
+function authReady(){return new Promise(res=>{const un=firebase.auth().onAuthStateChanged(u=>{un();res(u);});});}
 function ensureAuth(){
   if(!CFG.apiKey)return Promise.resolve(null);
-  const u=firebase.auth().currentUser;
-  return u?Promise.resolve(u):firebase.auth().signInAnonymously();
+  return authReady().then(u=>u||firebase.auth().signInAnonymously());
 }
 function authFail(e){
+  // 離線造成的登入失敗不是設定錯誤：維持唯讀，網路回來再連一次
+  if(!navigator.onLine||e?.code==='auth/network-request-failed'){
+    sync('offline');
+    window.addEventListener('online',()=>connectFB(),{once:true});
+    return;
+  }
   sync(false);
   const m=e?.message||String(e)||'unknown';
   document.getElementById('fb-err-msg').textContent='匿名登入失敗：'+m;
@@ -1915,6 +1922,8 @@ function loadFirebase(cb){
     const s1=document.createElement('script');
     s1.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
     s1.onerror=()=>{
+      // 有快照時離線照樣看得到東西，唯讀橫幅已說明狀況，錯誤橫幅只會蓋住畫面；網路回來自動重試
+      if(snapLoad()){sync('offline');window.addEventListener('online',()=>window._fbRetryLoad(),{once:true});return;}
       sync(false);
       document.getElementById('fb-retry-banner').style.display='';
     };
@@ -1955,7 +1964,12 @@ function connectFB(){
   }catch(e){sync(false);const m=e?.message||String(e)||'unknown';document.getElementById('fb-err-msg').textContent=m;document.getElementById('fb-err-banner').style.display='';console.error(e);}
 }
 function _fbListen(){
+  // 資料庫真正連上／斷線的唯一可靠訊號；navigator.onLine 在訊號一格時照樣回 true
+  DB.ref('.info/connected').on('value',s=>setFbOnline(s.val()===true));
   DB.ref('/').on('value',snap=>{
+    // 收到伺服器資料就代表此刻連得上（web SDK 沒有磁碟快取，value 不會來自本機）。
+    // .info/connected 與第一包資料的先後不保證，不補這行的話背景補資料可能整輪被跳過。
+    if(!_fbOnline)setFbOnline(true);
     const d=snap.val()||{};
     // 旅程設定一律以 Firebase 為準（本機只留 Firebase 網址）。
     // 舊版資料沒有 /config，就把這台裝置 localStorage 裡的設定寫上去做一次性遷移。
@@ -1987,7 +2001,7 @@ function _fbListen(){
     if(CFG.lat!=null)syncWeather(sched);
     // 先補座標 → 再抓整個行程範圍的設施清單 → 才算得出每天最近的警局/急診。
     // 任何一步失敗都不能讓後面的步驟被跳過（.then 鏈遇到 reject 會整條斷掉），所以各自 catch。
-    if(navigator.onLine){
+    if(_fbOnline){
       ensureActGeo(sched)
         .catch(e=>console.warn('ensureActGeo:',e?.message||e))
         .then(()=>ensureFacilities(lastSched))
@@ -1999,10 +2013,11 @@ function _fbListen(){
     }
     renderOfflineStat();
     ensureRatesForExpenses(lastExps).then(()=>{if(curTab==='exp'&&curAcc==='stat')renderStat(lastExps);});
-  },err=>{sync(navigator.onLine?'ok':'offline');toast('⚠️ Firebase 錯誤：'+err.message);});
+  },err=>{sync(_fbOnline?'ok':'offline');toast('⚠️ Firebase 錯誤：'+err.message);});
 }
 
 function createFullSchedule(){
+  if(!_fbOnline)return;
   const u={};
   for(let i=0;i<CFG.days;i++)u['/schedule/day'+(i+1)]={label:'Day '+(i+1),date:addDays(CFG.start,i),acts:{}};
   DB.ref('/').update(u);
