@@ -59,7 +59,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;ba
 
 .ic-日常{background:#7c3aed1a}.ic-房租{background:#ea580c1a}.ic-交通{background:#0891b21a}
 .ic-旅遊{background:#0284c71a}.ic-娛樂{background:#db27771a}.ic-教育{background:#16a34a1a}
-.ic-醫療{background:#dc26261a}.ic-贈與{background:#d974231a}.ic-長期規劃{background:#71717a1a}
+.ic-醫療{background:#dc26261a}.ic-贈與{background:#d974231a}.ic-長期規劃{background:#71717a1a}.ic-投資{background:#0d94881a}
+.invest-note{font-size:12px;color:var(--text-secondary);margin-top:4px}
 
 /* Modal */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end}
@@ -201,7 +202,7 @@ input,select{background:var(--bg-base);color:var(--text-primary);border:1px soli
     <button onclick="deleteMonth()" style="background:var(--bg-card);color:var(--red);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;cursor:pointer;white-space:nowrap">🗑</button>
   </div>
   <div class="grid2">
-    <div class="card"><div class="label">本月支出</div><div class="big red" id="exp-total">--</div></div>
+    <div class="card"><div class="label">本月支出</div><div class="big red" id="exp-total">--</div><div class="invest-note" id="exp-invest"></div></div>
     <div class="card"><div class="label">筆數</div><div class="big" id="exp-count">--</div></div>
   </div>
   <div class="card">
@@ -215,6 +216,7 @@ input,select{background:var(--bg-base);color:var(--text-primary);border:1px soli
     </div>
     <div class="label">年度支出</div>
     <div class="big red" id="exp-year-total">--</div>
+    <div class="invest-note" id="exp-year-invest"></div>
     <div class="chart-wrap" style="height:200px;margin-top:8px"><canvas id="cat-chart-year"></canvas></div>
     <div id="cat-legend-year" style="margin-top:12px"></div>
   </div>
@@ -483,6 +485,7 @@ input,select{background:var(--bg-base);color:var(--text-primary);border:1px soli
       <option value="贈與">🎁 贈與</option>
       <option value="長期規劃">💰 長期規劃</option>
       <option value="貸款">🏦 貸款</option>
+      <option value="投資">📈 投資</option>
     </select>
     <div class="form-label">銀行／付款方式</div>
     <input id="at-bank" placeholder="永豐 / 國泰 / 現金...">
@@ -516,6 +519,7 @@ input,select{background:var(--bg-base);color:var(--text-primary);border:1px soli
       <option value="贈與">🎁 贈與</option>
       <option value="長期規劃">💰 長期規劃</option>
       <option value="貸款">🏦 貸款</option>
+      <option value="投資">📈 投資</option>
     </select>
     <div class="form-label">銀行</div>
     <input id="et-bank" placeholder="">
@@ -650,7 +654,7 @@ input,select{background:var(--bg-base);color:var(--text-primary);border:1px soli
     <input id="cfg-key" placeholder="your-api-key">
     <button class="btn" onclick="saveConfig()">儲存</button>
     <!-- iOS 主畫面 App 的快取很頑固，出問題時要能先確認跑的是哪一版 -->
-    <div style="margin-top:10px;text-align:center;color:var(--text-secondary);font-size:12px">版本 2026-08-05b</div>
+    <div style="margin-top:10px;text-align:center;color:var(--text-secondary);font-size:12px">版本 2026-09-15a</div>
     <button class="mclose" onclick="closeOverlay('cfg-overlay')">取消</button>
   </div>
 </div>
@@ -740,13 +744,18 @@ function buildYears(id) {
 }
 
 // ── Categories ────────────────────────────────────────────────
-const ICONS={日常:'🛒',房租:'🏠',交通:'🚗',旅遊:'✈️',娛樂:'🎬',教育:'📚',醫療:'🏥',贈與:'🎁',長期規劃:'💰',貸款:'🏦'};
-const CATS=['日常','房租','交通','旅遊','娛樂','教育','醫療','贈與','長期規劃','貸款'];
+const ICONS={日常:'🛒',房租:'🏠',交通:'🚗',旅遊:'✈️',娛樂:'🎬',教育:'📚',醫療:'🏥',贈與:'🎁',長期規劃:'💰',貸款:'🏦',投資:'📈'};
+const CATS=['日常','房租','交通','旅遊','娛樂','教育','醫療','贈與','長期規劃','貸款','投資'];
+// 投資算存下來的錢：列在交易與類別分佈，但不算進支出總額、不扣結餘（跟後端 SAVINGS_CATEGORIES 一致）
+const SAVINGS_CATS=['投資'];
+function showInvestNote(id,amount){
+  document.getElementById(id).textContent=amount>0?`另投資 NT$${amount.toLocaleString()}（不計入支出）`:'';
+}
 
 // ══════════════ TAB 1: 支出 ══════════════
 let catChart=null;
 let catChartYear=null;
-const CAT_COLORS={日常:'#E8735A',房租:'#4F83B5',交通:'#8EA36E',旅遊:'#4B5FA6',娛樂:'#D4618A',教育:'#3A8B4E',醫療:'#B94047',贈與:'#E8A823',長期規劃:'#7B5EA7',貸款:'#475569'};
+const CAT_COLORS={日常:'#E8735A',房租:'#4F83B5',交通:'#8EA36E',旅遊:'#4B5FA6',娛樂:'#D4618A',教育:'#3A8B4E',醫療:'#B94047',贈與:'#E8A823',長期規劃:'#7B5EA7',貸款:'#475569',投資:'#14B8A6'};
 
 function renderCategoryChart(canvasId, legendId, chartVar, catMap) {
   const labels=Object.keys(catMap), vals=labels.map(c=>catMap[c]);
@@ -785,13 +794,16 @@ async function loadYearlyExpense() {
   try {
     const s=await api(`/finance/summary/year/${year}`);
     document.getElementById('exp-year-total').textContent=`NT$${s.total_expense.toLocaleString()}`;
+    showInvestNote('exp-year-invest',s.total_investment||0);
     renderCategoryChart('cat-chart-year','cat-legend-year',catChartYearRef,s.by_category);
   } catch(e){console.error(e);}
 }
 
 function renderExpenses(txs) {
-  const total=txs.reduce((s,t)=>s+t.amount,0);
+  const invest=txs.filter(t=>SAVINGS_CATS.includes(t.category)).reduce((s,t)=>s+t.amount,0);
+  const total=txs.reduce((s,t)=>s+t.amount,0)-invest;
   document.getElementById('exp-total').textContent=`NT$${total.toLocaleString()}`;
+  showInvestNote('exp-invest',invest);
   document.getElementById('exp-count').textContent=`${txs.length} 筆`;
 
   const catMap={};
