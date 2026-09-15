@@ -1607,6 +1607,11 @@ function syncWeather(sched){
 // 旅程本身的設定（標題/成員/出發日/天數/照片/主要城市）存在 Firebase /config，
 // 這樣換裝置不用重填，也不會兩台各存一份互相打架。
 const TRIP_KEYS=['title','members','start','days','photo','city','cityQuery','lat','lng','tz','cc'];
+// 寫死的連線資訊：iOS 清掉網站資料後，有網路就能自動恢復，不必重新輸入。
+// Firebase Web API Key 本來就會出現在前端，保護靠 Security Rules（2026-09-10 已鎖 auth != null）。
+const DEF_FB_URL='https://jj-sandeigo-2026-default-rtdb.asia-southeast1.firebasedatabase.app', DEF_FB_KEY='AIzaSyBH_wAW71e_LMJ3EOK0F45k6Vx_J31mSkY';
+// 本機有值優先用本機（維持既有裝置行為），沒有才用寫死的
+function deviceCfg(dev){dev=dev||{};return {...dev,url:dev.url||DEF_FB_URL,apiKey:dev.apiKey||DEF_FB_KEY};}
 // ─── 試用模式（不連 Firebase）─────────────────────────
 // 這支 app 對資料庫的用法只有 DB.ref(path).{set,update,remove,once,get,on}，介面很小，
 // 所以做一份純記憶體的假 RTDB 就能讓完整流程照跑一遍——含日期補正、地理編碼、車程、
@@ -1820,10 +1825,9 @@ function doSetup(){
 window.onload=()=>{
   // 讓 app 在完全沒網路時打得開；不支援或註冊失敗都不影響其他功能
   if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
-  const s=localStorage.getItem('us_trip');
-  if(!s)return;
-  const dev=JSON.parse(s);
-  CFG={...dev};
+  let dev={};
+  try{dev=JSON.parse(localStorage.getItem('us_trip')||'{}')||{};}catch(_){}
+  CFG=deviceCfg(dev);
   try{CFG.url=new URL(CFG.url||'').origin;}catch{}
   // 舊版本把整份設定都存在 localStorage，保留下來當作 /config 不存在時的遷移來源
   TRIP_KEYS.forEach(k=>{if(dev[k]!==undefined)CFG[k]=dev[k];});
@@ -1885,8 +1889,9 @@ function applyTripCfg(cfg){
 }
 
 // ─── Firebase ────────────────────────────────────────
-// API Key 跟資料庫網址一樣存在本機 localStorage，每台裝置各自貼一次，
-// 刻意不寫死在檔案裡（這個 repo 是 public，寫死等於把金鑰放進 Git 歷史）。
+// 網址與 API Key 以本機 localStorage 為優先，沒有時用檔案裡寫死的 DEF_FB_URL/DEF_FB_KEY（見 deviceCfg）。
+// 2026-09-15 起寫死：規則已鎖 auth != null，Web API Key 本來就公開在前端，保護靠 Security Rules
+// 與 Google Cloud 的 HTTP 參照網址限制。
 function fbInit(dbUrl){
   const conf={databaseURL:dbUrl};
   if(CFG.apiKey)conf.apiKey=CFG.apiKey.trim();
@@ -3969,6 +3974,15 @@ function _selftest(){
     ok('住宿不顯示公休日', NO_CLOSED_CATS.includes('hotel'));
     ok('餐廳仍顯示公休日', !NO_CLOSED_CATS.includes('food'));
     ok('景點仍顯示公休日', !NO_CLOSED_CATS.includes('sight'));
+  }
+
+  // ---- 寫死連線資訊 ----
+  {
+    ok('本機沒設定時用寫死的網址', deviceCfg({}).url===DEF_FB_URL);
+    ok('本機有網址時優先用本機', deviceCfg({url:'https://x.firebasedatabase.app'}).url==='https://x.firebasedatabase.app');
+    ok('apiKey 空字串視為沒設定', deviceCfg({url:'u',apiKey:''}).apiKey===DEF_FB_KEY);
+    ok('其他裝置設定（字級）保留', deviceCfg({fs:'l'}).fs==='l');
+    ok('null 也不會炸', deviceCfg(null).url===DEF_FB_URL);
   }
 
   // ---- 離線唯讀 ----
