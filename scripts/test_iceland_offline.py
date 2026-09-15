@@ -2,7 +2,7 @@
 """冰島版離線唯讀／Service Worker 端對端測試。
 
 不連真實資料庫：localStorage 預先塞一個不存在的 Firebase 網址，apiKey 留空。
-每次執行都把 iceland-trip.html 複製成暫存目錄的 index.html（iceland-sw.js 存在時複製成 sw.js），
+每次執行都把 iceland/iceland-trip.html 複製成暫存目錄的 index.html（iceland/iceland-sw.js 存在時複製成 sw.js），
 用本機 http server 提供，因為 Service Worker 只在 http(s)/localhost 上運作，playwright 也擋 file:。
 
 用法：
@@ -52,9 +52,9 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
 
 def build_site():
     d = Path(tempfile.mkdtemp(prefix='iceland-site-'))
-    shutil.copy(ROOT / 'iceland-trip.html', d / 'index.html')
-    if (ROOT / 'iceland-sw.js').exists():
-        shutil.copy(ROOT / 'iceland-sw.js', d / 'sw.js')
+    shutil.copy(ROOT / 'iceland' / 'iceland-trip.html', d / 'index.html')
+    if (ROOT / 'iceland' / 'iceland-sw.js').exists():
+        shutil.copy(ROOT / 'iceland' / 'iceland-sw.js', d / 'sw.js')
     return d
 
 
