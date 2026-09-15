@@ -43,6 +43,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif;backg
 .dot{width:8px;height:8px;border-radius:50%;background:#9CB5A4;}
 .dot.busy{background:var(--orange);animation:pulse 1s infinite;}
 .dot.off{background:#9A8F89;}
+/* 離線唯讀：沒真正連上資料庫時，編輯類控制項變淡（仍可點，點了會跳提示說明原因） */
+body.ro :is(.fab,.ib,.day-eb,.act-handle,.note-handle,.todo-item input[type=checkbox],[onclick^="save"]:not([onclick^="saveApiKey"]),[onclick^="doCopyAct"],[onclick^="fixDates"],[onclick^="refreshOfflineData"],[onclick^="clearAll"],[onclick^="addTodoItem"]){opacity:.4;}
+#ro-banner{display:none;background:#FEF3C7;color:#78350F;border-bottom:1px solid #F59E0B;padding:8px 16px;text-align:center;font-size:15px;font-weight:600;}
+#ro-banner.show{display:block;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--tab-h) + var(--safe-b) + 8px);}
 .tabbar{position:fixed;bottom:0;left:0;right:0;height:calc(var(--tab-h) + var(--safe-b));padding-bottom:var(--safe-b);background:#fff;border-top:1px solid var(--border);display:flex;z-index:100;}
@@ -380,6 +384,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
       <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">u0913b</span></div>
     </div>
   </div>
+  <div id="ro-banner"></div>
   <div class="content">
 
     <div class="page on" id="page-sched">
@@ -729,6 +734,37 @@ function sync(state){
   }else{
     dot.className='dot';txt.textContent='已同步';
   }
+}
+// ─── 離線唯讀 ───────────────────────────────────────
+// 「有網路」不等於「連得上資料庫」：訊號一格時 navigator.onLine 照樣是 true，
+// 這時寫入只會排在 SDK 的記憶體佇列，關掉 app 就不見。所以以資料庫真正連上為準，沒連上一律唯讀。
+let _fbOnline=false;
+// 開 app 的頭 4 秒還在連線，不要馬上喊「離線」；超過 4 秒仍沒連上才出橫幅（按鈕從一開始就是淡的）
+let _roGrace=true;
+function setFbOnline(v){
+  _fbOnline=!!v;
+  document.body.classList.toggle('ro',!_fbOnline);
+  if(_fbOnline){_roGrace=false;showRoBanner(false);sync('ok');}
+  else if(!_roGrace){showRoBanner(true);sync('offline');}
+}
+function startRoGrace(){
+  document.body.classList.add('ro');
+  setTimeout(()=>{_roGrace=false;if(!_fbOnline){showRoBanner(true);sync('offline');}},4000);
+}
+function showRoBanner(on){
+  const b=document.getElementById('ro-banner');if(!b)return;
+  if(on){
+    const s=snapLoad();
+    const t=s?new Date(s.at).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+    b.textContent=t?`📴 離線唯讀 · ${t} 的資料`:'📴 離線唯讀';
+  }
+  b.classList.toggle('show',on);
+}
+// 所有寫入入口的守門：沒連上就跳提示並回 true（呼叫端 return）
+function roBlock(){
+  if(_fbOnline)return false;
+  toast('📴 離線唯讀中，連上網路才能修改');
+  return true;
 }
 function openM(id){document.getElementById(id).classList.add('open');}
 function closeM(id){document.getElementById(id).classList.remove('open');}
@@ -1794,6 +1830,7 @@ window.onload=()=>{
 
 // ─── Boot ────────────────────────────────────────────
 function bootApp(){
+  startRoGrace();
   document.getElementById('setup').style.display='none';
   const app=document.getElementById('app');app.style.display='flex';
   document.getElementById('c_url').value=CFG.url||'';
@@ -1810,7 +1847,7 @@ function bootApp(){
     renderSched(lastSched);renderExp(lastExps);renderStat(lastExps);renderNotes(lastNotes);
   }
   if(!navigator.onLine)sync('offline');
-  window.addEventListener('offline',()=>sync('offline'));
+  window.addEventListener('offline',()=>{sync('offline');setFbOnline(false);});
   window.addEventListener('online',()=>sync('busy'));
   if(DEMO){DB=makeMemDB(demoSeed());_fbListen();return;}
   loadFirebase(()=>connectFB());
@@ -3885,6 +3922,21 @@ function _selftest(){
     ok('住宿不顯示公休日', NO_CLOSED_CATS.includes('hotel'));
     ok('餐廳仍顯示公休日', !NO_CLOSED_CATS.includes('food'));
     ok('景點仍顯示公休日', !NO_CLOSED_CATS.includes('sight'));
+  }
+
+  // ---- 離線唯讀 ----
+  {
+    const was=_fbOnline,grace=_roGrace;
+    _roGrace=false;
+    setFbOnline(false);
+    ok('沒連上時 body 有 ro', document.body.classList.contains('ro'));
+    ok('沒連上時 roBlock 回 true', roBlock()===true);
+    ok('寬限期過後斷線立即顯示橫幅', document.getElementById('ro-banner').classList.contains('show'));
+    setFbOnline(true);
+    ok('連上後 ro 移除', !document.body.classList.contains('ro'));
+    ok('連上後 roBlock 回 false', roBlock()===false);
+    ok('連上後橫幅隱藏', !document.getElementById('ro-banner').classList.contains('show'));
+    setFbOnline(was);_roGrace=grace;
   }
 
   console.log(out.join('\n')+`\n\n通過 ${pass} / 失敗 ${fail}`);
