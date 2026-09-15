@@ -1818,6 +1818,8 @@ function doSetup(){
   bootApp();
 }
 window.onload=()=>{
+  // 讓 app 在完全沒網路時打得開；不支援或註冊失敗都不影響其他功能
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
   const s=localStorage.getItem('us_trip');
   if(!s)return;
   const dev=JSON.parse(s);
@@ -2654,7 +2656,7 @@ function loadLeaflet(){
     const s=document.createElement('script');
     s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     s.onload=()=>res(true);
-    s.onerror=()=>res(false);   // CDN 掛掉就走降級路徑，不讓整頁卡住
+    s.onerror=()=>{_leafletLoading=null;res(false);};   // CDN 掛掉就走降級路徑；清掉快取的失敗結果，網路回來才能重試
     document.head.appendChild(s);
   });
   return _leafletLoading;
@@ -2730,7 +2732,7 @@ async function mountDayMap(did){
   const pts=dayGeoActs(day,did);
   if(!pts.length)return;
   host.dataset.mounted='1';
-  const okL=navigator.onLine?await loadLeaflet():false;
+  const okL=await loadLeaflet();   // 離線時由 Service Worker 快取提供；真的沒有才走降級
   // 等 CDN 的這段期間 renderSched 可能已經整頁重畫，host 已經脫離文件。
   // 此時 dayMaps 還沒有這一天，摘下暫存那段救不到它，繼續建圖只會留下永遠回收不掉的殭屍實例。
   // 直接放棄即可——重畫後的新節點會由 renderSched 結尾的 mountDayMap 重新掛載。
@@ -2741,7 +2743,7 @@ async function mountDayMap(did){
   }
   host.classList.add('day-map');
   const map=L.map(host,{zoomControl:false,attributionControl:true});
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap',crossOrigin:'anonymous'}).addTo(map);
   pts.forEach((p,i)=>{
     L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:`<div class="leaflet-marker-num">${i+1}</div>`,iconSize:[26,26],iconAnchor:[13,13]})})
       .addTo(map).bindPopup(esc(p.name));
