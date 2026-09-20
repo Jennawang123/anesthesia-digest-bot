@@ -184,7 +184,8 @@ def test_sw_offline(browser):
     ctx, page = new_page(browser)
     page.wait_for_selector('#app', state='visible')
     wait_sw(page)
-    n_lib = page.evaluate("caches.open('lib-v0914a').then(c=>c.keys()).then(k=>k.length)")
+    # 不綁版本號：SW 的 VERSION 一升，'lib-v0914a' 就會開出一個空快取而假性失敗
+    n_lib = page.evaluate("caches.keys().then(ks=>{const k=ks.find(x=>x.startsWith('lib-'));return k?caches.open(k).then(c=>c.keys()).then(a=>a.length):0;})")
     check('安裝時預抓 5 支函式庫', n_lib >= 5, n_lib)
     tile = 'https://tile.openstreetmap.org/5/15/9.png'
     page.evaluate(f"fetch('{tile}',{{mode:'cors'}}).then(r=>r.ok)")
@@ -243,6 +244,80 @@ def test_default_cfg(browser):
     ctx.close()
 
 
+def test_cost_amount(browser):
+    """金額欄位容錯：千分位逗號要吃得下，看不懂的金額要擋下來而不是靜默丟掉。
+
+    2026-09-20 冰島旅途中實際發生：活動內花費的金額欄位是 type="number"，
+    iOS 上輸入 24,900 這種千分位寫法時 value 直接變成空字串，被 saveAct 靜默
+    filter 掉；活動其他欄位照存、還跳「✅ 已儲存」，金額就這樣不見。
+    """
+    ctx, page = new_page(browser)
+    page.wait_for_selector('#app', state='visible')
+    r = page.evaluate("""()=>{
+      window._w=[];
+      const mk=(p)=>({
+        set(v){_w.push(['set',p,v]);return Promise.resolve()},
+        update(v){_w.push(['update',p,v]);return Promise.resolve()},
+        remove(){_w.push(['remove',p]);return Promise.resolve()},
+        once(ev,cb){cb({val:()=>({date:'2026-09-14',acts:{}})});},
+        on(){},get(){return Promise.resolve({val:()=>null})}});
+      DB={ref:mk};
+      setFbOnline(true);
+      const out={};
+      const costWrites=()=>_w.filter(x=>x[0]==='set'&&String(x[1]).indexOf('/expenses/actcost_')===0).map(x=>x[2]);
+      const actWrites=()=>_w.filter(x=>x[0]==='set'&&String(x[1]).indexOf('/schedule/')===0).map(x=>x[2]);
+
+      // 1. 千分位逗號
+      openActM('day1');
+      document.getElementById('a_name').value='晚餐';
+      curActCosts=[{desc:'海鮮湯',amt:'24,900',cur:'ISK',paidBy:'A'}];
+      _w=[]; saveAct();
+      out.commaAmt=(costWrites()[0]||{}).amt;
+      out.commaActCost=((actWrites()[0]||{}).costs||[{}])[0].amt;
+
+      // 2. 看不懂的金額要擋下來
+      openActM('day1');
+      document.getElementById('a_name').value='晚餐';
+      curActCosts=[{desc:'海鮮湯',amt:'abc',cur:'ISK',paidBy:'A'}];
+      _w=[]; saveAct();
+      out.badWrites=_w.length;
+      out.badToast=document.getElementById('toast').textContent;
+      out.badModalStillOpen=!!document.getElementById('m-act').classList.contains('open');
+
+      // 3. 只填描述沒填金額也要擋（那筆花費本來會整個消失）
+      openActM('day1');
+      document.getElementById('a_name').value='晚餐';
+      curActCosts=[{desc:'海鮮湯',amt:'',cur:'ISK',paidBy:'A'}];
+      _w=[]; saveAct();
+      out.descOnlyWrites=_w.length;
+
+      // 4. 整行全空＝使用者沒填，不該擋（ensureActCostRow 一定留一列空的）
+      openActM('day1');
+      document.getElementById('a_name').value='晚餐';
+      curActCosts=[{desc:'',amt:'',cur:'ISK',paidBy:'A'}];
+      _w=[]; saveAct();
+      out.emptyRowActs=actWrites().length;
+      out.emptyRowCosts=(actWrites()[0]||{}).costs;
+
+      // 5. 記帳頁同一套解析
+      openExpM();
+      document.getElementById('e_desc').value='晚餐';
+      document.getElementById('e_amt').value='24,900';
+      _w=[]; saveExp();
+      out.expAmt=(_w.filter(x=>x[0]==='set')[0]||['','',{}])[2].amt;
+      return out;}""")
+    check('活動花費：24,900 存成 24900', r['commaAmt'] == 24900, r['commaAmt'])
+    check('活動花費：活動本體的 costs 也是 24900', r['commaActCost'] == 24900, r['commaActCost'])
+    check('金額看不懂時完全不寫入', r['badWrites'] == 0, r['badWrites'])
+    check('金額看不懂時跳提示', '看不懂' in r['badToast'], r['badToast'])
+    check('金額看不懂時表單留著讓使用者改', r['badModalStillOpen'])
+    check('只填描述沒填金額也擋下來', r['descOnlyWrites'] == 0, r['descOnlyWrites'])
+    check('整行全空不擋，活動照存', r['emptyRowActs'] > 0, r['emptyRowActs'])
+    check('整行全空時 costs 寫 null', r['emptyRowCosts'] is None, r['emptyRowCosts'])
+    check('記帳頁：24,900 存成 24900', r['expAmt'] == 24900, r['expAmt'])
+    ctx.close()
+
+
 TESTS = {
     'selftest': test_selftest,
     'ro_state': test_ro_state,
@@ -251,6 +326,7 @@ TESTS = {
     'sw_offline': test_sw_offline,
     'auth_offline': test_auth_offline,
     'default_cfg': test_default_cfg,
+    'cost_amount': test_cost_amount,
 }
 
 

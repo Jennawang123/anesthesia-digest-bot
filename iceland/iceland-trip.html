@@ -388,7 +388,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0914a</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v0920a</span></div>
     </div>
   </div>
   <div id="ro-banner"></div>
@@ -599,7 +599,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="fg"><label class="lb">分類</label><div class="cat-grid" id="catGrid"></div></div>
     <div class="fg"><label class="lb">描述</label><input class="inp" id="e_desc" placeholder="例：午餐、Opal 卡儲值…"></div>
     <div class="fr">
-      <div class="fg" style="flex:0 0 130px"><label class="lb">金額</label><input class="inp" id="e_amt" type="number" placeholder="0.00" step="0.01" min="0"></div>
+      <div class="fg" style="flex:0 0 130px"><label class="lb">金額</label><input class="inp" id="e_amt" type="text" inputmode="decimal" placeholder="0.00"></div>
       <div class="fg"><label class="lb">幣別</label>
         <div class="cur-row" id="cur-row-exp"></div>
       </div>
@@ -668,6 +668,17 @@ function actCostList(act){
   if(Array.isArray(act?.costs))return act.costs;
   if(act?.cost?.amt>0)return [act.cost];
   return [];
+}
+// 金額欄位是 text+inputmode="decimal"，不是 type="number"——iOS 上只要內容不合法
+// （例如打了千分位逗號），value 會直接變成空字串：使用者看得到自己打的字、程式卻拿到空的。
+// 代價是這裡要自己容錯：空白、千分位逗號、幣別符號（kr / $ / 元）一律去掉再解析。
+// 逗號一律當千分位移除、不當小數點——使用者是台灣人，24,900 是兩萬四千九。
+function parseAmt(v){
+  if(typeof v==='number')return isFinite(v)?v:NaN;
+  const s=String(v??'').replace(/[\s,]/g,'').replace(/[^\d.-]/g,'');
+  if(!s)return NaN;
+  const n=parseFloat(s);
+  return isFinite(n)?n:NaN;
 }
 
 let CFG={},DB=null,curTab='sched',curAcc='exp';
@@ -2340,7 +2351,7 @@ function renderActCostRows(){
     <div class="act-cost-row">
       <div class="fr">
         <input class="inp" style="flex:0 0 78px" placeholder="描述" value="${esc(c.desc||'')}" oninput="curActCosts[${i}].desc=this.value">
-        <input class="inp" style="flex:0 0 76px" type="number" step="0.01" min="0" placeholder="0.00" value="${c.amt||''}" oninput="curActCosts[${i}].amt=this.value">
+        <input class="inp" style="flex:0 0 76px" type="text" inputmode="decimal" placeholder="0.00" value="${esc(String(c.amt??''))}" oninput="curActCosts[${i}].amt=this.value">
         <select class="inp" style="flex:0 0 84px" onchange="curActCosts[${i}].cur=this.value">${PRESET_CURRENCIES.map(cc=>`<option value="${cc.code}"${cc.code===c.cur?' selected':''}>${cc.flag} ${cc.code}</option>`).join('')}</select>
         <button type="button" class="ib" onclick="removeActCostRow(${i})">✕</button>
       </div>
@@ -2799,7 +2810,13 @@ function saveAct(){
   if(roBlock())return;
   const did=document.getElementById('ma-did').value,aid=document.getElementById('ma-aid').value;
   const name=document.getElementById('a_name').value.trim();if(!name){toast('請輸入活動名稱');return;}
-  const costs=curActCosts.map(c=>({desc:(c.desc||'').trim(),amt:parseFloat(c.amt),cur:c.cur||DEF_CUR,paidBy:c.paidBy||CFG.members[0]})).filter(c=>!isNaN(c.amt)&&c.amt>0);
+  // 整行完全空白＝使用者沒填（ensureActCostRow 一定會留一列空的），略過就好；
+  // 但只要填了描述或金額，金額解析不出來就必須擋下來。原本是靜默 filter 掉，活動其他欄位
+  // 照存、還跳「✅ 已儲存」，金額就這樣人間蒸發——2026-09-20 冰島旅途中實際踩到。
+  const filledCosts=curActCosts.filter(c=>String(c.desc??'').trim()!==''||String(c.amt??'').trim()!=='');
+  const costs=filledCosts.map(c=>({desc:(c.desc||'').trim(),amt:parseAmt(c.amt),cur:c.cur||DEF_CUR,paidBy:c.paidBy||CFG.members[0]}));
+  const badCost=costs.filter(c=>!(c.amt>0)).length;
+  if(badCost){toast('⚠️ 有 '+badCost+' 筆花費的金額看不懂，沒有存檔');return;}
   DB.ref('/schedule/'+did).once('value',daySnap=>{
     const dayData=daySnap.val()||{};
     const existingActs=Object.values(dayData.acts||{});
@@ -2835,17 +2852,17 @@ function saveAct(){
     }
     // 手動採用的座標蓋過上面的沿用，並清掉失敗紀錄——不清的話背景掃描還當它沒定位。
     if(pendingActGeo){obj.geo={...pendingActGeo,at:new Date().toISOString()};obj.geoFail=null;}
-    DB.ref('/schedule/'+did+'/acts/'+id).set(obj);
+    const writes=[DB.ref('/schedule/'+did+'/acts/'+id).set(obj)];
     // 舊格式固定 id 的記帳紀錄改成逐行索引，這個路徑往後不會再用到，順手清掉，
     // 不然舊資料第一次編輯儲存後，這筆連同新的 _0 一起留著會變成多算一筆。
-    DB.ref('/expenses/actcost_'+did+'_'+id).remove();
+    writes.push(DB.ref('/expenses/actcost_'+did+'_'+id).remove());
     const prevCostCount=actCostList(prev).length;
     costs.forEach((c,i)=>{
-      DB.ref('/expenses/actcost_'+did+'_'+id+'_'+i).set({desc:c.desc||name,amt:c.amt,cur:c.cur,cat:mapActCat(curAC),paidBy:c.paidBy,date:dayData.date||'',fromAct:true,at:new Date().toISOString()});
+      writes.push(DB.ref('/expenses/actcost_'+did+'_'+id+'_'+i).set({desc:c.desc||name,amt:c.amt,cur:c.cur,cat:mapActCat(curAC),paidBy:c.paidBy,date:dayData.date||'',fromAct:true,at:new Date().toISOString()}));
     });
     // 這次存的行數比之前少，代表使用者刪掉了某幾行，多出來的舊索引要一併刪除，
     // 否則會留下沒人記得、金額已經跟表單對不上的孤兒記帳項目。
-    for(let i=costs.length;i<prevCostCount;i++)DB.ref('/expenses/actcost_'+did+'_'+id+'_'+i).remove();
+    for(let i=costs.length;i<prevCostCount;i++)writes.push(DB.ref('/expenses/actcost_'+did+'_'+id+'_'+i).remove());
     // 編輯模式下若選了別天，先存回原處再整筆搬過去（moveAct 會一併處理記帳的日期）
     const moveTo=document.getElementById('move-day-row').style.display!=='none'
       ? document.getElementById('a_move_day').value : did;
@@ -2855,7 +2872,10 @@ function saveAct(){
       closeM('m-act');
       return;
     }
-    closeM('m-act');toast('✅ 已儲存');
+    // 「已儲存」要等伺服器真的收下才說——原本是 set() 不接 .then() 就無條件跳，
+    // 寫入失敗（權限、離線、網路中斷）時使用者照樣看到打勾，資料卻沒進去。
+    closeM('m-act');
+    Promise.all(writes).then(()=>toast('✅ 已儲存')).catch(e=>toast('⚠️ 儲存失敗：'+(e?.message||e)));
   });
 }
 function delAct(did,aid){
@@ -2948,7 +2968,7 @@ function openExpEdit(eid){
 }
 function saveExp(){
   if(roBlock())return;
-  const desc=document.getElementById('e_desc').value.trim(),amtStr=document.getElementById('e_amt').value,amt=parseFloat(amtStr);
+  const desc=document.getElementById('e_desc').value.trim(),amtStr=document.getElementById('e_amt').value,amt=parseAmt(amtStr);
   if(!desc){toast('請輸入描述');return;}if(!amtStr||isNaN(amt)||amt<=0){toast('請輸入正確金額');return;}
   const eid=document.getElementById('me-id').value||('e'+uid());
   sync(true);

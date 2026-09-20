@@ -1,7 +1,7 @@
 // 冰島版 Service Worker：讓 app 在完全沒網路時打得開。
 // 資料本身靠主頁的 localStorage 快照（iceland_trip_snap），這裡只負責「網頁與函式庫載得進來」。
 // 部署時複製成網站根目錄的 sw.js。
-const VERSION='v0914a';
+const VERSION='v0920a';
 const SHELL='shell-'+VERSION, LIB='lib-'+VERSION, TILES='tiles';
 const LIB_URLS=[
   'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
