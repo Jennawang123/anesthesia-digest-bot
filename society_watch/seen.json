@@ -23,6 +23,7 @@
     "PAIN:3142",
     "PAIN:3163",
     "PAIN:3181",
+    "PAIN:3185",
     "RAPM:1",
     "RAPM:10",
     "RAPM:11",
@@ -69,6 +70,7 @@
     "TSCCM:1000",
     "TSCCM:1009",
     "TSCCM:1010",
+    "TSCCM:1011",
     "TSCCM:932",
     "TSCCM:975",
     "TSCCM:977",
@@ -87,6 +89,7 @@
     "TWECCM:128",
     "TWECCM:129",
     "TWECCM:130",
-    "TWECCM:131"
+    "TWECCM:131",
+    "TWECCM:132"
   ]
 }
