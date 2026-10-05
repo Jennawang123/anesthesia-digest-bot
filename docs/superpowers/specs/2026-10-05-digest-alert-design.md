@@ -75,6 +75,22 @@ daily_push.py ───────────┘                              
 - 單篇 PMC 全文抓不到不告警（實測本來只有約 1/5 拿得到）。
 - 週末不推播的提早 return 不經過告警流程。
 
+### 隨附修正：9/21 的分類 `TypeError`
+
+根因：`_call1_batch` 把模型回傳的 `assignments` 原樣交出去，Haiku 偶爾把文章索引
+回成字串（`"12"`），`classify_articles` 的 `1 <= i <= len(articles)` 就拿 int 比 str。
+`scores` 的 `int(v)` 也有同類風險（值不是數字時 `ValueError`）。
+
+修法：在 `_call1_batch` 回傳前把模型輸出正規化，抽成純函式
+`_normalize_classification(parsed) -> (assignment, scores)`：
+
+- `assignments` 每個主題的索引逐一轉 `int`，轉不了的丟掉；值不是 list 的主題視為空
+- `scores` 的 key 與 value 逐一轉 `int`，轉不了的那筆丟掉（下游已有預設 5 分）
+- 丟掉任何一筆時印一行 log；不另外告警（單筆髒資料不影響整體）
+
+這是唯一一處會直接 import `daily_fetch_classify` 的測試，測試前先設假的
+`CLAUDE_API_KEY`（建立 client 不會連線）。
+
 ## 5. reason 字串
 
 同時是節流 key，必須短而穩定，不含每次會變的數字（天數 N 例外，見 §6）。
@@ -150,8 +166,6 @@ def main():
 
 ## 11. 不在範圍內
 
-- 修掉 9/21 那個 `TypeError` 本身（`classify_articles` 對模型回傳的索引沒轉型）。
-  本設計只保證它再發生時會收到告警。
 - 日報整理模型維持 `claude-sonnet-5`。
 - `weekly_digest.py`（已停用）。
 
@@ -165,13 +179,17 @@ def main():
   推播拋例外時不外拋且不寫狀態；狀態讀取失敗時 fail-open 照推
 - `format_alert()`：標題含階段名、每筆一行
 
-兩支日報腳本在 import 時就會讀環境變數並建立 Anthropic client，不直接 import 測試；
-可測邏輯都放在 `digest_alert.py`。
+兩支日報腳本在 import 時就會讀環境變數並建立 Anthropic client，告警相關的可測邏輯
+都放在 `digest_alert.py`。
+
+`tests/test_fetch_classify_normalize.py`：字串索引被轉成 int、非數字索引被丟掉、
+主題值不是 list、score 值非數字、正常輸入原樣通過。
 
 ## 13. 實作順序與驗收
 
 1. `digest_alert.py`＋測試
 2. 接進 `daily_push.py` 與 `daily-push.yml` → **停下來驗收**：
    使用者手動觸發 `test_alert=true`，確認 LINE 收到；再用 `force_weekday` 跑一次確認日報照常
-3. 驗收通過後接進 `daily_fetch_classify.py` 與 `daily-fetch-classify.yml`，手動觸發一次確認
+3. 驗收通過後接進 `daily_fetch_classify.py` 與 `daily-fetch-classify.yml`，
+   連同分類 `TypeError` 修正，手動觸發一次確認
 4. 更新記憶 `project_anesthesia_digest.md`
