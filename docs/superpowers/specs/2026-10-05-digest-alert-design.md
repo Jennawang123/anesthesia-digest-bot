@@ -63,7 +63,7 @@ daily_push.py ───────────┘                              
 
 | 觸發條件 | key | reason |
 |---|---|---|
-| `week.json` 的 `fetched_at` 距今超過 7.5 天，或欄位缺失／無法解析 | `week.json` | `已 N 天未更新，週一抓取可能失敗` |
+| `week.json` 的 `fetched_at` 距今超過 7.5 天，或欄位缺失／無法解析 | `week.json` | `已超過 7 天未更新，週一抓取可能失敗` |
 | Sonnet 格式化失敗，退回純文字清單 | `日報格式化` | `reason(e)` |
 | 心情小語 API 失敗，退回本地語錄 | `心情小語` | `reason(e)` |
 | PMCID 查詢整批失敗 | `全文補抓` | `reason(e)` |
@@ -93,7 +93,7 @@ daily_push.py ───────────┘                              
 
 ## 5. reason 字串
 
-同時是節流 key，必須短而穩定，不含每次會變的數字（天數 N 例外，見 §6）。
+同時是節流 key，必須短而穩定，不含每次會變的數字。
 
 | 例外類型 | 格式 |
 |---|---|
@@ -106,8 +106,8 @@ daily_push.py ───────────┘                              
 
 - 沿用 `society_watch.state.should_alert`：同 key 同 reason 7 天最多一次，
   換一種 reason 立刻再報；狀態檔壞掉一律 fail-open。
-- `week.json` 過期的 reason 會帶天數，為避免每天都被視為新 reason，
-  節流用的 reason 固定為 `已超過 7 天未更新，週一抓取可能失敗`，天數只放在訊息內文。
+- `week.json` 過期的 reason 是固定字串、不帶實際天數：帶天數的話每天都是新 reason，
+  7 天冷卻會失效變成天天告警。
 - 狀態檔 `daily_data/alert_state.json`，格式與學會監測的 `alert_state.json` 相同。
   在 Actions 上用 GitHub Contents API 讀寫（與 `sent_articles.json` 同一條路）；
   本機執行只寫本機檔。
@@ -143,7 +143,7 @@ def main():
 ⚠️ 麻醉日報異常（每日推播）
 
 ・日報格式化：Anthropic API 問題（先查餘額與月上限）...
-・week.json：已 9 天未更新，週一抓取可能失敗
+・week.json：已超過 7 天未更新，週一抓取可能失敗
 
 詳情見 GitHub Actions log。
 ```
