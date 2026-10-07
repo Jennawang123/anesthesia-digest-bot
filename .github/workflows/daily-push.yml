@@ -10,6 +10,10 @@ on:
         description: '強制指定星期幾 (1=週一 … 5=週五)，留空用當日'
         required: false
         default: ''
+      test_alert:
+        description: '只送一則測試告警到個人 LINE，不推日報（填 true）'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -37,10 +41,16 @@ jobs:
 
       - name: Push daily digest to LINE
         env:
+          # Actions 的 log 是 pipe，stdout 會 block-buffered 而 stderr 不會，
+          # 出事時 traceback 會排到正常輸出前面（9/21 那次就是）
+          PYTHONUNBUFFERED: "1"
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_GROUP_ID: ${{ secrets.LINE_GROUP_ID }}
+          # 異常告警的收件人（個人，不是群組）。與學會監測共用同一個 secret
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           FORCE_WEEKDAY: ${{ github.event.inputs.force_weekday }}
+          TEST_ALERT: ${{ github.event.inputs.test_alert }}
         run: python daily_push.py

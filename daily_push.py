@@ -16,6 +16,8 @@ from datetime import datetime, timezone, timedelta
 import requests
 from anthropic import Anthropic
 
+import digest_alert
+
 client = Anthropic(api_key=os.environ["CLAUDE_API_KEY"])
 LINE_TOKEN    = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
 LINE_GROUP_ID = os.environ["LINE_GROUP_ID"]
@@ -36,6 +38,10 @@ MIN_TOP_SCORE = 5  # 當日最高分低於此值就只推清單，不做摘要�
 PMC_MAX_CHARS       = 15000  # 單篇全文最多送給模型的字元數（約 3.7k tokens）
 PMC_TOTAL_MAX_CHARS = 45000  # 單日全文總量上限，避免 token 成本失控
 NCBI_UA = {"User-Agent": "anesthesia-digest-bot/1.0 (mailto:jennawang123@gmail.com)"}
+
+STAGE = "每日推播"
+# 降級但沒中斷的問題記在這裡，main() 結束時交給 digest_alert.report()
+FAILURES: list[tuple[str, str]] = []
 
 
 # ── 1. Data ───────────────────────────────────────────────────────────────────
@@ -181,6 +187,7 @@ def get_daily_quote() -> str:
         return resp.content[0].text.strip()
     except Exception as e:
         print(f"  ⚠️ 心情小語 API 失敗（{type(e).__name__}: {e}），改用本地語錄")
+        FAILURES.append(("心情小語", digest_alert.reason(e)))
         return random.choice(QUOTE_FALLBACKS)
 
 
@@ -243,6 +250,7 @@ def attach_fulltext(articles: list[dict]) -> int:
         pmcids = _pmids_to_pmcids(list(pmid_map))
     except Exception as e:
         print(f"  ⚠️ PMCID 查詢失敗（{type(e).__name__}: {e}），本次全部只用摘要")
+        FAILURES.append(("全文補抓", digest_alert.reason(e)))
         return 0
 
     used, hits = 0, 0
@@ -402,6 +410,7 @@ def format_message(articles: list[dict], topic: dict, date_str: str, hot_theme: 
         return response.content[0].text.strip()
     except Exception as e:
         print(f"  ⚠️ 日報格式化 API 失敗（{type(e).__name__}: {e}），改推純文字清單")
+        FAILURES.append(("日報格式化", digest_alert.reason(e)))
         return plain_message(articles, topic, date_str, hot_theme)
 
 
@@ -467,7 +476,7 @@ def push_line(text: str) -> None:
 
 # ── 5. Main ───────────────────────────────────────────────────────────────────
 
-def main():
+def run():
     now_twn  = taiwan_now()
     weekday  = int(os.environ.get("FORCE_WEEKDAY") or now_twn.isoweekday())
     date_str = now_twn.strftime("%Y/%m/%d")
@@ -481,6 +490,12 @@ def main():
     print(f"執行環境：{where}")
     print(f"{date_str} {topic['day']} | 主題：{topic['name']}")
 
+    with open("daily_data/week.json", "r", encoding="utf-8") as f:
+        fetched_at = json.load(f).get("fetched_at")
+    if digest_alert.is_stale(fetched_at, datetime.now(timezone.utc)):
+        print(f"  ⚠️ week.json 過期（fetched_at={fetched_at}），推的是舊資料")
+        FAILURES.append(("week.json", digest_alert.STALE_REASON))
+
     articles, hot_theme = load_articles(weekday)
     print(f"文章數：{len(articles)} | 熱點：{hot_theme or '-'}")
 
@@ -489,6 +504,7 @@ def main():
             attach_fulltext(articles)
         except Exception as e:
             print(f"  ⚠️ 全文補抓整體失敗（{type(e).__name__}: {e}），改用摘要")
+            FAILURES.append(("全文補抓", digest_alert.reason(e)))
 
     quote = get_daily_quote()
     print(f"心情小語：{quote}")
@@ -511,6 +527,24 @@ def main():
     sent.update(a["url"] for a in articles if a.get("url"))
     save_sent_urls(sent)
     print(f"已記錄 {len(articles)} 篇，累計 {len(sent)} 篇。")
+
+
+def main():
+    if os.environ.get("TEST_ALERT") == "true":
+        digest_alert.send_test()
+        print("已送出測試告警，不推日報。")
+        return
+
+    try:
+        run()
+    except BaseException as e:
+        # 含 SystemExit。記下來後照樣往外拋，保留 Actions 紅燈
+        if not isinstance(e, KeyboardInterrupt):
+            FAILURES.append((STAGE, digest_alert.reason(e)))
+        raise
+    finally:
+        # 排在日報推送之後：告警失敗不可影響日報。report() 自己不會拋例外
+        digest_alert.report(STAGE, FAILURES)
 
 
 if __name__ == "__main__":
