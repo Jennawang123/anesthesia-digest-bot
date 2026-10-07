@@ -15,6 +15,8 @@ import feedparser
 import requests
 from anthropic import Anthropic
 
+import digest_alert
+
 client = Anthropic(api_key=os.environ["CLAUDE_API_KEY"])
 
 TOPICS = {
@@ -28,6 +30,15 @@ TOPICS = {
 ERRATA_KEYWORDS = ("erratum", "correction", "retraction", "corrigendum")
 
 MIN_ARTICLES = 20  # 有來源失敗時，低於此數就不覆蓋既有 week.json
+
+STAGE = "週一抓取"
+# 降級但沒中斷的問題記在這裡，main() 結束時交給 digest_alert.report()
+FAILURES: list[tuple[str, str]] = []
+
+# 最近四週的 log 裡正常的期刊最少也有 2 篇，出現 0 的（NEJM 連三週、
+# Anesth Analg 30 個 PMID 解析出 0 篇）都是異常
+ZERO_REASON = "回 0 篇，疑似 feed 改版或解析失效"
+UNPARSEABLE_REASON = "模型回應無法解析，整批文章被略過"
 
 
 # ── 1. Fetch ──────────────────────────────────────────────────────────────────
@@ -251,12 +262,15 @@ Rules:
     )
     raw   = resp.content[0].text.strip()
     match = re.search(r"\{.*\}", raw, re.DOTALL)
-    if not match:
-        return {k: [] for k in "12345"}, {}
-
-    parsed = json.loads(match.group())
+    try:
+        parsed = json.loads(match.group()) if match else None
+    except json.JSONDecodeError:
+        parsed = None
     if not isinstance(parsed, dict):
-        parsed = {}
+        # 整批（最多 BATCH_SIZE 篇）都沒被分類，不能只是默默少掉
+        print(f"    ⚠️ 第 {offset + 1} 篇起的這一批：{UNPARSEABLE_REASON}")
+        FAILURES.append(("分類", UNPARSEABLE_REASON))
+        return {k: [] for k in "12345"}, {}
     return _normalize_classification(parsed)
 
 
@@ -351,7 +365,7 @@ def classify_articles(articles: list[dict]) -> dict[str, dict]:
 
 # ── 3. Main ───────────────────────────────────────────────────────────────────
 
-def main():
+def run():
     where = "GitHub Actions" if os.environ.get("GITHUB_ACTIONS") == "true" else "本機"
     print(f"執行環境：{where}")
     print("Fetching articles...")
@@ -386,8 +400,11 @@ def main():
             # 單一來源掛掉不該讓整週的抓取全毀，記下來繼續跑
             print(f"  ❌ {journal} 抓取失敗（{type(e).__name__}: {e}）")
             failed_sources.append(journal)
+            FAILURES.append((journal, digest_alert.reason(e)))
             continue
         print(f"  {journal}: {len(arts)}")
+        if not arts:
+            FAILURES.append((journal, ZERO_REASON))
         all_articles.extend(arts)
         time.sleep(0.5)
 
@@ -402,8 +419,11 @@ def main():
         except Exception as e:
             print(f"  ❌ {name} 抓取失敗（{type(e).__name__}: {e}）")
             failed_sources.append(name)
+            FAILURES.append((name, digest_alert.reason(e)))
             continue
         print(f"  {name}: {len(arts)}")
+        if not arts:
+            FAILURES.append((name, ZERO_REASON))
         all_articles.extend(arts)
 
     # Deduplicate by normalised title
@@ -417,16 +437,15 @@ def main():
     print(f"Unique articles: {len(unique)}")
     if failed_sources:
         print(f"⚠️ 本次有 {len(failed_sources)} 個來源失敗：{', '.join(failed_sources)}")
+    # 以前這裡是 return（綠燈），week.json 停在上週、日報默默推舊文章
     if not unique:
-        print("No articles found. Exiting.")
-        return
+        raise SystemExit("所有來源合計 0 篇，week.json 未更新")
 
     # 有來源掛掉且文章數明顯偏低時，不要用殘缺結果覆蓋掉上週的 week.json
     if failed_sources and len(unique) < MIN_ARTICLES:
-        raise SystemExit(
-            f"❌ 只抓到 {len(unique)} 篇（低於 {MIN_ARTICLES} 篇門檻）且有來源失敗，"
-            "不覆蓋 week.json，請稍後重跑 workflow。"
-        )
+        print(f"❌ 只抓到 {len(unique)} 篇（低於 {MIN_ARTICLES} 篇門檻）且有來源失敗")
+        # SystemExit 的訊息會成為告警文字與節流 key，不放每次會變的數字
+        raise SystemExit("文章數過低且有來源失敗，week.json 未更新，請稍後重跑 workflow")
 
     print("Classifying with Haiku...")
     classified = classify_articles(unique)
@@ -498,6 +517,18 @@ def _upload_to_github(data: dict, token: str, repo: str) -> None:
     put.raise_for_status()
     new_sha = put.json().get("content", {}).get("sha", "")[:7]
     print(f"Saved → daily_data/week.json (GitHub API, sha={new_sha})")
+
+
+def main():
+    try:
+        run()
+    except BaseException as e:
+        # 含 SystemExit。記下來後照樣往外拋，保留 Actions 紅燈
+        if not isinstance(e, KeyboardInterrupt):
+            FAILURES.append((STAGE, digest_alert.reason(e)))
+        raise
+    finally:
+        digest_alert.report(STAGE, FAILURES)
 
 
 if __name__ == "__main__":

@@ -64,3 +64,29 @@ def test_正規化後的結果餵給classify不會炸(monkeypatch):
     out = dfc.classify_articles(articles)
     assert [a["title"] for a in out["1"]["items"]] == ["t1", "t3"]
     assert out["1"]["items"][0]["score"] == 9
+
+
+class _FakeResp:
+    def __init__(self, text):
+        self.content = [type("Block", (), {"text": text})()]
+
+
+def _fake_client(text):
+    create = lambda **kwargs: _FakeResp(text)  # noqa: E731
+    return type("Client", (), {"messages": type("Messages", (), {"create": staticmethod(create)})()})()
+
+
+def test_模型回應沒有JSON時記錄失敗(monkeypatch):
+    monkeypatch.setattr(dfc, "FAILURES", [])
+    monkeypatch.setattr(dfc, "client", _fake_client("抱歉，我無法處理"))
+    assignment, scores = dfc._call1_batch([{"title": "t", "abstract": "a", "journal": "J"}], offset=0)
+    assert assignment == {k: [] for k in "12345"} and scores == {}
+    assert dfc.FAILURES == [("分類", dfc.UNPARSEABLE_REASON)]
+
+
+def test_模型回應是壞掉的JSON時記錄失敗而不是崩潰(monkeypatch):
+    monkeypatch.setattr(dfc, "FAILURES", [])
+    monkeypatch.setattr(dfc, "client", _fake_client('{"assignments": {"1": [1,'  + "}"))
+    assignment, scores = dfc._call1_batch([{"title": "t", "abstract": "a", "journal": "J"}], offset=0)
+    assert assignment == {k: [] for k in "12345"} and scores == {}
+    assert dfc.FAILURES == [("分類", dfc.UNPARSEABLE_REASON)]

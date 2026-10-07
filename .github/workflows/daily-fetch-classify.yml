@@ -26,7 +26,12 @@ jobs:
 
       - name: Fetch and classify articles
         env:
+          # stdout 不加這個會被緩衝，traceback 排到正常輸出前面
+          PYTHONUNBUFFERED: "1"
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          # 異常告警用：推給個人，不是日報群組
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python daily_fetch_classify.py
