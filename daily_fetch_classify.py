@@ -160,6 +160,49 @@ def fetch_rss(url: str, journal: str) -> list[dict]:
 BATCH_SIZE = 60  # max articles per Haiku call
 
 
+def _normalize_classification(parsed: dict) -> tuple[dict[str, list[int]], dict[int, int]]:
+    """把模型回的 JSON 整理成下游假設的型別。
+
+    Haiku 偶爾把文章索引回成字串（"12"），classify_articles 拿它跟 int 比大小
+    就 TypeError，整週的 week.json 都沒更新（2026-09-21）。轉不了的直接丟掉：
+    少一篇文章遠好過整次抓取報廢。
+    """
+    def to_int(value):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    dropped = 0
+
+    raw_assign = parsed.get("assignments")
+    if not isinstance(raw_assign, dict):
+        raw_assign = {}
+    assignment: dict[str, list[int]] = {}
+    for tid in "12345":
+        values = raw_assign.get(tid)
+        if not isinstance(values, list):
+            values = []
+        ints = [to_int(v) for v in values]
+        dropped += ints.count(None)
+        assignment[tid] = [i for i in ints if i is not None]
+
+    raw_scores = parsed.get("scores")
+    if not isinstance(raw_scores, dict):
+        raw_scores = {}
+    scores: dict[int, int] = {}
+    for key, value in raw_scores.items():
+        k, v = to_int(key), to_int(value)
+        if k is None or v is None:
+            dropped += 1
+            continue
+        scores[k] = v
+
+    if dropped:
+        print(f"    ⚠️ 分類結果有 {dropped} 筆型別不對，已略過")
+    return assignment, scores
+
+
 def _call1_batch(articles: list[dict], offset: int) -> tuple[dict[str, list[int]], dict[int, int]]:
     """對單一批次（最多 BATCH_SIZE 篇）執行分類+評分，回傳全域 1-based index。"""
     numbered = "\n".join(
@@ -211,11 +254,10 @@ Rules:
     if not match:
         return {k: [] for k in "12345"}, {}
 
-    parsed     = json.loads(match.group())
-    assignment = parsed.get("assignments", {})
-    scores_raw = parsed.get("scores", {})
-    scores     = {int(k): int(v) for k, v in scores_raw.items() if str(k).isdigit()}
-    return assignment, scores
+    parsed = json.loads(match.group())
+    if not isinstance(parsed, dict):
+        parsed = {}
+    return _normalize_classification(parsed)
 
 
 def _call1_classify_and_score(articles: list[dict]) -> tuple[dict[str, list[int]], dict[int, int]]:
