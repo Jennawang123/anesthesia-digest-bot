@@ -68,6 +68,15 @@
     "TSA:3125",
     "TSA:3126",
     "TSA:3127",
+    "TSA:3128",
+    "TSA:3129",
+    "TSA:3130",
+    "TSA:3131",
+    "TSA:3132",
+    "TSA:3133",
+    "TSA:3134",
+    "TSA:3135",
+    "TSA:3136",
     "TSCCM:1000",
     "TSCCM:1009",
     "TSCCM:1010",
@@ -92,6 +101,8 @@
     "TWECCM:130",
     "TWECCM:131",
     "TWECCM:132",
-    "TWECCM:133"
+    "TWECCM:133",
+    "TWECCM:134",
+    "TWECCM:135"
   ]
 }
