@@ -1,7 +1,7 @@
 # 點數促銷監測與推播（points-watch）設計
 
 日期：2026-10-09
-狀態：**2026-10-09 已上線（RSS 九計畫，每日台灣 10:30）**；`CUB` 待另案。上線前 dry-run 的修正（購買字眼改看標題＋摘要、內文開頭一併送判讀、同檔促銷涵蓋判定、最高可達新低的措辭）以程式碼與測試為準。實作計畫見 `docs/superpowers/plans/2026-10-09-points-promo-watch.md`（RSS 九計畫）。`CUB` 另案。
+狀態：**2026-10-09 已上線（RSS 九計畫，每日台灣 10:30）**；`CUB` 見 `2026-10-09-cub-transfer-bonus-watch-design.md`（已上線）。上線前 dry-run 的修正（購買字眼改看標題＋摘要、內文開頭一併送判讀、同檔促銷涵蓋判定、最高可達新低的措辭）以程式碼與測試為準。實作計畫見 `docs/superpowers/plans/2026-10-09-points-promo-watch.md`（RSS 九計畫）。`CUB` 另案。
 
 ## 1. 問題
 

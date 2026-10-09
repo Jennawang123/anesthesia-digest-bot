@@ -1,7 +1,9 @@
 # 國泰世華小樹點轉點加碼監測（points-watch／CUB）設計
 
 日期：2026-10-09
-狀態：設計定案，待寫實作計畫
+狀態：**2026-10-09 已上線**，隨 `points-watch.yml` 每日台灣 10:30 執行。實作計畫見 `docs/superpowers/plans/2026-10-09-cub-transfer-bonus-watch.md`。
+
+上線時與本文的差異（以程式碼與測試為準）：`program` 由程式從夥伴名稱判定，不由 Haiku 填；夥伴多了 `start_time`／`end_time`，非整天（00:00／23:59 以外）才顯示；內容是否更新改比百分比而非 `bonus` 措辭；`points_watch` 的所有通知改走獨立 LINE bot（`POINTS_LINE_CHANNEL_ACCESS_TOKEN`／`POINTS_LINE_USER_ID`，未設定時退回原 bot）。
 前案：`2026-10-09-points-promo-watch-design.md` §5（當時因無樣本而移出）
 
 ## 1. 問題
