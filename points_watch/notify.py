@@ -71,13 +71,20 @@ def format_alert(failures: list[tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
-def format_heartbeat(feed_count: int, article_count: int, promo_count: int) -> str:
-    return "\n".join([
+def format_heartbeat(feed_count: int, article_count: int, promo_count: int,
+                     cub_listed: int | None = None, cub_matched: int | None = None) -> str:
+    lines = [
         "💓 點數促銷監測運作正常",
         "",
         f"・監測來源：{feed_count} 個 RSS",
         f"・已判讀文章：{article_count} 篇",
         f"・已記錄促銷：{promo_count} 筆",
+    ]
+    if cub_listed is not None:
+        # 初篩命中數長期為 0 是唯一看得出「銀行改了措辭、初篩漏掉」的地方
+        lines.append(f"・國泰世華：清單 {cub_listed} 筆、初篩命中 {cub_matched} 筆")
+    lines.extend([
         "",
         "（每週一則。若某一週沒收到，表示監測可能已停擺，請查看 GitHub Actions。）",
     ])
+    return "\n".join(lines)

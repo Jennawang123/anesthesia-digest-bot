@@ -4,6 +4,8 @@
     python3 -m points_watch.main --bootstrap   # 首次：只把現有文章記為已看過，不判讀不推播
     python3 -m points_watch.main --dry-run     # 驗收：照常判讀，訊息印到 stdout，不推播不寫檔
     python3 -m points_watch.main               # 日常執行
+
+同一次執行會先跑買點促銷，再跑國泰世華小樹點轉點加碼（cub_run），最後才是每週心跳。
 """
 import argparse
 import traceback
@@ -14,7 +16,7 @@ from society_watch import fetch
 from society_watch import state as sw_state
 from society_watch.notify import split_message
 
-from . import alerts, extract, feeds, notify, rating, store
+from . import alerts, cub_run, extract, feeds, notify, rating, store
 from .line import push_line
 from .models import Article, Rated
 from .sources import DEFAULT_PAGES, FEEDS, feed_urls, is_candidate
@@ -52,14 +54,14 @@ def collect(pages: int) -> tuple[list[Article], list[tuple[str, str]]]:
     return list(articles.values()), failures
 
 
-def run(bootstrap: bool = False, dry_run: bool = False,
-        pages: int = DEFAULT_PAGES, today: date | None = None) -> list[tuple[str, str]]:
-    today = today or date.today()
+def _run_buy(bootstrap: bool, dry_run: bool, pages: int,
+             today: date) -> tuple[list[tuple[str, str]], dict | None]:
+    """買點／買哩程這條線。回傳（失敗清單, 心跳用的統計）；
+    bootstrap 與 dry-run 不產生統計，回 None。"""
     seen_path = DATA_DIR / "seen_articles.json"
     promos_path = DATA_DIR / "promos.json"
     baselines_path = DATA_DIR / "baselines.json"
     alerts_path = DATA_DIR / "alert_state.json"
-    heartbeat_path = DATA_DIR / "heartbeat.json"
 
     mode = "bootstrap" if bootstrap else "dry-run" if dry_run else "日常"
     print(f"執行日期：{today}｜模式：{mode}｜每 feed {pages} 頁")
@@ -72,7 +74,7 @@ def run(bootstrap: bool = False, dry_run: bool = False,
     if bootstrap:
         sw_state.save_seen(seen_path, seen | {a.key for a in candidates})
         print("bootstrap 模式：只記錄已看過的文章，不判讀不推播。")
-        return failures
+        return failures, None
 
     # dry-run 無視 seen，才看得到現有文章會產生什麼訊息
     fresh = candidates if dry_run else [a for a in candidates if a.key not in seen]
@@ -111,7 +113,7 @@ def run(bootstrap: bool = False, dry_run: bool = False,
         print(notify.format_promos(to_push) if to_push else "（沒有 🟢／🟡 促銷）")
         if failures:
             print("\n" + notify.format_alert(failures))
-        return failures
+        return failures, None
 
     # 告警先送：之後的推播若拋例外，當天的異常才不會跟著消失
     sent = alerts.send_due(failures, alerts_path, today, push_line)
@@ -156,13 +158,51 @@ def run(bootstrap: bool = False, dry_run: bool = False,
         store.save_promos(promos_path, promos)
         print(f"已送出 {len(due_keys)} 筆截止提醒。")
 
+    return failures, {"articles": len(seen | judged), "promos": len(promos)}
+
+
+def _run_cub(dry_run: bool, today: date) -> tuple[list[tuple[str, str]], dict]:
+    """跑國泰世華那條線。它的任何例外都在這裡接住：買點流程已經推播、
+    狀態也寫完了，不能被這邊拖下水。"""
+    try:
+        return cub_run.run(DATA_DIR, today, dry_run, push_line)
+    except Exception as e:
+        print(f"  ❌ 國泰世華流程中斷：{type(e).__name__}: {e}")
+        traceback.print_exc()
+        failure = ("國泰世華／流程", alerts.reason(e))
+        if not dry_run:
+            try:
+                alerts.send_due([failure], DATA_DIR / "alert_state.json", today, push_line)
+            except Exception as alert_error:
+                # 中斷的原因若就是 LINE 推不出去，這裡會再失敗一次。吞掉它：
+                # failure 照樣回傳，main() 會以非零狀態結束，Actions 的紅燈就是訊號。
+                print(f"  ❌ 國泰世華告警也送不出去：{type(alert_error).__name__}")
+        return [failure], {}
+
+
+def run(bootstrap: bool = False, dry_run: bool = False,
+        pages: int = DEFAULT_PAGES, today: date | None = None) -> list[tuple[str, str]]:
+    today = today or date.today()
+    failures, stats = _run_buy(bootstrap, dry_run, pages, today)
+    if bootstrap:
+        # bootstrap 只為了不把 RSS 裡的舊文一次推出；國泰世華那條線沒有這個問題
+        return failures
+
+    cub_failures, cub_stats = _run_cub(dry_run, today)
+    failures = failures + cub_failures
+    if dry_run:
+        return failures
+
     # 有任何失敗的那一輪不送「運作正常」，留到該週下一次乾淨的執行
+    heartbeat_path = DATA_DIR / "heartbeat.json"
     if not failures and sw_state.should_heartbeat(
             sw_state.load_heartbeat(heartbeat_path), today):
         push_line(notify.format_heartbeat(
             feed_count=len(FEEDS),
-            article_count=len(seen | judged),
-            promo_count=len(promos),
+            article_count=stats["articles"],
+            promo_count=stats["promos"],
+            cub_listed=cub_stats.get("listed"),
+            cub_matched=cub_stats.get("matched"),
         ))
         sw_state.save_heartbeat(heartbeat_path, sw_state.heartbeat_period(today))
         print("已送出每週心跳。")
@@ -189,8 +229,9 @@ def main() -> None:
         raise SystemExit(1)
     # 抽取失敗同理：API key 失效或餘額用盡時每篇都失敗，而失敗的文章
     # 約四天就滑出 feed。workflow 的 commit 步驟是 always()，亮紅燈不影響狀態。
-    if any(source.endswith("／抽取") for source, _ in failures):
-        print("❌ 有文章判讀失敗，以非零狀態結束。")
+    if any(source.endswith("／抽取") or source.startswith("國泰世華")
+           for source, _ in failures):
+        print("❌ 有判讀或國泰世華來源失敗，以非零狀態結束。")
         raise SystemExit(1)
 
 

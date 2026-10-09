@@ -61,6 +61,9 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(main.fetch, "get", fake_get)
     monkeypatch.setattr(main.extract, "extract", fake_extract)
     monkeypatch.setattr(main, "push_line", box["pushed"].append)
+    # 國泰世華那條線預設關掉：fake_get 對任何網址都回 RSS，會被它當成壞掉的清單
+    box["cub"] = lambda data_dir, today, dry_run, push: ([], {"listed": 0, "matched": 0})
+    monkeypatch.setattr(main.cub_run, "run", lambda *a, **k: box["cub"](*a, **k))
     box["dir"] = tmp_path
     return box
 
@@ -297,3 +300,81 @@ def test_candidate_filter_reads_summary(env):
         "</item></channel></rss>")
     main.run(today=TODAY)
     assert "IHG points on sale" in env["calls"]
+
+
+# ── 國泰世華那條線的串接 ──
+
+def test_cub_runs_after_buy_flow_with_same_dir_and_push(env):
+    seen = {}
+
+    def fake_cub(data_dir, today, dry_run, push):
+        seen.update(dir=data_dir, today=today, dry_run=dry_run,
+                    buy_state_written=(data_dir / "seen_articles.json").exists())
+        push("✈️ 假的加碼訊息")
+        return [], {"listed": 149, "matched": 3}
+    env["cub"] = fake_cub
+    main.run(today=TODAY)
+    assert seen == {"dir": env["dir"], "today": TODAY, "dry_run": False, "buy_state_written": True}
+    assert "✈️ 假的加碼訊息" in env["pushed"]
+
+
+def test_cub_crash_does_not_affect_buy_flow(env):
+    def boom(*a, **k):
+        raise RuntimeError("cub exploded")
+    env["cub"] = boom
+    failures = main.run(today=TODAY)
+    assert failures == [("國泰世華／流程", "程式錯誤（需改 code）RuntimeError")]
+    assert any(m.startswith("💰") for m in env["pushed"])
+    assert "IHG|bonus|100|2026-10-31" in _json(env, "promos.json")
+    assert any(m.startswith("⚠️") and "國泰世華／流程" in m for m in env["pushed"])
+    assert not [m for m in env["pushed"] if m.startswith("💓")]
+
+
+def test_cub_failures_are_returned_and_block_heartbeat(env):
+    env["cub"] = lambda *a, **k: ([("國泰世華／清單", "活動清單為空或結構改變")],
+                                  {"listed": 0, "matched": 0})
+    failures = main.run(today=TODAY)
+    assert ("國泰世華／清單", "活動清單為空或結構改變") in failures
+    assert not [m for m in env["pushed"] if m.startswith("💓")]
+
+
+def test_heartbeat_reports_cub_stats(env):
+    env["cub"] = lambda *a, **k: ([], {"listed": 149, "matched": 3})
+    main.run(today=TODAY)
+    beat = next(m for m in env["pushed"] if m.startswith("💓"))
+    assert "・國泰世華：清單 149 筆、初篩命中 3 筆" in beat
+
+
+def test_bootstrap_skips_cub(env):
+    called = []
+    env["cub"] = lambda *a, **k: called.append(1) or ([], {})
+    main.run(bootstrap=True, today=TODAY)
+    assert called == []
+
+
+def test_dry_run_passes_flag_to_cub_and_sends_nothing(env):
+    flags = []
+    env["cub"] = lambda data_dir, today, dry_run, push: (flags.append(dry_run), ([], {}))[1]
+    main.run(dry_run=True, today=TODAY)
+    assert flags == [True]
+    assert env["pushed"] == []
+
+
+def test_cli_exits_nonzero_on_cub_failure(env, monkeypatch):
+    env["cub"] = lambda *a, **k: ([("國泰世華／判讀", "加碼判讀：partners 為空")], {})
+    monkeypatch.setattr(sys, "argv", ["points_watch"])
+    with pytest.raises(SystemExit) as e:
+        main.main()
+    assert e.value.code == 1
+
+
+def test_cub_crash_with_line_down_still_returns_failures(env, monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("cub exploded")
+    env["cub"] = boom
+    env["extract"] = lambda a, t: None            # 買點這輪沒有東西要推
+
+    def line_down(text):
+        raise requests.HTTPError("500")
+    monkeypatch.setattr(main, "push_line", line_down)
+    assert main.run(today=TODAY) == [("國泰世華／流程", "程式錯誤（需改 code）RuntimeError")]

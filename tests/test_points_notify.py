@@ -100,3 +100,13 @@ def test_up_to_new_low_is_worded_conditionally():
                                         new_low=True, up_to=True)])
     assert "若拿到最高級距為每哩 1.71¢（🏆 低於原最佳 1.88¢）" in text
     assert "新低，原最佳" not in text
+
+
+def test_heartbeat_with_cub_line():
+    text = notify.format_heartbeat(feed_count=3, article_count=42, promo_count=7,
+                                   cub_listed=149, cub_matched=3)
+    assert "・國泰世華：清單 149 筆、初篩命中 3 筆" in text.splitlines()
+
+
+def test_heartbeat_without_cub_stats_has_no_cub_line():
+    assert "國泰世華" not in notify.format_heartbeat(feed_count=3, article_count=42, promo_count=7)
