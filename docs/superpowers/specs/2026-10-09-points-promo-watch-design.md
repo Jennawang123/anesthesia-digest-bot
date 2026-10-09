@@ -1,7 +1,7 @@
 # 點數促銷監測與推播（points-watch）設計
 
 日期：2026-10-09
-狀態：設計定案，待寫實作計畫
+狀態：設計定案；實作計畫見 `docs/superpowers/plans/2026-10-09-points-promo-watch.md`（RSS 九計畫）。`CUB` 另案。
 
 ## 1. 問題
 
@@ -44,11 +44,13 @@
 | `storefront.points.com`（IHG／Choice 實際售點店面） | 403 | 不用 |
 | `loyaltylobby.com/feed/` | 200，RSS | **採用** |
 | `onemileatatime.com/feed/` | 200，RSS | **採用** |
-| `frequentmiler.com/feed/` | 200，但當下無相關標題，未驗證內容 | 計畫階段實測後決定是否採用 |
+| `frequentmiler.com/feed/` | 200，RSS；實抓到「Buy IHG Points for as low as 0.5 cents each」 | **採用** |
 | `awardtravelfinder.com/buy_points_promotions` | 200，結構未細驗 | 不採用（使用者選擇純 RSS 方案） |
-| `cathay-cube.com.tw` 活動總覽 | 200 但只有 React 外殼，內容動態載入 | 見 §5 |
+| `cathay-cube.com.tw` 活動總覽 | 200 但只有 React 外殼；同網址加 `.model.json` 可取得靜態 JSON | 見 §5 |
 
 **為何不盯官網**：官方店面由 points.com 代管並有防機器人，GitHub Actions 的機房 IP 抓不到。部落格 RSS 通常在促銷當天發文，標題即含加贈幅度與每點成本（例：「Buy Hilton Honors Points With Best-Ever 120% Bonus, 0.45 Cents Each」）。
+
+**實抓後確認的三個限制**：(1) 每頁只有 14–25 篇（Loyalty Lobby 約兩天份），故每個 feed 抓兩頁（`?paged=2`）；(2) Loyalty Lobby 的連結帶 `?omhide=true`，比對前要去掉 query；(3) OMAAT 每個計畫共用固定網址、每次新促銷只更新發布日，故「看過的文章」的鍵是 `URL|發布日` 而非 URL。
 
 ## 3. 架構
 
@@ -62,7 +64,7 @@ points_watch/
   ├── extract.py      Haiku：Article → Promo（結構化促銷）或 None
   ├── rating.py       Promo + baselines → 每點成本、評等（純函式）
   ├── baselines.json  各計畫原價與歷史最佳每點成本
-  ├── state.py        已看過的文章、已推過的促銷、待提醒清單
+  ├── store.py        已推過的促銷、待提醒判定（已看過的文章直接用 society_watch.state）
   ├── notify.py       四種訊息的排版
   └── main.py         串接流程
 tests/fixtures/points_watch/           實抓的 RSS 與文章樣本
@@ -92,7 +94,7 @@ Promo = {
 
 1. 逐一抓 RSS。單一 feed 失敗不影響其他 feed，記入失敗清單。
 2. 以標題關鍵字篩選：必須同時命中「計畫關鍵字」（如 `IHG`、`LifeMiles`）與「購買關鍵字」（`buy`、`purchase`、`sale`）。沒命中的不送 LLM。
-3. 濾掉 `seen_articles.json` 已有的 URL。
+3. 濾掉 `seen_articles.json` 已有的文章（鍵為 `URL|發布日`）。
 4. 每篇新文章送 Haiku，回傳 `Promo` 或「這不是買點促銷」。輸入只給標題與 RSS 摘要，不另抓全文。
 5. 去重鍵＝`program|kind|percent|end_date`。鍵已在 `pushed_promos.json` 的不再推（同一促銷被多家報導、或「last call」舊文重發）。
 6. `rating.py` 計算每點成本與評等（§6）。
@@ -106,7 +108,9 @@ Promo = {
 
 獨立來源，不經 RSS 流程。評等規則固定：加贈 ≥15% 為 🟢，10–14% 為 🟡，低於 10% 不推。
 
-抓法在計畫階段依實抓結果三選一，依序嘗試：
+**不在第一份實作計畫內**，RSS 管線上線驗收後另開計畫。2026-10-09 實抓：`…/credit-card/bonus/point-exchange/airmiles.model.json` 回 200 的靜態 JSON，但該頁目前只有常態兌換比率，無法驗證加贈活動會出現在哪一頁。
+
+抓法依實抓結果三選一，依序嘗試：
 
 1. 從頁面 JS 找出活動列表的 JSON 端點（比照 `society_watch` 的 PAIN 來源）
 2. 整頁文字 diff＋Haiku（比照 AIRWAY 來源）
@@ -131,7 +135,9 @@ discount: cpp = base_cpp * (1 - percent/100)
 | 🟡 普通 | `cpp ≤ best_cpp × 1.15` |
 | 🔴 不推 | 其餘 |
 
-`cpp < best_cpp` 時訊息標「🏆 新低」，並把 `baselines.json` 的 `best_cpp` 更新為新值（由 Actions 一併 commit）。
+`cpp < best_cpp` 時訊息標「🏆 新低」，並把 `baselines.json` 的 `best_cpp` 更新為新值（由 Actions 一併 commit；以單行字串取代改寫，不整檔重排）。
+
+**防呆**：`cpp < best_cpp × 0.70` 視為抽取錯誤，走 ⚠️ 告警、不推播、不更新基準。否則一次抽錯就會把基準永久改壞，之後真正的好價全部變成 🔴。
 
 ### 6.2 基準表初始值
 
@@ -142,12 +148,12 @@ discount: cpp = base_cpp * (1 - percent/100)
 | UNITED | 1.88¢ | 100% 加贈 | ⚠️ 僅見於 2026-09 促銷報導，未確認是否為歷史最佳 |
 | LIFEMILES | 1.35¢ | 145% 加贈 | ⚠️ 同上 |
 | AEROPLAN | 1.35¢ | 100% 加贈 | ⚠️ 同上 |
-| ALASKA | — | 120% 加贈（2026-10 進行中） | ❌ 未取得每哩成本 |
+| ALASKA | 1.88¢ | 100% 加贈 | ⚠️ OMAAT 2026-10-02；另有「up to 120%」報導，是否公開促銷待查 |
 | AA | — | — | ❌ 2026-09 的 2.26¢ 是折扣價，非歷史最佳 |
 | FLYINGBLUE | — | — | ❌ |
 | VIRGIN | — | — | ❌ |
 
-**⚠️ 與 ❌ 的七家必須在實作計畫的第一個任務逐家查證**（各家歷次促銷報導），填入 `base_cpp` 與 `best_cpp` 後交使用者過目，才能進行後續任務。基準錯誤會讓評等整個失真，這是本系統最重要的一份資料。
+**⚠️ 與 ❌ 的七家（含 ALASKA）必須在實作計畫的第一個任務逐家查證**（各家歷次促銷報導），填入 `base_cpp` 與 `best_cpp` 後交使用者過目，才能進行後續任務。基準錯誤會讓評等整個失真，這是本系統最重要的一份資料。
 
 **已知特性**：IHG 的 100% 加贈一年出現多次，所以 IHG 的 🟢 會很頻繁——這是正確行為（確實平歷史最佳），代表錯過一次的代價不高。
 
@@ -172,7 +178,7 @@ https://…
 | 💰 新促銷 | 有 🟢 或 🟡 | 同日合併一則，🟢 排前面 |
 | ⏰ 截止提醒 | 🟢 促銷剩 ≤2 天 | 每個促銷一次 |
 | ⚠️ 監測異常 | 見 §8 | 同來源同原因 7 天最多一次 |
-| 💓 每週心跳 | 每 ISO 週第一次成功執行 | 每週一則；內容含本週檢查文章數、推播促銷數 |
+| 💓 每週心跳 | 每 ISO 週第一次成功執行 | 每週一則；內容含 RSS 數、累計判讀文章數、累計促銷筆數 |
 
 `up_to` 為 True 時一律加註「最高可達，需登入確認個人優惠」。`end_date` 為 None 時顯示「截止日未註明」，且不排入 ⏰ 提醒。
 
