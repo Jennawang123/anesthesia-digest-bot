@@ -10,13 +10,12 @@ import traceback
 from datetime import date
 from pathlib import Path
 
-import requests
-
 from society_watch import fetch
 from society_watch import state as sw_state
-from society_watch.notify import push_line, split_message
+from society_watch.notify import split_message
 
-from . import extract, feeds, notify, rating, store
+from . import alerts, extract, feeds, notify, rating, store
+from .line import push_line
 from .models import Article, Rated
 from .sources import DEFAULT_PAGES, FEEDS, feed_urls, is_candidate
 
@@ -24,18 +23,8 @@ DATA_DIR = Path(__file__).resolve().parent
 
 
 def _reason(error: Exception) -> str:
-    """把例外轉成告警文字。這串同時是 should_alert 的節流鍵，必須短而穩定。"""
-    if isinstance(error, (feeds.FeedError, extract.ExtractError, rating.SuspiciousPrice)):
-        return str(error)
-    if isinstance(error, requests.RequestException):
-        return f"連線失敗 {type(error).__name__}"
-    if (type(error).__module__ or "").startswith("anthropic"):
-        return f"Anthropic API 問題（先查餘額與月上限）{type(error).__name__}"
-    return f"程式錯誤（需改 code）{type(error).__name__}"
-
-
-def _alert_key(source: str, reason: str) -> str:
-    return f"{source}｜{reason}"
+    return alerts.reason(
+        error, plain=(feeds.FeedError, extract.ExtractError, rating.SuspiciousPrice))
 
 
 def collect(pages: int) -> tuple[list[Article], list[tuple[str, str]]]:
@@ -125,18 +114,9 @@ def run(bootstrap: bool = False, dry_run: bool = False,
         return failures
 
     # 告警先送：之後的推播若拋例外，當天的異常才不會跟著消失
-    if failures:
-        alerts = sw_state.load_alerts(alerts_path)
-        # 節流鍵含原因：同一 feed 有兩篇以不同原因失敗時，若鍵只有來源，
-        # 後寫的會蓋掉先寫的，隔天兩個原因輪流被當成「換了壞法」而天天告警。
-        due = [f for f in failures
-               if sw_state.should_alert(alerts, _alert_key(*f), today, f[1])]
-        if due:
-            push_line(notify.format_alert(due))
-            for source, reason in due:
-                sw_state.record_alert(alerts, _alert_key(source, reason), today, reason)
-            sw_state.save_alerts(alerts_path, alerts)
-            print(f"已送出 {len(due)} 則告警。")
+    sent = alerts.send_due(failures, alerts_path, today, push_line)
+    if sent:
+        print(f"已送出 {sent} 則告警。")
 
     if to_push:
         for part in split_message(notify.format_promos(to_push)):

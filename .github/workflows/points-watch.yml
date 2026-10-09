@@ -46,6 +46,8 @@ jobs:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+          POINTS_LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.POINTS_LINE_CHANNEL_ACCESS_TOKEN }}
+          POINTS_LINE_USER_ID: ${{ secrets.POINTS_LINE_USER_ID }}
           MODE: ${{ github.event.inputs.mode }}
           PAGES: ${{ github.event.inputs.pages }}
         run: |
