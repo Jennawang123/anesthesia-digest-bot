@@ -1,0 +1,70 @@
+name: 點數促銷監測
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '執行模式'
+        type: choice
+        default: 'normal'
+        options:
+          - normal
+          - bootstrap
+          - dry-run
+      pages:
+        description: '每個 feed 抓幾頁（dry-run 想回溯時調大）'
+        required: false
+        default: '2'
+
+permissions:
+  contents: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic requests beautifulsoup4
+
+      - name: Run points watch
+        env:
+          PYTHONUNBUFFERED: "1"
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+          MODE: ${{ github.event.inputs.mode }}
+          PAGES: ${{ github.event.inputs.pages }}
+        run: |
+          case "$MODE" in
+            bootstrap) python3 -m points_watch.main --bootstrap --pages "${PAGES:-2}" ;;
+            dry-run)   python3 -m points_watch.main --dry-run --pages "${PAGES:-2}" ;;
+            *)         python3 -m points_watch.main --pages "${PAGES:-2}" ;;
+          esac
+
+      - name: Commit state
+        # always()：告警送出後 alert_state.json 已寫檔，若接著推播失敗就跳過
+        # commit，7 天冷卻紀錄會遺失而隔天重複告警。
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 用 -A 而非逐檔列舉：狀態檔有些只在特定情況才產生，
+          # git add 遇到不存在的 pathspec 會整條失敗且什麼都不 stage。
+          git add -A points_watch/
+          if git diff --cached --quiet; then
+            echo "狀態無變化，不 commit。"
+          else
+            git commit -m "chore: update points watch state [skip ci]"
+            git push || (git pull --rebase origin main && git push)
+          fi
