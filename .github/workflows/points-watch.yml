@@ -1,6 +1,9 @@
 name: 點數促銷監測
 
 on:
+  schedule:
+    # 每日 02:30 UTC = 10:30 台灣時間，與學會監測的 10:00 錯開
+    - cron: '30 2 * * *'
   workflow_dispatch:
     inputs:
       mode:
