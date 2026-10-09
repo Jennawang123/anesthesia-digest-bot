@@ -272,7 +272,7 @@ def test_up_to_new_low_notifies_but_keeps_baseline(env):
         program="IHG", kind="bonus", percent=110, stated_cpp=None,
         end_date=date(2026, 10, 31), up_to=True, url=a.url)
     main.run(today=TODAY)
-    assert any("🏆 新低" in m for m in env["pushed"])
+    assert any("🏆 低於原最佳" in m for m in env["pushed"])
     assert (env["dir"] / "baselines.json").read_text(encoding="utf-8") == BASELINES
 
 

@@ -29,10 +29,12 @@ def _format_one(r: Rated) -> str:
         gap = round((r.cpp / r.best_cpp - 1) * 100)
         compare = f"歷史最佳 {r.best_cpp:.2f}¢，貴 {gap}%"
 
-    lines = [
-        f"{_ICON[r.grade]} {_headline(p.program, p.kind, p.percent)}",
-        f"每{unit} {r.cpp:.2f}¢（{compare}）",
-    ]
+    price = f"每{unit} {r.cpp:.2f}¢（{compare}）"
+    if r.new_low and p.up_to:
+        # 分級／限定對象的新低不是人人拿得到，價格也是用最高級距算的，
+        # 寫成既成事實會誤導（2026-10-09 Alaska 120% 那則）。
+        price = f"若拿到最高級距為每{unit} {r.cpp:.2f}¢（🏆 低於原最佳 {r.best_cpp:.2f}¢）"
+    lines = [f"{_ICON[r.grade]} {_headline(p.program, p.kind, p.percent)}", price]
     if r.from_article:
         lines.append("（依文章報價）")
     if p.up_to:

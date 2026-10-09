@@ -93,3 +93,10 @@ def test_heartbeat():
     text = notify.format_heartbeat(feed_count=3, article_count=42, promo_count=7)
     assert text.startswith("💓 點數促銷監測運作正常")
     assert "3" in text and "42" in text and "7" in text
+
+
+def test_up_to_new_low_is_worded_conditionally():
+    text = notify.format_promos([_rated(program="ALASKA", percent=120, cpp=1.71, best=1.88,
+                                        new_low=True, up_to=True)])
+    assert "若拿到最高級距為每哩 1.71¢（🏆 低於原最佳 1.88¢）" in text
+    assert "新低，原最佳" not in text
