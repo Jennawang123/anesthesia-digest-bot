@@ -126,3 +126,21 @@ def test_reminder_last_day_and_plain_partners():
     assert "11/30 截止（今天截止）" in text
     assert "・洲際優悅會｜50%" in text and "・JAL哩程儲蓄專案｜30%" in text
     assert "需登錄" not in text
+
+
+def test_period_shows_clock_times_only_when_not_whole_day():
+    fb = {**FB, "start_time": "07:00", "end_time": "07:59"}
+    assert "  10/1 07:00–11/1 07:59" in cub_notify.format_campaign(TITLE, URL, [fb]).splitlines()
+    whole = {**JAL, "start_time": "00:00", "end_time": "23:59"}
+    assert "  10/1–11/30" in cub_notify.format_campaign(TITLE, URL, [whole]).splitlines()
+    only_end = {**FB, "start_time": "00:00", "end_time": "07:59"}
+    assert "  10/1–11/1 07:59" in cub_notify.format_campaign(TITLE, URL, [only_end]).splitlines()
+
+
+def test_reminder_mentions_early_cutoff():
+    fb = {**FB, "start_time": "07:00", "end_time": "07:59"}
+    lines = cub_notify.format_reminder(TITLE, URL, date(2026, 11, 1), [fb], date(2026, 10, 29)).splitlines()
+    assert "  當天 07:59 截止" in lines
+    jal = {**JAL, "end_time": "23:59"}
+    assert "截止" not in "".join(cub_notify.format_reminder(
+        TITLE, URL, date(2026, 11, 30), [jal], date(2026, 11, 28)).splitlines()[2:])

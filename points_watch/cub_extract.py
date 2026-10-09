@@ -31,19 +31,22 @@ PROMPT_TEMPLATE = """你是信用卡點數活動的資料抽取器。以下是�
 只輸出一個 JSON 物件，不要任何其他文字。
 不是 → {{"is_transfer_bonus": false}}
 是 → {{"is_transfer_bonus": true, "partners": [{{"name": "...", "bonus": "...", "percent": 0,
-"start": "YYYY-MM-DD", "end": "YYYY-MM-DD", "registration": null, "cap": null}}]}}
+"start": "YYYY-MM-DD", "start_time": "HH:MM", "end": "YYYY-MM-DD", "end_time": "HH:MM",
+"registration": null, "cap": null}}]}}
 
 每個有額外加贈的航空或飯店夥伴各一筆，欄位規則：
 - name：頁面上的夥伴名稱，原文照抄（例「亞洲萬里通」「洲際優悅會」）。
 - bonus：加贈內容，一句話，20 字以內（例「每次轉換加贈 30%」「滿 1 萬里送 800、滿 2 萬里送 1,600」）。
 - percent：加贈百分比，整數。頁面寫百分比就照填；寫「滿 X 送 Y」時用 Y÷X×100 取整（滿 10,000 送 800 → 8）；無法換算填 null。
-- start、end：該夥伴自己的加贈期間，只取日期不要時分；頁面沒寫填 null。
+- start、end：該夥伴自己的加贈期間的日期；頁面沒寫填 null。
+- start_time、end_time：頁面寫明的起訖時分，24 小時制 "HH:MM"（例「11月01日 07:59」→ end_time "07:59"）；頁面沒寫時分填 null。
 - registration：需要事先登錄時，寫出登錄期間與名額，一句話（例「10/28 16:00–10/30 23:59，限量 2,000 名」）；不需登錄填 null。
 - cap：回饋上限，一句話（例「每正卡戶 1,600 里」）；寫明無上限或沒提到都填 null。
 同一頁的抽獎活動不是夥伴，不要列。"""
 
 _EVA = re.compile(r"長榮|\bEVA\b", re.I)
 _ASIA = re.compile(r"亞洲萬里通|asia\s*miles", re.I)
+_CLOCK = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
 @dataclass(frozen=True)
@@ -55,6 +58,10 @@ class Partner:
     end: date | None
     registration: str | None
     cap: str | None
+    # 起訖的時分。多數夥伴是 00:00–23:59，但 2026 年藍天飛行截止在 11/1 07:59，
+    # 只顯示日期會讓人以為當天整天都還可以轉。
+    start_time: str | None = None
+    end_time: str | None = None
 
     @property
     def program(self) -> str | None:
@@ -72,6 +79,7 @@ class Partner:
             "start": self.start.isoformat() if self.start else None,
             "end": self.end.isoformat() if self.end else None,
             "registration": self.registration, "cap": self.cap,
+            "start_time": self.start_time, "end_time": self.end_time,
         }
 
 
@@ -103,6 +111,14 @@ def _day(value, what: str) -> date | None:
         raise CubError(f"加碼判讀：{what} 日期格式錯誤") from e
 
 
+def _clock(value, what: str) -> str | None:
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    if not isinstance(value, str) or not _CLOCK.match(value.strip()):
+        raise CubError(f"加碼判讀：{what} 時間格式錯誤")
+    return value.strip()
+
+
 def _percent(value) -> int | None:
     if value is None:
         return None
@@ -127,6 +143,8 @@ def _partner(item) -> Partner:
         start=start, end=end,
         registration=_optional(item.get("registration"), "registration"),
         cap=_optional(item.get("cap"), "cap"),
+        start_time=_clock(item.get("start_time"), "start_time"),
+        end_time=_clock(item.get("end_time"), "end_time"),
     )
 
 

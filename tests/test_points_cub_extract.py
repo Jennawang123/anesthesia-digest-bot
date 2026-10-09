@@ -102,3 +102,22 @@ def test_bad_response_raises(bad):
     # 兩者混在一起的話模型回垃圾會被當成「沒事」而整年漏報。
     with pytest.raises(CubError):
         _parse(bad)
+
+
+def test_clock_times_are_kept():
+    p = _parse(_ok({**JAL, "name": "法航荷航藍天飛行", "start_time": "07:00",
+                    "end": "2026-11-01", "end_time": "07:59"}))[0]
+    assert (p.start_time, p.end_time) == ("07:00", "07:59")
+    assert p.as_dict()["end_time"] == "07:59"
+
+
+def test_clock_times_default_to_none():
+    p = _parse(_ok({**JAL, "start_time": "", "end_time": None}))[0]
+    assert (p.start_time, p.end_time) == (None, None)
+    assert _parse(_ok(JAL))[0].as_dict()["start_time"] is None
+
+
+@pytest.mark.parametrize("bad", ["7:59", "24:00", "07:60", "上午七點", 759])
+def test_bad_clock_time_raises(bad):
+    with pytest.raises(CubError):
+        _parse(_ok({**JAL, "end_time": bad}))

@@ -23,8 +23,17 @@ def _md(text) -> str | None:
     return f"{d.month}/{d.day}"
 
 
+def _clock(value, whole_day: str) -> str:
+    # 00:00 開始、23:59 結束就是整天，不必寫出來；其他時分才值得佔版面
+    return f" {value}" if isinstance(value, str) and value and value != whole_day else ""
+
+
 def _period(p: dict) -> str:
     start, end = _md(p.get("start")), _md(p.get("end"))
+    if start:
+        start += _clock(p.get("start_time"), "00:00")
+    if end:
+        end += _clock(p.get("end_time"), "23:59")
     if start and end:
         return f"{start}–{end}"
     if end:
@@ -68,6 +77,9 @@ def _block(p: dict, with_lamp: bool, with_period: bool, with_cap: bool) -> list[
         lines.append(f"  {p['bonus']}")
     if with_period:
         lines.append(f"  {_period(p)}")
+    elif _clock(p.get("end_time"), "23:59"):
+        # 提醒訊息不列期間，但截止不在午夜的要特別講
+        lines.append(f"  當天{_clock(p.get('end_time'), '23:59')} 截止")
     if p.get("registration"):
         lines.append(f"  需登錄：{p['registration']}")
     if with_cap and p.get("cap"):
