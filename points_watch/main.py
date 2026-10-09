@@ -34,6 +34,10 @@ def _reason(error: Exception) -> str:
     return f"程式錯誤（需改 code）{type(error).__name__}"
 
 
+def _alert_key(source: str, reason: str) -> str:
+    return f"{source}｜{reason}"
+
+
 def collect(pages: int) -> tuple[list[Article], list[tuple[str, str]]]:
     """逐 feed 抓取解析。單一 feed 失敗不影響其他 feed。同一篇文章只留一份。"""
     articles: dict[str, Article] = {}
@@ -121,11 +125,14 @@ def run(bootstrap: bool = False, dry_run: bool = False,
     # 告警先送：之後的推播若拋例外，當天的異常才不會跟著消失
     if failures:
         alerts = sw_state.load_alerts(alerts_path)
-        due = [f for f in failures if sw_state.should_alert(alerts, f[0], today, f[1])]
+        # 節流鍵含原因：同一 feed 有兩篇以不同原因失敗時，若鍵只有來源，
+        # 後寫的會蓋掉先寫的，隔天兩個原因輪流被當成「換了壞法」而天天告警。
+        due = [f for f in failures
+               if sw_state.should_alert(alerts, _alert_key(*f), today, f[1])]
         if due:
             push_line(notify.format_alert(due))
             for source, reason in due:
-                sw_state.record_alert(alerts, source, today, reason)
+                sw_state.record_alert(alerts, _alert_key(source, reason), today, reason)
             sw_state.save_alerts(alerts_path, alerts)
             print(f"已送出 {len(due)} 則告警。")
 
@@ -138,19 +145,26 @@ def run(bootstrap: bool = False, dry_run: bool = False,
 
     # 推播成功才推進狀態。push_line 失敗會拋例外穿出去，這段到不了，
     # 下一輪整批重來——重複優於漏報。
-    for key, r in rated.items():
-        promos[key] = store.entry(r, today)
-    if rated:
-        store.save_promos(promos_path, promos)
-    lows = {r.promo.program: r.cpp for r in rated.values() if r.new_low}
+    # 基準排在 promos 之前寫：反過來的話，兩者之間被中斷會留下「促銷已知
+    # 但新低沒寫進基準」，下一輪不再評等，那次新低就永遠不會進基準。
+    lows: dict[str, float] = {}
+    for r in rated.values():
+        if r.new_low:
+            lows[r.promo.program] = min(r.cpp, lows.get(r.promo.program, r.cpp))
     if lows:
         text = baselines_path.read_text(encoding="utf-8")
         for program, cpp in lows.items():
             text = rating.update_best(text, program, cpp)
-        baselines_path.write_text(text, encoding="utf-8")
+        sw_state._atomic_write(baselines_path, text)
+    for key, r in rated.items():
+        promos[key] = store.entry(r, today)
+    if rated:
+        store.save_promos(promos_path, promos)
     sw_state.save_seen(seen_path, seen | judged)
 
-    due_keys = store.due_reminders(promos, today)
+    # 本輪才第一次推出的促銷不在同一輪再提醒一次（💰 裡已寫截止日）；
+    # 它仍未標記 reminded，明天還在期限內就會提醒。
+    due_keys = [k for k in store.due_reminders(promos, today) if k not in rated]
     if due_keys:
         push_line(notify.format_reminder([promos[k] for k in due_keys], today))
         for k in due_keys:
@@ -158,7 +172,9 @@ def run(bootstrap: bool = False, dry_run: bool = False,
         store.save_promos(promos_path, promos)
         print(f"已送出 {len(due_keys)} 筆截止提醒。")
 
-    if sw_state.should_heartbeat(sw_state.load_heartbeat(heartbeat_path), today):
+    # 有任何失敗的那一輪不送「運作正常」，留到該週下一次乾淨的執行
+    if not failures and sw_state.should_heartbeat(
+            sw_state.load_heartbeat(heartbeat_path), today):
         push_line(notify.format_heartbeat(
             feed_count=len(FEEDS),
             article_count=len(seen | judged),
@@ -186,6 +202,11 @@ def main() -> None:
     down = {source for source, _ in failures} & {f["name"] for f in FEEDS}
     if len(down) == len(FEEDS):
         print("❌ 所有 feed 都失敗，以非零狀態結束。")
+        raise SystemExit(1)
+    # 抽取失敗同理：API key 失效或餘額用盡時每篇都失敗，而失敗的文章
+    # 約四天就滑出 feed。workflow 的 commit 步驟是 always()，亮紅燈不影響狀態。
+    if any(source.endswith("／抽取") for source, _ in failures):
+        print("❌ 有文章判讀失敗，以非零狀態結束。")
         raise SystemExit(1)
 
 

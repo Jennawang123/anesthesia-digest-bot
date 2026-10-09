@@ -210,3 +210,58 @@ def test_pages_argument_fetches_more_urls(env, monkeypatch):
     monkeypatch.setattr(main.fetch, "get", lambda u, **kw: urls.append(u) or _rss(NOISE))
     main.run(pages=3, today=TODAY)
     assert len(urls) == 9 and "https://frequentmiler.com/feed/?paged=3" in urls
+
+
+# ── 以下是審查主流程後補的 ──
+
+def test_two_new_lows_same_program_keep_the_lowest(env):
+    env["feeds"]["https://loyaltylobby.com/feed/"] = _rss(
+        ("Buy IHG Points A", "https://x.test/1"), ("Buy IHG Points B", "https://x.test/2"))
+    env["feeds"]["https://onemileatatime.com/feed/"] = _rss(NOISE)
+    env["feeds"]["https://frequentmiler.com/feed/"] = _rss(NOISE)
+    by_url = {"https://x.test/1": 120, "https://x.test/2": 110}   # 0.45、0.48
+    env["extract"] = lambda a, t: _promo(percent=by_url[a.url], url=a.url)
+    main.run(today=TODAY)
+    assert '"best_cpp": 0.45' in (env["dir"] / "baselines.json").read_text(encoding="utf-8")
+
+
+def test_different_reasons_on_same_feed_do_not_defeat_throttle(env):
+    env["feeds"]["https://loyaltylobby.com/feed/"] = _rss(
+        ("Buy IHG Points A", "https://x.test/1"), ("Buy IHG Points B", "https://x.test/2"))
+    env["feeds"]["https://onemileatatime.com/feed/"] = _rss(NOISE)
+    env["feeds"]["https://frequentmiler.com/feed/"] = _rss(NOISE)
+    reasons = {"https://x.test/1": "Haiku 回應不含 JSON", "https://x.test/2": "end_date 早於今天"}
+
+    def boom(a, t):
+        raise extract.ExtractError(reasons[a.url])
+    env["extract"] = boom
+    main.run(today=TODAY)
+    env["pushed"].clear()
+    main.run(today=date(2026, 10, 10))
+    main.run(today=date(2026, 10, 11))
+    assert env["pushed"] == []
+
+
+def test_no_reminder_in_same_run_as_first_push(env):
+    env["extract"] = lambda a, t: _promo(end=date(2026, 10, 10))   # 首見時只剩 1 天
+    main.run(today=TODAY)
+    assert not [m for m in env["pushed"] if m.startswith("⏰")]
+    env["pushed"].clear()
+    main.run(today=date(2026, 10, 10))
+    assert len([m for m in env["pushed"] if m.startswith("⏰")]) == 1
+
+
+def test_no_heartbeat_on_a_run_with_failures(env):
+    env["feeds"]["https://onemileatatime.com/feed/"] = requests.ConnectionError("x")
+    main.run(today=TODAY)
+    assert not [m for m in env["pushed"] if m.startswith("💓")]
+
+
+def test_cli_exits_nonzero_on_extract_failure(env, monkeypatch):
+    def boom(a, t):
+        raise extract.ExtractError("Haiku 回應不含 JSON")
+    env["extract"] = boom
+    monkeypatch.setattr(sys, "argv", ["points_watch"])
+    with pytest.raises(SystemExit) as e:
+        main.main()
+    assert e.value.code == 1
