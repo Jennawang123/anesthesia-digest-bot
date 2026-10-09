@@ -1,0 +1,58 @@
+{
+  "/content/cub-aem-cs/zh-tw/cathaybk/personal/event/overview/credit-card/travel/202609/miles20251011.html": {
+    "first_seen": "2026-10-09",
+    "partners": [
+      {
+        "bonus": "滿 1 萬里送 800、滿 2 萬里送 1,600",
+        "cap": "每正卡戶 1,600 里",
+        "end": "2026-10-31",
+        "end_time": "23:59",
+        "name": "亞洲萬里通",
+        "percent": 8,
+        "program": "ASIAMILES",
+        "registration": "10/28 16:00–10/30 23:59，限量 2,000 名",
+        "start": "2026-10-01",
+        "start_time": "00:00"
+      },
+      {
+        "bonus": "每次轉換加贈 30%",
+        "cap": null,
+        "end": "2026-11-30",
+        "end_time": "23:59",
+        "name": "JAL哩程儲蓄專案",
+        "percent": 30,
+        "program": null,
+        "registration": null,
+        "start": "2026-10-01",
+        "start_time": "00:00"
+      },
+      {
+        "bonus": "每次轉換加贈 50%",
+        "cap": null,
+        "end": "2026-11-30",
+        "end_time": "23:59",
+        "name": "洲際優悅會",
+        "percent": 50,
+        "program": null,
+        "registration": null,
+        "start": "2026-10-01",
+        "start_time": "00:00"
+      },
+      {
+        "bonus": "每次轉換加贈 20%",
+        "cap": null,
+        "end": "2026-11-01",
+        "end_time": "07:59",
+        "name": "法航荷航藍天飛行",
+        "percent": 20,
+        "program": null,
+        "registration": null,
+        "start": "2026-10-01",
+        "start_time": "07:00"
+      }
+    ],
+    "reminded": [],
+    "title": "秋日遊-點數轉換指定航空里程/飯店積分限時加碼",
+    "url": "https://www.cathay-cube.com.tw/cathaybk/personal/event/overview/credit-card/travel/202609/miles20251011"
+  }
+}
