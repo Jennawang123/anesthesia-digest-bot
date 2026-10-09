@@ -1,0 +1,78 @@
+"""promos.json 讀寫與截止提醒判定。"""
+import sys
+from datetime import date
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from points_watch import store  # noqa: E402
+from points_watch.models import Promo, Rated  # noqa: E402
+
+TODAY = date(2026, 10, 9)
+
+
+def _rated(grade="green", end=date(2026, 10, 31), program="IHG"):
+    promo = Promo(program=program, kind="bonus", percent=100, stated_cpp=0.5,
+                  end_date=end, up_to=True, url="https://x.test/a")
+    return Rated(promo=promo, cpp=0.5, best_cpp=0.5, grade=grade,
+                 new_low=False, from_article=False)
+
+
+def test_entry_roundtrip(tmp_path):
+    path = tmp_path / "promos.json"
+    r = _rated()
+    store.save_promos(path, {r.promo.key: store.entry(r, TODAY)})
+    assert store.load_promos(path) == {
+        "IHG|bonus|100|2026-10-31": {
+            "program": "IHG", "kind": "bonus", "percent": 100, "cpp": 0.5,
+            "grade": "green", "end_date": "2026-10-31", "url": "https://x.test/a",
+            "first_seen": "2026-10-09", "reminded": False,
+        }
+    }
+    assert path.read_text(encoding="utf-8").endswith("\n")
+
+
+def test_load_missing_file(tmp_path):
+    assert store.load_promos(tmp_path / "nope.json") == {}
+
+
+def test_entry_without_end_date():
+    assert store.entry(_rated(end=None), TODAY)["end_date"] is None
+
+
+@pytest.mark.parametrize("end, due", [
+    (date(2026, 10, 12), False),   # 剩 3 天
+    (date(2026, 10, 11), True),    # 剩 2 天
+    (date(2026, 10, 10), True),
+    (date(2026, 10, 9), True),     # 今天截止
+    (date(2026, 10, 8), False),    # 已過期
+])
+def test_due_by_days_left(end, due):
+    r = _rated(end=end)
+    promos = {r.promo.key: store.entry(r, date(2026, 10, 1))}
+    assert bool(store.due_reminders(promos, TODAY)) is due
+
+
+def test_only_green_gets_reminder():
+    r = _rated(grade="yellow", end=date(2026, 10, 10))
+    assert store.due_reminders({r.promo.key: store.entry(r, TODAY)}, TODAY) == []
+
+
+def test_reminded_once_only():
+    r = _rated(end=date(2026, 10, 10))
+    e = store.entry(r, TODAY)
+    e["reminded"] = True
+    assert store.due_reminders({r.promo.key: e}, TODAY) == []
+
+
+def test_no_end_date_no_reminder():
+    r = _rated(end=None)
+    assert store.due_reminders({r.promo.key: store.entry(r, TODAY)}, TODAY) == []
+
+
+def test_corrupt_entry_is_skipped_not_fatal():
+    # 這個檔 commit 進 public repo、可能被手改。壞一筆不該讓整個 run 死掉。
+    promos = {"bad": {"grade": "green", "end_date": "not-a-date"}, "worse": "string"}
+    assert store.due_reminders(promos, TODAY) == []
