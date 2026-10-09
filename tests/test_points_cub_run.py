@@ -132,7 +132,7 @@ def test_list_structure_change_is_reported(env):
 def test_judge_failure_alerts_and_retries_next_day(env):
     env["extract_error"] = cub.CubError("加碼判讀：Haiku 回應不含 JSON")
     failures, _ = _run(env)
-    assert set(failures) == {("國泰世華／判讀", "加碼判讀：Haiku 回應不含 JSON")}
+    assert failures == [("國泰世華／判讀", "加碼判讀：Haiku 回應不含 JSON")]   # 三篇同原因只算一筆
     alerts_sent = [m for m in env["pushed"] if m.startswith("⚠️")]
     assert len(alerts_sent) == 1
     assert alerts_sent[0].count("國泰世華／判讀") == 1     # 三篇同原因只列一行
@@ -199,3 +199,37 @@ def test_no_reminder_in_the_run_that_first_announces(env):
     env["pushed"].clear()
     _run(env, date(2026, 10, 30))
     assert len(env["pushed"]) == 1 and env["pushed"][0].startswith("⏰")
+
+
+# ── 以下是審查流程後補的 ──
+
+def test_reworded_bonus_after_page_edit_is_not_an_update(env):
+    _run(env)
+    env["pushed"].clear()
+    env["list"] = LIST_TEXT.replace(PROMO_MODIFIED, "2026-10-10T01:00:00.000+00:00")
+    from dataclasses import replace
+    env["partners"] = [ASIA, replace(IHG, bonus="加贈 50% 積分")]
+    _run(env, date(2026, 10, 10))
+    assert env["pushed"] == []
+
+
+def test_update_does_not_swallow_another_partners_reminder(env):
+    _run(env)
+    env["pushed"].clear()
+    env["list"] = LIST_TEXT.replace(PROMO_MODIFIED, "2026-10-28T01:00:00.000+00:00")
+    env["partners"] = [ASIA, IHG, EVA]
+    _run(env, date(2026, 10, 28))               # 亞萬剩 3 天，同一輪又有內容更新
+    kinds = [m[:1] for m in env["pushed"]]
+    assert kinds == ["✈", "⏰"]
+    assert "亞洲萬里通" in env["pushed"][1]
+
+
+def test_corrupt_reminded_field_does_not_cause_daily_repeats(env):
+    _run(env)
+    promos = _json(env, "cub_promos.json")
+    promos[PROMO_PATH]["reminded"] = "oops"
+    (env["dir"] / "cub_promos.json").write_text(json.dumps(promos, ensure_ascii=False), encoding="utf-8")
+    env["pushed"].clear()
+    _run(env, date(2026, 10, 28))
+    _run(env, date(2026, 10, 29))
+    assert len([m for m in env["pushed"] if m.startswith("⏰")]) == 1

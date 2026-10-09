@@ -50,6 +50,7 @@ def run(data_dir: Path, today: date, dry_run: bool,
     judged: set[str] = set()
     messages: list[str] = []
     pending: dict[str, dict] = {}
+    announced: set[str] = set()    # 本輪第一次推出的新活動（不含內容更新）
 
     for campaign in fresh:
         print(f"  判讀：[國泰世華] {campaign.title}")
@@ -83,17 +84,21 @@ def run(data_dir: Path, today: date, dry_run: bool,
         if updated and isinstance(old.get("first_seen"), str):
             fresh_entry["first_seen"] = old["first_seen"]
         pending[campaign.path] = fresh_entry
+        if not updated:
+            announced.add(campaign.path)
 
     if dry_run:
         print("\n===== dry-run：國泰世華會推播的內容 =====")
         print("\n\n".join(messages) if messages else "（沒有轉點加碼活動）")
         if failures:
             print("\n（失敗）" + "；".join(f"{s}：{r}" for s, r in failures))
-        return failures, stats
+        return list(dict.fromkeys(failures)), stats
+
+    # 三篇活動頁以同一個原因失敗時只算一筆：告警一行、回傳給 main 的也是一筆
+    failures = list(dict.fromkeys(failures))
 
     # 告警先送：之後的推播若拋例外，當天的異常才不會跟著消失
-    # 去重後再送：三篇活動頁以同一個原因失敗時，告警只需要一行
-    sent = alerts.send_due(list(dict.fromkeys(failures)), alerts_path, today, push)
+    sent = alerts.send_due(failures, alerts_path, today, push)
     if sent:
         print(f"已送出 {sent} 則國泰世華告警。")
 
@@ -110,13 +115,18 @@ def run(data_dir: Path, today: date, dry_run: bool,
         sw_state.save_seen(seen_path, seen | judged)
 
     for path, entry in promos.items():
-        if path in pending:
-            # 本輪才推出 ✈️ 的活動不在同一輪再提醒一次；明天仍在期限內會提醒
+        if path in announced:
+            # 本輪才第一次推出 ✈️ 的活動不在同一輪再提醒一次；明天仍在期限內會提醒。
+            # 只排除「新活動」：內容更新（例如中途加入長榮）不該吃掉其他夥伴的截止提醒。
             continue
         for end, partners in cub_store.due_groups(entry, today):
             push(cub_notify.format_reminder(
                 entry.get("title", ""), entry.get("url", ""), end, partners, today))
-            entry.setdefault("reminded", []).append(end.isoformat())
+            # 這個檔可能被手改壞；reminded 不是 list 時重建，否則提醒送出卻記不下來，
+            # 會變成每天重複提醒
+            if not isinstance(entry.get("reminded"), list):
+                entry["reminded"] = []
+            entry["reminded"].append(end.isoformat())
             cub_store.save(promos_path, promos)
             print(f"已送出國泰世華截止提醒（{end}）。")
 

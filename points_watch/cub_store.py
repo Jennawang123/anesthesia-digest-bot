@@ -34,10 +34,15 @@ def entry(title: str, url: str, partners: list[dict], today: date,
 
 
 def _signature(partners: list[dict]) -> list[tuple[str, ...]]:
-    # 只比「會改變使用者決定」的欄位。registration／cap 是 Haiku 摘出的一句話，
-    # 兩次判讀的措辭可能不同，放進來會把同一份內容誤判成有更新。
+    # 只比「會改變使用者決定」且穩定的欄位。bonus／registration／cap 都是 Haiku
+    # 摘出的一句話，銀行每改一次頁面就重新判讀一次，措辭可能從「每次轉換加贈 50%」
+    # 變成「加贈 50%」，拿來比會把同一份內容誤報成「內容更新」。
+    # 所以有 percent 就比 percent；換算不出百分比的才退而比 bonus 文字。
+    def amount(p: dict) -> str:
+        percent = p.get("percent")
+        return f"{percent}%" if isinstance(percent, int) else str(p.get("bonus"))
     return sorted(
-        tuple(str(p.get(k)) for k in ("name", "bonus", "start", "end"))
+        (str(p.get("name")), amount(p), str(p.get("start")), str(p.get("end")))
         for p in partners if isinstance(p, dict)
     )
 

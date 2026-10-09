@@ -45,7 +45,7 @@ def test_same_content_ignores_order_and_cosmetic_fields():
 
 
 @pytest.mark.parametrize("change", [
-    {"bonus": "加贈 15%"}, {"end": "2026-11-15"}, {"start": "2026-10-05"}, {"name": "長榮航空"},
+    {"percent": 15}, {"end": "2026-11-15"}, {"start": "2026-10-05"}, {"name": "長榮航空"},
 ])
 def test_content_differs(change):
     assert not cub_store.same_content([_p()], [_p(**change)])
@@ -95,3 +95,16 @@ def test_corrupt_entry_does_not_raise():
     # 這個檔 commit 進 public repo、可能被手改
     for bad in ("string", {}, {"partners": "x"}, {"partners": [{"end": "nope"}, "junk"]}):
         assert cub_store.due_groups(bad, TODAY) == []
+
+
+def test_same_percent_with_different_wording_is_the_same_content():
+    # 頁面被編輯後重新判讀，Haiku 對同一個 50% 的描述可能換一種說法
+    a = [_p("洲際優悅會", bonus="每次轉換加贈 50%", percent=50)]
+    b = [_p("洲際優悅會", bonus="加贈 50%", percent=50)]
+    assert cub_store.same_content(a, b)
+
+
+def test_without_percent_the_bonus_text_decides():
+    a = [_p(bonus="加贈貴賓室券一張", percent=None)]
+    assert cub_store.same_content(a, [_p(bonus="加贈貴賓室券一張", percent=None)])
+    assert not cub_store.same_content(a, [_p(bonus="加贈貴賓室券兩張", percent=None)])
