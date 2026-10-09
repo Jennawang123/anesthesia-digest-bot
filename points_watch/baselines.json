@@ -1,0 +1,11 @@
+{
+  "IHG":        {"base_cpp": 1.00, "best_cpp": 0.50},
+  "CHOICE":     {"base_cpp": 1.03, "best_cpp": 0.57},
+  "LIFEMILES":  {"base_cpp": 3.30, "best_cpp": 1.22},
+  "AEROPLAN":   {"base_cpp": 2.70, "best_cpp": 1.27},
+  "UNITED":     {"base_cpp": 3.76, "best_cpp": 1.88},
+  "ALASKA":     {"base_cpp": 3.76, "best_cpp": 1.88},
+  "AA":         {"base_cpp": 3.76, "best_cpp": 1.88},
+  "FLYINGBLUE": {"base_cpp": 3.06, "best_cpp": 1.69},
+  "VIRGIN":     {"base_cpp": 2.52, "best_cpp": 1.48}
+}

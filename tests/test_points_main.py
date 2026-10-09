@@ -265,3 +265,12 @@ def test_cli_exits_nonzero_on_extract_failure(env, monkeypatch):
     with pytest.raises(SystemExit) as e:
         main.main()
     assert e.value.code == 1
+
+
+def test_up_to_new_low_notifies_but_keeps_baseline(env):
+    env["extract"] = lambda a, t: Promo(
+        program="IHG", kind="bonus", percent=110, stated_cpp=None,
+        end_date=date(2026, 10, 31), up_to=True, url=a.url)
+    main.run(today=TODAY)
+    assert any("🏆 新低" in m for m in env["pushed"])
+    assert (env["dir"] / "baselines.json").read_text(encoding="utf-8") == BASELINES

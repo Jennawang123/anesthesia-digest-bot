@@ -149,7 +149,9 @@ def run(bootstrap: bool = False, dry_run: bool = False,
     # 但新低沒寫進基準」，下一輪不再評等，那次新低就永遠不會進基準。
     lows: dict[str, float] = {}
     for r in rated.values():
-        if r.new_low:
+        # 「最高可達」的新低只通知（訊息照標 🏆）、不改基準：限定對象的低價
+        # 一旦寫進基準，之後一般人拿得到的促銷就會從 🟢 掉到 🟡。
+        if r.new_low and not r.promo.up_to:
             lows[r.promo.program] = min(r.cpp, lows.get(r.promo.program, r.cpp))
     if lows:
         text = baselines_path.read_text(encoding="utf-8")
