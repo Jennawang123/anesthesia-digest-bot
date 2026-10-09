@@ -14,12 +14,14 @@ PASS = [
     "IHG Buy Points Buy Points 100% Bonus Sale Through February 5, 2026",
     "Alaska Airlines Buy Miles Up To 120% Bonus Sale Until October 19, 2026",
     "Buy Choice Privileges Points At 40% Off: 0.62 Cents Each, Worth It?",
-    # 以下兩則不是買點促銷，但關鍵字層擋不掉，交給 Haiku 判否
-    "Alaska Atmos Rewards’ Global Getaways Award Sale: Save Up To 50%",
-    "Last Chance Deals: IHG points sale, United portal promo, Hotels.com gift card discount, & more",
+    "LAST CALL: IHG Buy Points 100% Bonus Sale With Increased Limit Until October 5, 2026",
 ]
 
 BLOCK = [
+    # 2026-10-09 dry-run 實際混進來的兩篇：只有 sale、沒有 buy／purchase
+    "Alaska Atmos Rewards’ Global Getaways Award Sale: Save Up To 50%",
+    "IHG 12% Off Points & Cash Sale For Stays Through November 16, 2026 (Book By November 2)",
+    "Last Chance Deals: IHG points sale, United portal promo, Hotels.com gift card discount, & more",
     "Hilton Honors Buy Points 120% Bonus Sale + Increased Limit October 7 – November 21, 2026",
     "Buy Marriott points for as low as 0.81 cents each",
     "IHG One Rewards Premier Select Credit Card Review: Is The $350 Annual Fee Worth It?",
@@ -53,3 +55,21 @@ def test_feed_urls_paginate():
     assert sources.feed_urls(feed, 2) == [
         "https://x.test/feed/", "https://x.test/feed/?paged=2",
     ]
+
+
+def test_buy_word_in_summary_is_enough():
+    title = "Alaska miles on sale with a 100% bonus"
+    assert not sources.is_candidate(title)
+    assert sources.is_candidate(title, "Alaska is offering a 100% bonus on purchased miles.")
+
+
+def test_real_summaries_of_the_two_false_positives_stay_blocked():
+    assert not sources.is_candidate(
+        "Alaska Atmos Rewards’ Global Getaways Award Sale: Save Up To 50%",
+        "Alaska Atmos Rewards' Global Getaways promotion lets members save up to 50% on "
+        "economy award tickets to select destinations, and it's now offered monthly.")
+    assert not sources.is_candidate(
+        "IHG 12% Off Points & Cash Sale For Stays Through November 16, 2026 (Book By November 2)",
+        "IHG has a new targeted (or open to anyone) Points & Cash sale that started to appear "
+        "in rate and award searches today. Select IHG One Rewards members can save 12% on the "
+        "cash portion of the Points & Cash for stays through November 16,")

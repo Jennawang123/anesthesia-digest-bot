@@ -76,7 +76,7 @@ def run(bootstrap: bool = False, dry_run: bool = False,
     print(f"執行日期：{today}｜模式：{mode}｜每 feed {pages} 頁")
 
     articles, failures = collect(pages)
-    candidates = [a for a in articles if is_candidate(a.title)]
+    candidates = [a for a in articles if is_candidate(a.title, a.summary)]
     seen = sw_state.load_seen(seen_path)
     print(f"抓到 {len(articles)} 篇，通過關鍵字 {len(candidates)} 篇")
 
@@ -99,7 +99,9 @@ def run(bootstrap: bool = False, dry_run: bool = False,
             promo = extract.extract(article, today)
             if promo is None:
                 print("    → 不是買點促銷")
-            elif promo.key in promos or promo.key in rated:
+            elif promo.key in promos or store.covered(
+                    {**promos, **{k: store.entry(v, today) for k, v in rated.items()}},
+                    promo, today):
                 print(f"    → 已知促銷 {promo.key}")
             else:
                 r = rating.rate(promo, baselines[promo.program])

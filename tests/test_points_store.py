@@ -76,3 +76,45 @@ def test_corrupt_entry_is_skipped_not_fatal():
     # 這個檔 commit 進 public repo、可能被手改。壞一筆不該讓整個 run 死掉。
     promos = {"bad": {"grade": "green", "end_date": "not-a-date"}, "worse": "string"}
     assert store.due_reminders(promos, TODAY) == []
+
+
+def _known(percent=120, end=date(2026, 10, 19), first=TODAY, program="ALASKA"):
+    r = _rated(end=end, program=program)
+    e = store.entry(r, first)
+    e["percent"] = percent
+    return {"k": e}
+
+
+def _new(percent=100, end=None, program="ALASKA", kind="bonus"):
+    return Promo(program=program, kind=kind, percent=percent, stated_cpp=None,
+                 end_date=end, up_to=True, url="https://x.test/b")
+
+
+def test_covered_same_sale_reported_lower_and_undated():
+    # 實例：Loyalty Lobby 先報 120%／10-19，OMAAT 再報 100%／無截止日
+    assert store.covered(_known(), _new(), TODAY)
+
+
+def test_higher_percent_is_not_covered():
+    assert not store.covered(_known(percent=100), _new(percent=120), TODAY)
+
+
+def test_ended_sale_does_not_cover_the_next_one():
+    assert not store.covered(_known(end=date(2026, 10, 8)), _new(), TODAY)
+
+
+def test_undated_record_covers_for_three_weeks_only():
+    known = _known(end=None, first=date(2026, 9, 18))        # 21 天前
+    assert store.covered(known, _new(), TODAY)
+    assert not store.covered(_known(end=None, first=date(2026, 9, 17)), _new(), TODAY)
+
+
+def test_other_program_or_kind_not_covered():
+    assert not store.covered(_known(program="IHG"), _new(), TODAY)
+    assert not store.covered(_known(), _new(kind="discount"), TODAY)
+
+
+def test_covered_ignores_corrupt_entries():
+    junk = {"a": "x", "b": {"program": "ALASKA", "kind": "bonus", "percent": "120"},
+            "c": {"program": "ALASKA", "kind": "bonus", "percent": 120, "end_date": "nope"}}
+    assert not store.covered(junk, _new(), TODAY)

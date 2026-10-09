@@ -29,15 +29,18 @@ PROGRAMS = {
     "VIRGIN":     {"label": "Virgin Atlantic", "unit": "哩", "keywords": ["virgin atlantic", "virgin points", "flying club"]},
 }
 
-_BUY = re.compile(r"\b(buy|buying|purchase|purchased|purchasing|sale)\b", re.I)
+# 刻意不含 sale：2026-10-09 dry-run 實測，「IHG 12% Off Points & Cash Sale」
+# 與「Global Getaways Award Sale」都靠 sale 混進來，後者還被 Haiku 誤判成
+# 買哩程 50% 折扣。這兩篇的摘要都沒有 buy／purchase，而四篇真的買點文都有。
+_BUY = re.compile(r"\b(buy|buying|purchas\w*)\b", re.I)
 # transfer：轉點加贈常同時出現計畫名與 bonus／sale，但不是買點
 _SKIP = re.compile(r"\(expired\)|\btransfer\b", re.I)
 _KEYWORDS = [k for p in PROGRAMS.values() for k in p["keywords"]]
 
 
-def is_candidate(title: str) -> bool:
-    """標題是否值得送給 Haiku：命中計畫名＋購買字眼，且不含排除字。"""
-    if _SKIP.search(title) or not _BUY.search(title):
+def is_candidate(title: str, summary: str = "") -> bool:
+    """是否值得送給 Haiku：標題命中計畫名、標題或摘要有購買字眼、標題不含排除字。"""
+    if _SKIP.search(title) or not (_BUY.search(title) or _BUY.search(summary)):
         return False
     lowered = title.lower()
     return any(k in lowered for k in _KEYWORDS)

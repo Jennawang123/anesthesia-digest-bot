@@ -18,19 +18,26 @@ from .sources import PROGRAMS
 
 PROMPT_TEMPLATE = """你是飯店與航空點數促銷的資料抽取器。以下是一篇部落格文章的標題與摘要。
 
-判斷它是否在報導「單一計畫的官方買點／買哩程促銷（加贈或折扣）」。只追蹤這些計畫：
+判斷它是否在報導「單一計畫的官方買點／買哩程促銷」——也就是會員直接付現金向該計畫
+購買點數或哩程本身，並在促銷期間獲得加贈或折扣。只追蹤這些計畫（左邊是代號）：
 {programs}
 
-以下一律不算（回 is_promo=false）：獎勵票特價、信用卡開卡禮或審查文、轉點加贈、
-一次列出多則優惠的彙整文、不在上列清單的計畫、已經結束的促銷。
+以下一律不算（回 is_promo=false）：
+- 兌換獎勵票／獎勵住宿時少扣點數的特價（award sale、Global Getaways、Promo Rewards）
+- 訂房的 Points & Cash 折扣、房價促銷、住宿加贈點數
+- 信用卡開卡禮或審查文、轉點加贈、購物入口加碼
+- 一次列出多則優惠的彙整文
+- 不在上列清單的計畫
+- 已經結束的促銷（截止日早於今天）
 
 今天是 {today}，文章發布於 {published}。
 標題：{title}
 摘要：{summary}
+內文開頭：{body}
 
 只輸出一個 JSON 物件，不要任何其他文字。
 不是 → {{"is_promo": false}}
-是 → {{"is_promo": true, "program": "<上列代號>", "kind": "bonus" 或 "discount",
+是 → {{"is_promo": true, "program": "<上列代號，原樣照抄>", "kind": "bonus" 或 "discount",
 "percent": <整數>, "stated_cpp": <數字或 null>, "end_date": "YYYY-MM-DD" 或 null, "up_to": true 或 false}}
 
 欄位規則：
@@ -46,14 +53,33 @@ class ExtractError(RuntimeError):
 
 
 def build_prompt(article: Article, today: date) -> str:
-    programs = "\n".join(f"- {code}＝{p['label']}" for code, p in PROGRAMS.items())
+    programs = "\n".join(f"- {code}：{p['label']}" for code, p in PROGRAMS.items())
     return PROMPT_TEMPLATE.format(
         programs=programs,
         today=today.isoformat(),
         published=article.published.isoformat() if article.published else "不明",
         title=article.title,
         summary=article.summary,
+        body=article.body or "（無）",
     )
+
+
+def _program(value) -> str:
+    """把模型回的 program 對回代號。
+
+    2026-10-09 dry-run 實測：Haiku 對 Alaska 那篇回的不是代號 ALASKA，
+    整篇因此被當成壞回應。這裡容忍大小寫與「回了計畫名稱而非代號」，
+    但必須恰好對到一個計畫，否則照舊拋例外。
+    """
+    text = str(value).strip()
+    if text.upper() in PROGRAMS:
+        return text.upper()
+    low = text.lower()
+    hits = [code for code, p in PROGRAMS.items()
+            if p["label"].lower() in low or any(k in low for k in p["keywords"])]
+    if len(hits) != 1:
+        raise ExtractError("program 不在追蹤清單")
+    return hits[0]
 
 
 def _number(value, low: float, high: float, what: str) -> float:
@@ -78,8 +104,7 @@ def parse_response(raw: str, article: Article, today: date) -> Promo | None:
     if not data["is_promo"]:
         return None
 
-    if data.get("program") not in PROGRAMS:
-        raise ExtractError("program 不在追蹤清單")
+    program = _program(data.get("program"))
     if data.get("kind") not in ("bonus", "discount"):
         raise ExtractError("kind 不是 bonus 或 discount")
     percent = _number(data.get("percent"), 1, 300, "percent")
@@ -102,7 +127,7 @@ def parse_response(raw: str, article: Article, today: date) -> Promo | None:
     if not isinstance(data.get("up_to"), bool):
         raise ExtractError("up_to 不是布林值")
 
-    return Promo(program=data["program"], kind=data["kind"], percent=int(percent),
+    return Promo(program=program, kind=data["kind"], percent=int(percent),
                  stated_cpp=stated, end_date=end, up_to=data["up_to"], url=article.url)
 
 
@@ -115,4 +140,9 @@ def extract(article: Article, today: date) -> Promo | None:
     )
     # 取第一個 text block，不假設 content[0] 就是文字
     text = next((b.text for b in resp.content if getattr(b, "type", None) == "text"), "")
-    return parse_response(text, article, today)
+    try:
+        return parse_response(text, article, today)
+    except ExtractError:
+        # 原始回應只印在 log，不放進例外訊息（訊息是告警節流的鍵，必須穩定）
+        print(f"    Haiku 原始回應：{text!r}")
+        raise

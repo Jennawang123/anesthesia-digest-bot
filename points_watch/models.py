@@ -10,6 +10,7 @@ class Article:
     url: str
     published: date | None
     summary: str
+    body: str = ""          # content:encoded 的開頭；摘要常缺截止日，內文才有
 
     @property
     def key(self) -> str:

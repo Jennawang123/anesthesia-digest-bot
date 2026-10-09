@@ -65,3 +65,20 @@ def test_item_without_link_skipped():
            "</channel></rss>")
     articles = feeds.parse_feed(xml, "x")
     assert [(a.title, a.url, a.published) for a in articles] == [("ok", "https://x.test/a", None)]
+
+
+def test_body_from_content_encoded():
+    xml = ('<rss xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><item>'
+           "<title>t</title><link>https://x.test/a</link>"
+           "<description>short</description>"
+           "<content:encoded><![CDATA[<p>Between October 2 and <b>October 19</b>, 2026</p>"
+           + "x" * 5000 + "]]></content:encoded>"
+           "</item></channel></rss>")
+    a = feeds.parse_feed(xml, "x")[0]
+    assert a.body.startswith("Between October 2 and October 19 , 2026")
+    assert len(a.body) == feeds.BODY_MAX
+
+
+def test_body_empty_when_feed_has_no_full_text():
+    articles = feeds.parse_feed(_load("loyaltylobby.xml"), "loyaltylobby")
+    assert all(a.body == "" for a in articles)     # fixture 已去掉 content:encoded

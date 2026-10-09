@@ -274,3 +274,26 @@ def test_up_to_new_low_notifies_but_keeps_baseline(env):
     main.run(today=TODAY)
     assert any("🏆 新低" in m for m in env["pushed"])
     assert (env["dir"] / "baselines.json").read_text(encoding="utf-8") == BASELINES
+
+
+def test_same_sale_reported_lower_and_undated_not_pushed_again(env):
+    # 2026-10-09 dry-run 實例：Alaska 被 Loyalty Lobby 報成 120%／10-19，
+    # 被 OMAAT 報成 100%／無截止日
+    env["extract"] = lambda a, t: _promo(program="ALASKA", percent=120, end=date(2026, 10, 19))
+    main.run(today=TODAY)
+    env["pushed"].clear()
+    env["feeds"]["https://onemileatatime.com/feed/"] = _rss(
+        ("Buy Alaska Atmos Rewards Points With 100% Bonus", "https://om.test/alaska"))
+    env["extract"] = lambda a, t: _promo(program="ALASKA", percent=100, end=None, url=a.url)
+    main.run(today=date(2026, 10, 10))
+    assert not [m for m in env["pushed"] if m.startswith("💰")]
+
+
+def test_candidate_filter_reads_summary(env):
+    env["feeds"]["https://loyaltylobby.com/feed/"] = (
+        "<rss><channel><item><title>IHG points on sale</title><link>https://x.test/s</link>"
+        "<pubDate>Thu, 08 Oct 2026 06:00:00 +0000</pubDate>"
+        "<description>You can purchase points with a 100% bonus.</description>"
+        "</item></channel></rss>")
+    main.run(today=TODAY)
+    assert "IHG points on sale" in env["calls"]

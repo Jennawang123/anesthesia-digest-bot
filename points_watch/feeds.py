@@ -8,6 +8,10 @@ from urllib.parse import urlsplit, urlunsplit
 from .models import Article
 
 SUMMARY_MAX = 600   # 送給 Haiku 的摘要上限；實測 description 多在 300 字內
+# 內文只取開頭。實測（2026-10-09）促銷期間與每點成本都落在前 1,000 字內，
+# 而 OMAAT 的摘要完全不寫截止日——只給摘要的話訊息會是「截止日未註明」。
+BODY_MAX = 1500
+_CONTENT = "{http://purl.org/rss/1.0/modules/content/}encoded"
 
 _TAG = re.compile(r"<[^>]+>")
 _SPACE = re.compile(r"\s+")
@@ -53,5 +57,6 @@ def parse_feed(xml_text: str, feed: str) -> list[Article]:
             url=_strip_query(link),
             published=_published(item.findtext("pubDate")),
             summary=_clean(item.findtext("description"))[:SUMMARY_MAX],
+            body=_clean(item.findtext(_CONTENT))[:BODY_MAX],
         ))
     return articles

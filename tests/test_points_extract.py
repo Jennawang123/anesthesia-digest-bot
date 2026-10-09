@@ -82,3 +82,25 @@ def test_bad_response_raises(bad):
     # 兩者混在一起的話，模型回垃圾會被當成「沒事」而永久漏報。
     with pytest.raises(extract.ExtractError):
         _parse(bad)
+
+
+@pytest.mark.parametrize("returned, code", [
+    ("ALASKA", "ALASKA"), ("alaska", "ALASKA"), ("Alaska Airlines", "ALASKA"),
+    ("Alaska Atmos Rewards", "ALASKA"), ("Flying Blue", "FLYINGBLUE"),
+    ("IHG One Rewards", "IHG"), ("Virgin Atlantic Flying Club", "VIRGIN"),
+])
+def test_program_name_normalised_to_code(returned, code):
+    assert _parse({**GOOD, "program": returned}).program == code
+
+
+@pytest.mark.parametrize("returned", ["Hilton Honors", "", None, 3, "IHG and Alaska"])
+def test_program_must_match_exactly_one(returned):
+    with pytest.raises(extract.ExtractError):
+        _parse({**GOOD, "program": returned})
+
+
+def test_prompt_includes_body():
+    from dataclasses import replace
+    with_body = replace(ARTICLE, body="Between October 2 and October 19, 2026")
+    assert "Between October 2 and October 19, 2026" in extract.build_prompt(with_body, TODAY)
+    assert "（無）" in extract.build_prompt(ARTICLE, TODAY)
