@@ -184,7 +184,8 @@ def test_sw_offline(browser):
     ctx, page = new_page(browser)
     page.wait_for_selector('#app', state='visible')
     wait_sw(page)
-    n_lib = page.evaluate("caches.open('lib-u0915a').then(c=>c.keys()).then(k=>k.length)")
+    # 不綁版本號：SW 的 VERSION 一升，'lib-u0915a' 就會開出一個空快取而假性失敗
+    n_lib = page.evaluate("caches.keys().then(ks=>{const k=ks.find(x=>x.startsWith('lib-'));return k?caches.open(k).then(c=>c.keys()).then(a=>a.length):0;})")
     check('安裝時預抓 5 支函式庫', n_lib >= 5, n_lib)
     tile = 'https://tile.openstreetmap.org/5/15/9.png'
     page.evaluate(f"fetch('{tile}',{{mode:'cors'}}).then(r=>r.ok)")

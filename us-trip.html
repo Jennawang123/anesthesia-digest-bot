@@ -387,7 +387,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">美國西南部</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">u1004b</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">u1012a</span></div>
     </div>
   </div>
   <div id="ro-banner"></div>
@@ -1107,6 +1107,8 @@ async function ensureActGeo(sched,force=false){
         if(!force&&act.geoFail&&!GEO_RETRY_REASONS.includes(act.geoFail.reason))continue;
         const res=await geoEnqueue(()=>geoResolve(q,refs));
         const base='/schedule/'+did+'/acts/'+aid;
+        // 排隊等查詢的期間活動可能已被刪除或搬到別天；這時再寫回去會讓它以空殼復活
+        if(!lastSched?.[did]?.acts?.[aid])continue;
         if(res.fail){
           await DB.ref(base+'/geoFail').set({at:new Date().toISOString(),tried:geoCandidates(q),reason:res.fail});
         }else{
@@ -1141,6 +1143,7 @@ async function pruneDayOutliers(did,resolved){
     // 手動採用的座標是使用者親自確認過的，這一關不碰它
     if(r.locked)continue;
     if(resolved.some(o=>o!==r&&haversine(r.lat,r.lng,o.lat,o.lng)<=GEO_PRUNE_KM))continue;
+    if(!lastSched?.[did]?.acts?.[r.aid])continue;
     await DB.ref('/schedule/'+did+'/acts/'+r.aid+'/geo').remove();
     await DB.ref('/schedule/'+did+'/acts/'+r.aid+'/geoFail')
       .set({at:new Date().toISOString(),tried:geoCandidates(r.loc||''),reason:'sanity-reject'});
@@ -2188,7 +2191,7 @@ function initDnD(){
     // 手指移動時座標常落在列與列的縫隙或超出最後一列，嚴格邊界比對很容易找不到目標
     const dc=document.getElementById('dc-'+DG.did);
     if(dc){
-      const candRows=[...dc.querySelectorAll('.act-row')].filter(r=>r.dataset.aid!==DG.aid);
+      const candRows=[...dc.querySelectorAll('.act-row[data-aid]')].filter(r=>r.dataset.aid!==DG.aid);
       let nearest=null,minDist=Infinity;
       candRows.forEach(r=>{
         const rr=r.getBoundingClientRect();
@@ -2214,7 +2217,7 @@ function initDnD(){
     if(tgt!==DG.did){moveAct(DG.did,DG.aid,DG.act,tgt);return;}
     // 同日內排序——同樣改用「離放開位置最近的列」，跟上面 touchmove 的高亮邏輯一致
     const dc=document.getElementById('dc-'+tgt);
-    const actRows=[...dc.querySelectorAll('.act-row')];
+    const actRows=[...dc.querySelectorAll('.act-row[data-aid]')];
     if(actRows.length<2)return;
     let tgtRow=null,minDist=Infinity;
     actRows.forEach(r=>{
@@ -2384,7 +2387,7 @@ function initActDnD(){
     e.preventDefault();e.stopPropagation();
     const did=ADG.did;
     const dayCard=document.getElementById('dc-'+did);
-    const rows=[...dayCard.querySelectorAll('.act-row')];
+    const rows=[...dayCard.querySelectorAll('.act-row[data-aid]')];
     const srcIdx=rows.findIndex(r=>r.dataset.aid===ADG.aid);
     const tgtIdx=rows.findIndex(r=>r.dataset.aid===tgtRow.dataset.aid);
     if(srcIdx<0||tgtIdx<0||srcIdx===tgtIdx){ADG.on=false;return;}
