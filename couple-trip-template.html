@@ -2501,6 +2501,9 @@ function renderSched(sched){
             const nxtGeo=nxt?(nxt.stay?nxt.geo:nxt.act.geo):null;
             const legRow=(geo&&nxtGeo)?legHtml(geo,nxtGeo):'';
             if(item.stay){
+              // 自動卡片是渲染時算出來的，不存在 Firebase，所以刻意沒有 data-aid。
+              // 任何逐列寫入活動欄位的程式（排序等）都要用 .act-row[data-aid] 取列，
+              // 否則會寫出 /acts/undefined，畫面多一筆空白行程。
               const txt=item.stay==='in'?`從 ${esc(item.name)} 出發`:`今晚住 ${esc(item.name)}`;
               return `<div class="act-row stay-card">
               <div class="act-ico" style="background:${ACTM.hotel.bg}">🛏️</div>
