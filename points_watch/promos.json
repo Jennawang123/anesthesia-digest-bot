@@ -9,5 +9,16 @@
     "program": "IHG",
     "reminded": true,
     "url": "https://loyaltylobby.com/2026/10/10/ihg-buy-points-100-bonus-flash-sale-with-increased-limit-extra-gift-until-october-13-2026/"
+  },
+  "LIFEMILES|bonus|145|2026-10-20": {
+    "cpp": 1.35,
+    "end_date": "2026-10-20",
+    "first_seen": "2026-10-13",
+    "grade": "yellow",
+    "kind": "bonus",
+    "percent": 145,
+    "program": "LIFEMILES",
+    "reminded": false,
+    "url": "https://onemileatatime.com/deals/buy-avianca-lifemiles/"
   }
 }
