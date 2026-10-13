@@ -319,7 +319,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">家庭旅行</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v1004a</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">v1013a</span></div>
     </div>
   </div>
   <div class="content">
@@ -1159,7 +1159,7 @@ function initDnD(){
     // 手指移動時座標常落在列與列的縫隙或超出最後一列，嚴格邊界比對很容易找不到目標
     const dc=document.getElementById('dc-'+DG.did);
     if(dc){
-      const candRows=[...dc.querySelectorAll('.act-row')].filter(r=>r.dataset.aid!==DG.aid);
+      const candRows=[...dc.querySelectorAll('.act-row[data-aid]')].filter(r=>r.dataset.aid!==DG.aid);
       let nearest=null,minDist=Infinity;
       candRows.forEach(r=>{
         const rr=r.getBoundingClientRect();
@@ -1185,7 +1185,7 @@ function initDnD(){
     if(tgt!==DG.did){moveAct(DG.did,DG.aid,DG.act,tgt);return;}
     // 同日內排序——同樣改用「離放開位置最近的列」，跟上面 touchmove 的高亮邏輯一致
     const dc=document.getElementById('dc-'+tgt);
-    const actRows=[...dc.querySelectorAll('.act-row')];
+    const actRows=[...dc.querySelectorAll('.act-row[data-aid]')];
     if(actRows.length<2)return;
     let tgtRow=null,minDist=Infinity;
     actRows.forEach(r=>{
@@ -1350,7 +1350,7 @@ function initActDnD(){
     e.preventDefault();e.stopPropagation();
     const did=ADG.did;
     const dayCard=document.getElementById('dc-'+did);
-    const rows=[...dayCard.querySelectorAll('.act-row')];
+    const rows=[...dayCard.querySelectorAll('.act-row[data-aid]')];
     const srcIdx=rows.findIndex(r=>r.dataset.aid===ADG.aid);
     const tgtIdx=rows.findIndex(r=>r.dataset.aid===tgtRow.dataset.aid);
     if(srcIdx<0||tgtIdx<0||srcIdx===tgtIdx){ADG.on=false;return;}
