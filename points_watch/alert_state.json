@@ -1,4 +1,8 @@
 {
+  "frequentmiler／抽取｜end_date 早於今天": {
+    "date": "2026-10-14",
+    "reason": "end_date 早於今天"
+  },
   "frequentmiler｜連線失敗 ReadTimeout": {
     "date": "2026-10-13",
     "reason": "連線失敗 ReadTimeout"
