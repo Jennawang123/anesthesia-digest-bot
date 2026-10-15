@@ -1,4 +1,15 @@
 {
+  "AEROPLAN|bonus|90|2026-10-29": {
+    "cpp": 1.42,
+    "end_date": "2026-10-29",
+    "first_seen": "2026-10-15",
+    "grade": "yellow",
+    "kind": "bonus",
+    "percent": 90,
+    "program": "AEROPLAN",
+    "reminded": false,
+    "url": "https://loyaltylobby.com/2026/10/14/air-canada-buy-aeroplan-miles-up-to-90-or-higher-bonus-bonus-october-14-29-2026/"
+  },
   "IHG|bonus|100|2026-10-13": {
     "cpp": 0.5,
     "end_date": "2026-10-13",
