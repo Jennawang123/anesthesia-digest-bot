@@ -6,5 +6,9 @@
   "frequentmiler｜連線失敗 ReadTimeout": {
     "date": "2026-10-13",
     "reason": "連線失敗 ReadTimeout"
+  },
+  "loyaltylobby｜RSS 無法解析，可能被擋或改版": {
+    "date": "2026-10-20",
+    "reason": "RSS 無法解析，可能被擋或改版"
   }
 }
