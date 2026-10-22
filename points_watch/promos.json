@@ -32,6 +32,17 @@
     "reminded": true,
     "url": "https://loyaltylobby.com/2026/10/10/ihg-buy-points-100-bonus-flash-sale-with-increased-limit-extra-gift-until-october-13-2026/"
   },
+  "IHG|bonus|100|2026-11-05": {
+    "cpp": 0.5,
+    "end_date": "2026-11-05",
+    "first_seen": "2026-10-22",
+    "grade": "green",
+    "kind": "bonus",
+    "percent": 100,
+    "program": "IHG",
+    "reminded": false,
+    "url": "https://loyaltylobby.com/2026/10/21/ihg-buy-points-100-mystery-bonus-sale-with-increased-limit-until-november-5-2026/"
+  },
   "LIFEMILES|bonus|145|2026-10-20": {
     "cpp": 1.35,
     "end_date": "2026-10-20",
