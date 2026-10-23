@@ -53,5 +53,16 @@
     "program": "LIFEMILES",
     "reminded": false,
     "url": "https://onemileatatime.com/deals/buy-avianca-lifemiles/"
+  },
+  "UNITED|bonus|100|2026-10-31": {
+    "cpp": 1.88,
+    "end_date": "2026-10-31",
+    "first_seen": "2026-10-23",
+    "grade": "green",
+    "kind": "bonus",
+    "percent": 100,
+    "program": "UNITED",
+    "reminded": false,
+    "url": "https://onemileatatime.com/deals/buy-united-mileageplus-miles/"
   }
 }
