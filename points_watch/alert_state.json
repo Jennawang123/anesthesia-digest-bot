@@ -10,5 +10,9 @@
   "loyaltylobby｜RSS 無法解析，可能被擋或改版": {
     "date": "2026-10-20",
     "reason": "RSS 無法解析，可能被擋或改版"
+  },
+  "omaat／抽取｜percent 不是數字": {
+    "date": "2026-10-27",
+    "reason": "percent 不是數字"
   }
 }
