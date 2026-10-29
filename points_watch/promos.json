@@ -73,7 +73,7 @@
     "kind": "bonus",
     "percent": 100,
     "program": "UNITED",
-    "reminded": false,
+    "reminded": true,
     "url": "https://onemileatatime.com/deals/buy-united-mileageplus-miles/"
   }
 }
