@@ -177,6 +177,44 @@ def pick_detail_targets_per_route(records, per_route,
     return [t for bucket in buckets.values() for t in bucket]
 
 
+def pick_refresh_targets_per_route(records, per_route, route=None):
+    """每條航線各挑最便宜的 N 組重掃，不論是否詳掃過。
+
+    --refresh 依全域價格挑，某條航線大跌後前幾百名全是它，其他航線的
+    價格就永遠停在首次掃描那天。route 為 (亞洲端, 目的地) 時只挑該航線。
+    """
+    buckets = {}
+    for cid, rec in sorted(records.items(), key=lambda kv: kv[1]["priceKRW"]):
+        key = _route(rec)
+        if key is None or (route and key != route):
+            continue
+        bucket = buckets.setdefault(key, [])
+        if len(bucket) < per_route:
+            bucket.append((cid, rec))
+    return [t for bucket in buckets.values() for t in bucket]
+
+
+def next_probe_target(records, dest, fresh_since, tried=()):
+    """目的地探測：回傳下一組該重掃的 (cid, rec)，已能確定最低價時回傳 None。
+
+    最新價（scannedAt >= fresh_since）中的最低值 ≤ 下一組舊價時，底下的
+    舊資料都比它貴，最低價已確定；否則重掃那組最便宜的舊價。tried 是本次
+    已重掃過的組，失敗時價格不會更新，不排除會一直挑到同一組。
+    """
+    ranked = sorted((kv for kv in records.items()
+                     if (_route(kv[1]) or (None, None))[1] == dest),
+                    key=lambda kv: kv[1]["priceKRW"])
+    fresh = [rec["priceKRW"] for _, rec in ranked
+             if rec.get("scannedAt", "") >= fresh_since]
+    stale = [(cid, rec) for cid, rec in ranked
+             if rec.get("scannedAt", "") < fresh_since and cid not in tried]
+    if not stale:
+        return None
+    if fresh and min(fresh) <= stale[0][1]["priceKRW"]:
+        return None
+    return stale[0]
+
+
 def read_db_url():
     """讀 Firebase Database URL。找不到時回傳 None（僅本機儲存）。"""
     url = os.environ.get("FOUR_LEG_FARE_DB", "").strip()

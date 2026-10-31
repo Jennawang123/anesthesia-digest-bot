@@ -7,7 +7,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from fare_store import (LocalStore, merge_detail,  # noqa: E402
                         merge_refresh, pick_detail_targets,
-                        pick_detail_targets_per_route)
+                        pick_detail_targets_per_route,
+                        pick_refresh_targets_per_route,
+                        next_probe_target)
 
 
 def test_寫入後可讀回(tmp_path):
@@ -207,3 +209,63 @@ def test_每航線挑選同樣跳過屢次失敗的組():
         "ok1": _rec(110, "PUS", "MUC"),
     }
     assert [k for k, _ in pick_detail_targets_per_route(recs, 1)] == ["ok1"]
+
+
+def test_重掃每航線挑選不跳過已詳掃的組():
+    # 歐洲各航線最便宜的組都是 8 月詳掃過的，跳過它們就永遠不會更新
+    recs = {
+        "done": _rec(100, "PUS", "MXP", detail="full"),
+        "next": _rec(110, "PUS", "MXP"),
+        "more": _rec(120, "PUS", "MXP"),
+        "lax": _rec(50, "BKK", "LAX"),
+    }
+    got = [k for k, _ in pick_refresh_targets_per_route(recs, 2)]
+    assert sorted(got) == ["done", "lax", "next"]
+
+
+def test_重掃可限定單一航線():
+    recs = {
+        "mxp": _rec(100, "PUS", "MXP"),
+        "lax": _rec(50, "BKK", "LAX"),
+    }
+    got = pick_refresh_targets_per_route(recs, 3, route=("PUS", "MXP"))
+    assert [k for k, _ in got] == ["mxp"]
+
+
+NOW = "2026-10-31T00:00:00+00:00"
+OLD = "2026-08-19T00:00:00+00:00"
+
+
+def test_探測先挑該目的地最便宜的舊價():
+    recs = {
+        "a": _rec(100, "PUS", "MXP", scannedAt=OLD),
+        "b": _rec(120, "ICN", "MXP", scannedAt=OLD),
+        "lax": _rec(50, "BKK", "LAX", scannedAt=OLD),
+    }
+    assert next_probe_target(recs, "MXP", NOW)[0] == "a"
+
+
+def test_最新價不高於下一組舊價就停():
+    recs = {
+        "a": _rec(110, "PUS", "MXP", scannedAt=NOW),
+        "b": _rec(120, "ICN", "MXP", scannedAt=OLD),
+    }
+    assert next_probe_target(recs, "MXP", NOW) is None
+
+
+def test_漲價後往下挑下一組舊價():
+    # 米蘭 8 月最低那組重掃後漲三成，排上來的是另一組舊價
+    recs = {
+        "a": _rec(210, "PUS", "MXP", scannedAt=NOW),
+        "b": _rec(158, "PUS", "MXP", scannedAt=OLD),
+    }
+    assert next_probe_target(recs, "MXP", NOW)[0] == "b"
+
+
+def test_本次失敗過的組不再挑():
+    recs = {
+        "a": _rec(100, "PUS", "MXP", scannedAt=OLD),
+        "b": _rec(120, "PUS", "MXP", scannedAt=OLD),
+    }
+    assert next_probe_target(recs, "MXP", NOW, tried={"a"})[0] == "b"
+

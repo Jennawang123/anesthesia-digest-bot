@@ -22,7 +22,7 @@ import argparse
 import asyncio
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -32,6 +32,8 @@ from fare_combos import (PHASE1, PHASE2, PHASE3, PHASE4, PHASE5,
 from fare_store import (LocalStore, merge_detail, merge_refresh,
                         pick_detail_targets,
                         pick_detail_targets_per_route,
+                        pick_refresh_targets_per_route,
+                        next_probe_target,
                         push_firebase, read_db_url)
 from fx_rate import fetch_krw_twd, to_twd
 from gf_parse import parse_row
@@ -371,13 +373,20 @@ async def run_detail(targets, store, db_url, rate, fx_at, delay=3.0):
 
 
 async def run_refresh(top_n, store, db_url, rate, fx_at,
-                      delay=3.0, concurrency=2):
-    """重掃最便宜的前 N 組，累積價格歷史。供每日排程使用。"""
+                      delay=3.0, concurrency=2, targets=None):
+    """重掃最便宜的前 N 組，累積價格歷史。供每日排程使用。
+
+    傳入 targets 時改重掃指定的組（--refresh-per-route 用），top_n 不作用。
+    """
     from playwright.async_api import async_playwright
 
-    ok = store.all_ok()
-    targets = sorted(ok.items(), key=lambda kv: kv[1]["priceKRW"])[:top_n]
-    print(f"重掃最便宜的 {len(targets)} 組")
+    if targets is None:
+        ok = store.all_ok()
+        targets = sorted(ok.items(),
+                         key=lambda kv: kv[1]["priceKRW"])[:top_n]
+        print(f"重掃最便宜的 {len(targets)} 組")
+    else:
+        print(f"每航線重掃，共 {len(targets)} 組")
     if not targets:
         print("尚無資料可重掃，請先執行 --phase1 / --phase2")
         return
@@ -425,6 +434,39 @@ async def run_refresh(top_n, store, db_url, rate, fx_at,
         print(f"（連續失敗中止，{counters['skipped']} 組未重掃）")
 
 
+async def run_probe(dests, cap, store, db_url, rate, fx_at, delay=3.0):
+    """各目的地由最便宜的舊價往下重掃，最低價確定或達 cap 組即停。
+
+    只想知道哪個目的地現在最便宜時用；比 --refresh-per-route 省很多組。
+    24 小時內掃過的價格視為最新。
+    """
+    fresh_since = (datetime.now(timezone.utc)
+                   - timedelta(hours=24)).isoformat()
+    for dest in dests:
+        tried = set()
+        while len(tried) < cap:
+            t = next_probe_target(store.all_ok(), dest, fresh_since, tried)
+            if t is None:
+                break
+            tried.add(t[0])
+            await run_refresh(0, store, db_url, rate, fx_at,
+                              delay=delay, concurrency=1, targets=[t])
+        recs = [r for r in store.all_ok().values()
+                if (r.get("legs") or [{}, {}])[1].get("to") == dest]
+        fresh = [r for r in recs if r.get("scannedAt", "") >= fresh_since]
+        best = min(fresh, key=lambda r: r["priceKRW"]) if fresh else None
+        settled = next_probe_target(store.all_ok(), dest, fresh_since) is None
+        if best:
+            print(f"== {dest}：最新最低 ￦{best['priceKRW']:,}"
+                  f"（NT${best.get('priceTWD') or 0:,}，"
+                  f"{best['legs'][0]['from']}，"
+                  f"{'/'.join(l['date'][5:] for l in best['legs'])}）"
+                  f"{'　已確定' if settled else '　未確定：仍有更便宜的舊價'}"
+                  f"，本次重掃 {len(tried)} 組")
+        else:
+            print(f"== {dest}：本次重掃 {len(tried)} 組皆失敗，無最新價")
+
+
 def main():
     ap = argparse.ArgumentParser(description="四腿票掃描器")
     ap.add_argument("--once", action="store_true", help="只掃一組驗證環境")
@@ -448,13 +490,21 @@ def main():
                     help="每條航線各補最便宜的 N 組時刻")
     ap.add_argument("--refresh", type=int, metavar="N",
                     help="重掃最便宜的前 N 組並累積價格歷史（供每日排程）")
+    ap.add_argument("--refresh-per-route", type=int, metavar="N",
+                    help="每條航線各重掃最便宜的 N 組（不論是否詳掃過）")
+    ap.add_argument("--probe", metavar="DESTS",
+                    help="目的地探測，逗號分隔或 all，例如 MXP,VIE")
+    ap.add_argument("--probe-cap", type=int, default=3,
+                    help="--probe 每個目的地最多重掃幾組")
+    ap.add_argument("--route", metavar="ASIA-DEST",
+                    help="搭配 --refresh-per-route 只掃一條航線，例如 PUS-MXP")
     args = ap.parse_args()
 
     if args.once:
         asyncio.run(run_once())
         return
 
-    if args.refresh:
+    if args.refresh or args.refresh_per_route or args.probe:
         if not wait_for_network():
             print("網路持續不通，這次重掃略過。")
             return
@@ -465,8 +515,21 @@ def main():
         except Exception as e:
             rate, fx_at = None, ""
             print(f"匯率取得失敗，台幣欄位留空：{str(e)[:80]}")
+        if args.probe:
+            dests = (["LAX", "SFO", "MXP", "VIE", "YVR", "AMS", "MUC"]
+                     if args.probe.lower() == "all"
+                     else args.probe.upper().split(","))
+            asyncio.run(run_probe(dests, args.probe_cap, store, db_url,
+                                  rate, fx_at, delay=args.delay))
+            return
+        targets = None
+        if args.refresh_per_route:
+            route = tuple(args.route.upper().split("-")) if args.route else None
+            targets = pick_refresh_targets_per_route(
+                store.all_ok(), args.refresh_per_route, route)
         asyncio.run(run_refresh(args.refresh, store, db_url, rate, fx_at,
-                                delay=args.delay, concurrency=args.concurrency))
+                                delay=args.delay, concurrency=args.concurrency,
+                                targets=targets))
         return
 
     if args.detail or args.detail_per_route:
