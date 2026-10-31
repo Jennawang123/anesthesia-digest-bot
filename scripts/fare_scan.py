@@ -314,7 +314,9 @@ async def detail_scan(context, legs):
                  "depart": c["depart"], "arrive": c["arrive"],
                  "arrivePlusDays": c["arrive_plus_days"],
                  "duration": c["duration"],
-                 "nonstop": c["nonstop"], "via": c["via"]}
+                 "nonstop": c["nonstop"], "via": c["via"],
+                 # 頂層 carrier 只是第一段的，長程段可能是別家飛
+                 "carrier": c["carrier"]}
                 for (d, o, t), c in zip(legs, collected)
             ],
             "allNonstop": all(c["nonstop"] for c in collected),
