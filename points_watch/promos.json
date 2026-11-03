@@ -32,6 +32,17 @@
     "reminded": false,
     "url": "https://loyaltylobby.com/2026/10/18/last-call-alaska-airlines-buy-miles-up-to-120-bonus-sale-until-october-19-2026/"
   },
+  "CHOICE|bonus|40|2026-11-26": {
+    "cpp": 0.74,
+    "end_date": "2026-11-26",
+    "first_seen": "2026-11-03",
+    "grade": "red",
+    "kind": "bonus",
+    "percent": 40,
+    "program": "CHOICE",
+    "reminded": false,
+    "url": "https://loyaltylobby.com/2026/11/02/choice-privileges-buy-points-40-bonus-sale-until-novmeber-26-2026/"
+  },
   "IHG|bonus|100|2026-10-13": {
     "cpp": 0.5,
     "end_date": "2026-10-13",
@@ -51,7 +62,7 @@
     "kind": "bonus",
     "percent": 100,
     "program": "IHG",
-    "reminded": false,
+    "reminded": true,
     "url": "https://loyaltylobby.com/2026/10/21/ihg-buy-points-100-mystery-bonus-sale-with-increased-limit-until-november-5-2026/"
   },
   "LIFEMILES|bonus|145|2026-10-20": {
