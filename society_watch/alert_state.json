@@ -1,0 +1,6 @@
+{
+  "TSA": {
+    "date": "2026-11-03",
+    "reason": "SSLError: HTTPSConnectionPool(host='www.anesth.org.tw', port=443): Max retries exceeded wi"
+  }
+}
