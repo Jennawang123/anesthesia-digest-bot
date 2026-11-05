@@ -47,6 +47,7 @@
 
 1. **某一週沒收到心跳 = 整條線停擺**，先看 Actions 有沒有執行。
 2. 收到 ⚠️ 異常：訊息會寫明是哪一站、哪一種壞法（連不上、解析出 0 筆、疑似改版）。多半是對方網站改版，要改 `society_watch/extract.py` 對應的 parser，並用 `tests/fixtures/society_watch/` 下的實抓樣本重跑測試。
+   - 例外：錯誤是 `SSLError` / `CERTIFICATE_VERIFY_FAILED` 時不是改版，是對方換憑證時中繼憑證沒裝齊（瀏覽器會自動補鏈所以看起來正常，Python 不會）。先看後續幾天的 Actions log 有沒有恢復 `✅ <站名> N 筆`，通常對方幾天內自己修好；**不要改成 `verify=False`**。恢復後漏掉的公告會在下次成功時當新項目補推（比對基準是 seen.json，不是日期）。2026-11-03～04 TSA 發生過一次，11-05 自行恢復。
 3. 本機跑不動 AIRWAY 那站是正常的（這台電腦的網路連不到該 CDN），bootstrap 與實抓一律在 Actions 上跑。
 
 ---
