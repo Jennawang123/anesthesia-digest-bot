@@ -43,11 +43,22 @@ def test_not_candidate(title):
     assert not sources.is_candidate(title)
 
 
-def test_nine_programs():
+def test_ten_programs():
     assert set(sources.PROGRAMS) == {
         "IHG", "CHOICE", "LIFEMILES", "AEROPLAN", "UNITED",
-        "ALASKA", "AA", "FLYINGBLUE", "VIRGIN",
+        "ALASKA", "AA", "FLYINGBLUE", "VIRGIN", "AVIOS",
     }
+
+
+@pytest.mark.parametrize("title", [
+    # 2026-11 漏報的真實標題：只寫賣家、沒寫 Avios 也要進得來
+    "Buy Finnair Plus Avios For 50% Off (1.06 Cents Each)",
+    "Buy Qatar Airways Avios With up to a 60% Bonus",
+    "Buy British Airways Avios With a 40% Bonus (1.64¢ Each)",
+    "Should You Buy Iberia Avios With a 50% Bonus?",
+])
+def test_avios_candidate(title):
+    assert sources.is_candidate(title)
 
 
 def test_feed_urls_paginate():

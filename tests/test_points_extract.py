@@ -88,6 +88,7 @@ def test_bad_response_raises(bad):
     ("ALASKA", "ALASKA"), ("alaska", "ALASKA"), ("Alaska Airlines", "ALASKA"),
     ("Alaska Atmos Rewards", "ALASKA"), ("Flying Blue", "FLYINGBLUE"),
     ("IHG One Rewards", "IHG"), ("Virgin Atlantic Flying Club", "VIRGIN"),
+    ("Avios", "AVIOS"), ("Finnair Plus", "AVIOS"), ("Qatar Airways Privilege Club", "AVIOS"),
 ])
 def test_program_name_normalised_to_code(returned, code):
     assert _parse({**GOOD, "program": returned}).program == code

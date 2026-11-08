@@ -7,5 +7,6 @@
   "ALASKA":     {"base_cpp": 3.76, "best_cpp": 1.88},
   "AA":         {"base_cpp": 3.76, "best_cpp": 1.88},
   "FLYINGBLUE": {"base_cpp": 3.06, "best_cpp": 1.69},
-  "VIRGIN":     {"base_cpp": 2.52, "best_cpp": 1.48}
+  "VIRGIN":     {"base_cpp": 2.52, "best_cpp": 1.48},
+  "AVIOS":      {"base_cpp": 2.30, "best_cpp": 1.27}
 }

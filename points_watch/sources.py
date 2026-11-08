@@ -27,6 +27,10 @@ PROGRAMS = {
     "AA":         {"label": "AAdvantage", "unit": "哩", "keywords": ["aadvantage", "american airlines miles", "american miles"]},
     "FLYINGBLUE": {"label": "Flying Blue", "unit": "哩", "keywords": ["flying blue"]},
     "VIRGIN":     {"label": "Virgin Atlantic", "unit": "哩", "keywords": ["virgin atlantic", "virgin points", "flying club"]},
+    # 各家賣的 Avios 可互轉，合併成一個計畫比價（2026-11-09 使用者定案）。
+    # 標題常只寫賣家不寫 Avios（例：Finnair Plus 2026-11 的 5 折），所以賣家名也要列。
+    "AVIOS":      {"label": "Avios", "unit": "點", "keywords": ["avios", "british airways", "qatar", "iberia", "finnair", "aer lingus"],
+                   "note": "British Airways、Qatar、Iberia、Finnair、Aer Lingus 任一家賣的 Avios 都算"},
 }
 
 # 刻意不含 sale：2026-10-09 dry-run 實測，「IHG 12% Off Points & Cash Sale」

@@ -60,7 +60,7 @@
 |---|---|
 | 觸發 | `.github/workflows/points-watch.yml`：每天 10:30 台灣時間（cron `30 2 * * *`） |
 | 程式 | `python3 -m points_watch.main`。`--dry-run`：照常抓取與判讀，訊息印到 log，不推播、不寫狀態、無視已看過的紀錄；`--bootstrap`：只把 RSS 現有文章記為已看過；`--pages N`：每個 RSS 抓幾頁（預設 2） |
-| 資料來源（買點） | Loyalty Lobby、One Mile at a Time、Frequent Miler 三個 RSS（`points_watch/sources.py`）。追蹤 IHG、Choice、LifeMiles、Aeroplan、United、Alaska、AAdvantage、Flying Blue、Virgin Atlantic。官網（ihg.com、storefront.points.com）會擋，不用 |
+| 資料來源（買點） | Loyalty Lobby、One Mile at a Time、Frequent Miler 三個 RSS（`points_watch/sources.py`）。追蹤 IHG、Choice、LifeMiles、Aeroplan、United、Alaska、AAdvantage、Flying Blue、Virgin Atlantic、Avios（BA／Qatar／Iberia／Finnair／Aer Lingus 合併一個計畫，賣家名也是關鍵字，因為標題常只寫賣家）。官網（ihg.com、storefront.points.com）會擋，不用 |
 | 資料來源（國泰世華） | 活動清單 `…/event/overview/credit-card.model.list.json`；活動頁網址加 `.model.json` 取內文。**不是公開 API**，銀行改版就會壞 |
 | 評等基準 | `points_watch/baselines.json`：各計畫原價與近兩年公開促銷最佳價（不是史上最低，也不含限定對象的價格）。**一個計畫一行，手改時維持這個版面**，程式靠它做單行取代 |
 | 狀態檔 | `points_watch/` 下的 `seen_articles.json`、`promos.json`、`cub_seen.json`、`cub_promos.json`、`alert_state.json`、`heartbeat.json`，以及會被自動下修的 `baselines.json`。都由 Actions commit 回 repo |

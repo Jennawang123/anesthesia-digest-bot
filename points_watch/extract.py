@@ -27,6 +27,7 @@ PROMPT_TEMPLATE = """你是飯店與航空點數促銷的資料抽取器。以�
 - 訂房的 Points & Cash 折扣、房價促銷、住宿加贈點數
 - 信用卡開卡禮或審查文、轉點加贈、購物入口加碼
 - 一次列出多則優惠的彙整文
+- British Airways 的 Avios Boost（只能加購近期賺到的 Avios，不是公開買點）
 - 不在上列清單的計畫
 - 已經結束的促銷（截止日早於今天）
 
@@ -53,7 +54,9 @@ class ExtractError(RuntimeError):
 
 
 def build_prompt(article: Article, today: date) -> str:
-    programs = "\n".join(f"- {code}：{p['label']}" for code, p in PROGRAMS.items())
+    programs = "\n".join(
+        f"- {code}：{p['label']}" + (f"（{p['note']}）" if p.get("note") else "")
+        for code, p in PROGRAMS.items())
     return PROMPT_TEMPLATE.format(
         programs=programs,
         today=today.isoformat(),
