@@ -32,6 +32,17 @@
     "reminded": false,
     "url": "https://loyaltylobby.com/2026/10/18/last-call-alaska-airlines-buy-miles-up-to-120-bonus-sale-until-october-19-2026/"
   },
+  "AVIOS|discount|50|2026-11-16": {
+    "cpp": 1.15,
+    "end_date": "2026-11-16",
+    "first_seen": "2026-11-08",
+    "grade": "green",
+    "kind": "discount",
+    "percent": 50,
+    "program": "AVIOS",
+    "reminded": false,
+    "url": "https://loyaltylobby.com/2026/11/06/reader-question-renewing-finnair-gold-with-minimal-flying-when-buying-avios-under-current-campaign-converting/"
+  },
   "CHOICE|bonus|40|2026-11-26": {
     "cpp": 0.74,
     "end_date": "2026-11-26",
@@ -73,7 +84,7 @@
     "kind": "bonus",
     "percent": 100,
     "program": "IHG",
-    "reminded": false,
+    "reminded": true,
     "url": "https://loyaltylobby.com/2026/11/07/extended-ihg-buy-points-100-mystery-bonus-sale-with-increased-limit-until-november-10-2026/"
   },
   "LIFEMILES|bonus|145|2026-10-20": {
