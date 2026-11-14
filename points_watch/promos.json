@@ -40,7 +40,7 @@
     "kind": "discount",
     "percent": 50,
     "program": "AVIOS",
-    "reminded": false,
+    "reminded": true,
     "url": "https://loyaltylobby.com/2026/11/06/reader-question-renewing-finnair-gold-with-minimal-flying-when-buying-avios-under-current-campaign-converting/"
   },
   "CHOICE|bonus|40|2026-11-26": {
