@@ -140,6 +140,7 @@ body.ro :is(.fab,.ib,.day-eb,.act-handle,.note-handle,.todo-item input[type=chec
 .pie-tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
 .pie-tab{padding:5px 13px;border-radius:20px;font-size:16px;font-weight:700;border:1.5px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);}
 .pie-tab.on{background:var(--blue);color:#fff;border-color:var(--blue);}
+.pie-who{flex-basis:100%;justify-content:flex-start;}
 .pie-tab.twd.on{background:var(--purple);border-color:var(--purple);}
 /* 圓餅圖與圖例改成上下排：並排時圖例只剩 ~180px，分類名稱會被 ellipsis 吃掉（🎡..），
    而使用者要看的正是「哪一類花了這些錢」。上下排讓名稱拿到整行寬度。 */
@@ -387,7 +388,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
     <div class="hdr-overlay"></div>
     <div class="hdr-title-block">
       <div class="hdr-t" id="appTitle">美國西南部</div>
-      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">u1012a</span></div>
+      <div class="hdr-s"><span class="dot" id="syncDot"></span><span id="syncTxt">已同步</span> <span style="font-size:12px;opacity:.5">u1117a</span></div>
     </div>
   </div>
   <div id="ro-banner"></div>
@@ -679,7 +680,7 @@ let CFG={},DB=null,curTab='sched',curAcc='exp';
 let weatherByDate=new Map();
 let curCat='food',curPayer=0,curCur=DEF_CUR,curSplit='both';
 let curAC='sight',curActCosts=[];
-let curNT='text',curImg=null,curPieCur=DEF_CUR,lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[],lastSafety={},lastFacilities={},lastLegs={};
+let curNT='text',curImg=null,curPieCur=DEF_CUR,curPieWho=-1,lastExps={},lastNotes={},lastSched={},exchRates={},curActImages=[],lastSafety={},lastFacilities={},lastLegs={};
 // 行程頁一次只顯示一天。null = 總覽（只有住宿總整理）。
 // _overviewChosen 用來分辨「還沒選過、應該自動跳到今天」與「使用者自己選了總覽」。
 let curDay=null,_overviewChosen=false;
@@ -3237,8 +3238,19 @@ function calcMemberSpend(exps,who){
   return totals;
 }
 
+// 某人對一筆帳的實際負擔比例（拆帳後）：p1/p2 全由該人負擔，both 或缺值各半，
+// 跟 calcBal 同一套規則。who=-1 代表兩人合計，權重 1。
+// 這是「分攤後實際負擔」口徑，刻意跟成員方格（誰付的算誰）不同，使用者 2026-11-17 指定。
+function shareOf(e,who){
+  if(who<0)return 1;
+  const sp=e.split||'both';
+  if(sp==='p1')return who===0?1:0;
+  if(sp==='p2')return who===1?1:0;
+  return .5;
+}
+
 // Pie chart
-function drawDonut(canvasId,exps,cur){
+function drawDonut(canvasId,exps,cur,who=-1){
   const canvas=document.getElementById(canvasId);if(!canvas)return null;
   const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
   ctx.clearRect(0,0,w,h);
@@ -3248,7 +3260,7 @@ function drawDonut(canvasId,exps,cur){
     const eCur=e.cur||DEF_CUR;
     if(!isCombined&&eCur!==cur)return;
     const cat=e.cat||'other';
-    let amt=e.amt||0;
+    let amt=(e.amt||0)*shareOf(e,who);
     if(isCombined)amt=(eCur==='TWD')?amt:amt*rateFor(eCur);
     totals[cat]=(totals[cat]||0)+amt;
   });
@@ -3274,8 +3286,20 @@ function drawDonut(canvasId,exps,cur){
 }
 
 function renderPie(exps){
-  const presentCurs=PRESET_CURRENCIES.filter(c=>Object.values(exps).some(e=>(e.cur||DEF_CUR)===c.code&&(e.amt||0)>0));
-  if(!presentCurs.length){document.getElementById('pieSec').innerHTML='';return;}
+  const mems=CFG.members||[];
+  if(curPieWho>=mems.length)curPieWho=-1;
+  const hasAny=Object.values(exps).some(e=>e&&(e.amt||0)>0);
+  if(!hasAny){document.getElementById('pieSec').innerHTML='';return;}
+  const presentCurs=PRESET_CURRENCIES.filter(c=>Object.values(exps).some(e=>e&&(e.cur||DEF_CUR)===c.code&&(e.amt||0)*shareOf(e,curPieWho)>0));
+  // 成員切換列：只有兩人拆帳才有意義（shareOf 只認 p1/p2）
+  const whoTabs=mems.length===2?`<div class="pie-tabs pie-who">${[{k:-1,label:'全部'},...mems.map((n,i)=>({k:i,label:esc(n)}))].map(t=>`<div class="pie-tab ${curPieWho===t.k?'on':''}" onclick="switchPieWho(${t.k})">${t.label}</div>`).join('')}</div>`:'';
+  if(!presentCurs.length){
+    document.getElementById('pieSec').innerHTML=`<div class="pie-card">
+      <div class="pie-hdr"><span class="pie-title">支出分布</span>${whoTabs}</div>
+      <div style="color:var(--muted);font-size:17px;text-align:center;padding:16px 0">${esc(mems[curPieWho]||'')} 目前沒有需要負擔的花費</div>
+    </div>`;
+    return;
+  }
 
   // Ensure curPieCur is valid
   if(curPieCur!=='combined'&&!presentCurs.some(c=>c.code===curPieCur)){
@@ -3288,16 +3312,18 @@ function renderPie(exps){
   document.getElementById('pieSec').innerHTML=`<div class="pie-card">
     <div class="pie-hdr">
       <span class="pie-title">支出分布</span>
+      ${whoTabs}
       <div class="pie-tabs">${tabs.map(t=>`<div class="pie-tab ${t.cls} ${curPieCur===t.k?'on':''}" onclick="switchPie('${t.k}')">${t.label}</div>`).join('')}</div>
     </div>
     <div class="pie-body">
       <canvas id="pieCanvas" width="140" height="140" style="flex-shrink:0"></canvas>
       <div class="pie-legend" id="pieLegend"></div>
     </div>
+    ${curPieWho>=0?`<div class="pie-rate">${esc(mems[curPieWho])} 拆帳後實際負擔（均分算一半），與下方「誰付的」金額不同</div>`:''}
     <div class="pie-rate" id="pieRate">${presentCurs.filter(c=>c.code!=='TWD'&&exchRates[c.code]).map(c=>`1 ${c.code}≈NT$${exchRates[c.code].toFixed(SMALL_UNIT_CURS.includes(c.code)?4:2)}`).join(' · ')}</div>
   </div>`;
 
-  const result=drawDonut('pieCanvas',exps,curPieCur);
+  const result=drawDonut('pieCanvas',exps,curPieCur,curPieWho);
   if(!result)return;
   const{entries,total}=result;
   const sym=curSym(curPieCur);
@@ -3316,6 +3342,7 @@ function renderPie(exps){
 }
 
 function switchPie(cur){curPieCur=cur;renderPie(lastExps);}
+function switchPieWho(i){curPieWho=i;renderPie(lastExps);}
 
 function renderStat(exps){
   renderPie(exps);
@@ -4017,6 +4044,10 @@ function _selftest(){
     ok('雙方各付：淨額相抵', bal({e1:{paidBy:'A',amt:1000,split:'both'},e2:{paidBy:'B',amt:600,split:'both'}}).settle===200);
     // 舊資料沒有 split 欄位，必須當成均分，否則升級後舊帳會整批算錯
     ok('缺 split 視為均分', bal({e1:{paidBy:'A',amt:800}}).settle===400);
+    // 圓餅圖成員切換：拆帳後實際負擔
+    ok('shareOf 均分各半', shareOf({split:'both'},0)===.5&&shareOf({},1)===.5);
+    ok('shareOf 自付全額', shareOf({split:'p1'},0)===1&&shareOf({split:'p1'},1)===0&&shareOf({split:'p2'},1)===1);
+    ok('shareOf 全部=1', shareOf({split:'p1'},-1)===1);
     // 幣別各算各的
     {
       const mixed={e1:{paidBy:'A',amt:1000,cur:'USD',split:'both'},e2:{paidBy:'B',amt:3000,cur:'JPY',split:'both'}};
