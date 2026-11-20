@@ -1,4 +1,15 @@
 {
+  "AEROPLAN|bonus|100|2026-12-10": {
+    "cpp": 1.35,
+    "end_date": "2026-12-10",
+    "first_seen": "2026-11-20",
+    "grade": "yellow",
+    "kind": "bonus",
+    "percent": 100,
+    "program": "AEROPLAN",
+    "reminded": false,
+    "url": "https://loyaltylobby.com/2026/11/19/air-canada-buy-aeroplan-miles-up-to-100-or-higher-myster-bonus-sale-november-19-december-10-2026/"
+  },
   "AEROPLAN|bonus|90|2026-10-29": {
     "cpp": 1.42,
     "end_date": "2026-10-29",
@@ -130,6 +141,17 @@
     "program": "LIFEMILES",
     "reminded": false,
     "url": "https://onemileatatime.com/deals/buy-avianca-lifemiles/"
+  },
+  "LIFEMILES|bonus|145|2026-11-21": {
+    "cpp": 1.35,
+    "end_date": "2026-11-21",
+    "first_seen": "2026-11-20",
+    "grade": "yellow",
+    "kind": "bonus",
+    "percent": 145,
+    "program": "LIFEMILES",
+    "reminded": false,
+    "url": "https://loyaltylobby.com/2026/11/19/avianca-lifemiles-buy-miles-up-to-145-flash-sale-through-november-21-2026/"
   },
   "UNITED|bonus|100|2026-10-31": {
     "cpp": 1.88,
