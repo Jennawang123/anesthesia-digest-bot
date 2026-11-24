@@ -131,6 +131,17 @@
     "reminded": true,
     "url": "https://loyaltylobby.com/2026/11/11/ihg-buy-points-100-bonus-sale-with-increased-limit-until-november-15-2026/"
   },
+  "IHG|bonus|100|2026-12-11": {
+    "cpp": 0.5,
+    "end_date": "2026-12-11",
+    "first_seen": "2026-11-24",
+    "grade": "green",
+    "kind": "bonus",
+    "percent": 100,
+    "program": "IHG",
+    "reminded": false,
+    "url": "https://loyaltylobby.com/2026/11/23/ihg-buy-points-100-bonus-sale-with-increased-limit-until-november-23-december-11-2026/"
+  },
   "LIFEMILES|bonus|145|2026-10-20": {
     "cpp": 1.35,
     "end_date": "2026-10-20",
@@ -163,5 +174,16 @@
     "program": "UNITED",
     "reminded": true,
     "url": "https://onemileatatime.com/deals/buy-united-mileageplus-miles/"
+  },
+  "VIRGIN|bonus|80|2026-12-31": {
+    "cpp": 1.4,
+    "end_date": "2026-12-31",
+    "first_seen": "2026-11-24",
+    "grade": "green",
+    "kind": "bonus",
+    "percent": 80,
+    "program": "VIRGIN",
+    "reminded": false,
+    "url": "https://loyaltylobby.com/2026/11/24/virgin-atlantic-buy-miles-up-to-80-bonus-through-december-31-2026/"
   }
 }
