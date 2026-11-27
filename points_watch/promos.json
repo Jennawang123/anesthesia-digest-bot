@@ -1,4 +1,15 @@
 {
+  "AA|discount|50|2026-12-02": {
+    "cpp": 1.88,
+    "end_date": "2026-12-02",
+    "first_seen": "2026-11-27",
+    "grade": "green",
+    "kind": "discount",
+    "percent": 50,
+    "program": "AA",
+    "reminded": false,
+    "url": "https://loyaltylobby.com/2026/11/27/american-airlines-buy-aadvantage-miles-up-to-50-off-increased-limit-through-december-2-2026/"
+  },
   "AEROPLAN|bonus|100|2026-12-10": {
     "cpp": 1.35,
     "end_date": "2026-12-10",
